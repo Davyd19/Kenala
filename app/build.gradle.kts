@@ -60,4 +60,6 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.animation)
+    implementation("androidx.core:core-splashscreen:1.0.1")
+    implementation(libs.androidx.core.ktx)
 }

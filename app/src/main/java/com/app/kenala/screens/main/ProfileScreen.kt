@@ -35,11 +35,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.app.kenala.ui.theme.AccentBlue
 import com.app.kenala.ui.theme.BorderColor
-import com.app.kenala.ui.theme.LightTextColor
-import com.app.kenala.ui.theme.PrimaryColor
-import com.app.kenala.ui.theme.SecondaryColor
+import com.app.kenala.ui.theme.LightBlue
+import com.app.kenala.ui.theme.PrimaryBlue
 
 /**
  * Layar Profile
@@ -60,7 +59,8 @@ fun ProfileScreen() {
                 text = "Profil & Pencapaian",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(start = 25.dp, top = 20.dp)
+                modifier = Modifier.padding(start = 25.dp, top = 20.dp),
+                color = MaterialTheme.colorScheme.onBackground
             )
 
             // Header Profil (Avatar & Nama)
@@ -85,14 +85,14 @@ private fun ProfileHeader() {
             .padding(top = 30.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Avatar "N"
+        // Avatar dengan gradien baru
         Box(
             modifier = Modifier
                 .size(100.dp)
                 .clip(CircleShape)
                 .background(
                     Brush.linearGradient(
-                        colors = listOf(PrimaryColor, SecondaryColor)
+                        colors = listOf(PrimaryBlue, AccentBlue) // Gradien yang konsisten
                     )
                 ),
             contentAlignment = Alignment.Center
@@ -108,7 +108,8 @@ private fun ProfileHeader() {
         Text(
             text = "Nayla Nurul Afifah",
             style = MaterialTheme.typography.titleLarge, // 22px
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
         )
     }
 }
@@ -116,7 +117,6 @@ private fun ProfileHeader() {
 /**
  * Composable pribadi untuk kartu yang berisi menu
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MenuCard() {
     Card(
@@ -175,7 +175,7 @@ private fun MenuItem(title: String, icon: ImageVector, onClick: () -> Unit) {
                 Icon(
                     imageVector = icon,
                     contentDescription = title,
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = PrimaryBlue, // Warna ikon baru yang lebih menarik
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(15.dp))
@@ -188,7 +188,7 @@ private fun MenuItem(title: String, icon: ImageVector, onClick: () -> Unit) {
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = "Panah",
-                tint = LightTextColor,
+                tint = LightBlue, // Warna panah yang lebih lembut
                 modifier = Modifier.size(20.dp)
             )
         }

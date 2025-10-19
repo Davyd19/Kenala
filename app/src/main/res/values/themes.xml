@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
+    <!-- Base application theme. -->
     <style name="Theme.Kenala" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- Splash Screen Theme -->
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <!-- Atur window background ke warna solid (misalnya, warna PrimaryDark Anda) -->
+        <item name="windowSplashScreenBackground">@color/primary_dark_color</item>
+        <!-- Atur ikon di tengah (logo Anda) -->
+        <item name="windowSplashScreenAnimatedIcon">@drawable/logo_kenala</item>
+        <!-- Tentukan tema yang akan digunakan SETELAH splash screen selesai -->
+        <item name="postSplashScreenTheme">@style/Theme.Kenala</item>
+    </style>
 </resources>

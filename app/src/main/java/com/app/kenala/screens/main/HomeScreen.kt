@@ -16,10 +16,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CardGiftcard
+import androidx.compose.material.icons.filled.Route
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -34,14 +39,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.app.kenala.ui.theme.LightTextColor
-import com.app.kenala.ui.theme.PrimaryColor
-import com.app.kenala.ui.theme.PrimaryDark
-import com.app.kenala.ui.theme.SecondaryColor
-import androidx.navigation.NavHostController
 import com.app.kenala.navigation.Screen
+import com.app.kenala.ui.theme.AccentBlue
+import com.app.kenala.ui.theme.BrightBlue
+import com.app.kenala.ui.theme.LightBlue
+import com.app.kenala.ui.theme.PrimaryBlue
+import com.app.kenala.ui.theme.PrimaryDark
 
 
 /**
@@ -50,36 +56,30 @@ import com.app.kenala.navigation.Screen
  */
 @Composable
 fun HomeScreen(navController: NavHostController) {
-    // Scaffold memberi kita background yang sudah di-tema
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
-        // LazyColumn digunakan agar layar bisa di-scroll jika kontennya panjang
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // Item 1: Header (Nama & Avatar)
             item { HomeHeader() }
-
-            // Item 2: Kartu Misi Utama
             item { MainMissionCard(navController = navController) }
 
-            // Item 3: Judul Section "Misi Pilihan"
+            // --- FITUR BARU: STATISTIK & MISI TERAKHIR ---
+            item { StatsSummaryCard() }
+            item { LastMissionCard() }
+
             item {
                 Text(
-                    text = "Misi Pilihan",
+                    text = "Misi Pilihan Untukmu",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(start = 25.dp, top = 25.dp, bottom = 15.dp)
                 )
             }
-
-            // Item 4: Daftar Misi Pilihan (Horizontal)
             item { MissionChoiceRow() }
-
-            // Spacer di akhir
             item { Spacer(modifier = Modifier.height(25.dp)) }
         }
     }
@@ -100,23 +100,21 @@ private fun HomeHeader() {
         Column {
             Text(
                 text = "Hai, Nayla!",
-                style = MaterialTheme.typography.headlineSmall, // 24px
+                style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
             )
             Text(
                 text = "Level 5: Petualang Lokal",
                 style = MaterialTheme.typography.bodyMedium,
-                color = LightTextColor
+                color = LightBlue
             )
         }
-        // Avatar (dari prototipe)
         AsyncImage(
-            model = "https://i.pravatar.cc/100?u=nayla", // URL Avatar dari prototipe
+            model = "https://i.pravatar.cc/100?u=nayla",
             contentDescription = "Avatar Profil",
             modifier = Modifier
                 .size(44.dp)
                 .clip(CircleShape)
-                .background(SecondaryColor)
         )
     }
 }
@@ -129,16 +127,15 @@ private fun HomeHeader() {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 25.dp, vertical = 10.dp),
-        shape = MaterialTheme.shapes.extraLarge, // 24dp
+        shape = MaterialTheme.shapes.extraLarge,
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
     ) {
-        // Gradien Biru Gelap
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(
                     Brush.linearGradient(
-                        colors = listOf(PrimaryDark, PrimaryColor)
+                        colors = listOf(PrimaryBlue, AccentBlue)
                     )
                 )
                 .padding(25.dp)
@@ -146,23 +143,20 @@ private fun HomeHeader() {
             Column {
                 Text(
                     text = "Siap untuk Misi Baru?",
-                    style = MaterialTheme.typography.titleLarge, // 22px
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = BrightBlue
                 )
-
-                // TODO: Tambahkan preference grid di sini nanti
                 Spacer(modifier = Modifier.height(20.dp))
-
                 Button(
-                    onClick = { navController.navigate(Screen.Gacha.route) },
+                    onClick = { navController.navigate(Screen.MissionPreferences.route) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
-                    shape = MaterialTheme.shapes.large, // 16dp
+                    shape = MaterialTheme.shapes.large,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color.White,
-                        contentColor = PrimaryDark
+                        contentColor = PrimaryBlue
                     )
                 ) {
                     Text(
@@ -177,29 +171,115 @@ private fun HomeHeader() {
 }
 
 /**
+ * --- BARU: Kartu untuk ringkasan statistik pengguna ---
+ */
+@Composable
+private fun StatsSummaryCard() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 25.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(15.dp)
+    ) {
+        StatItem(
+            icon = Icons.Default.CardGiftcard,
+            value = "12",
+            label = "Misi Selesai",
+            modifier = Modifier.weight(1f)
+        )
+        StatItem(
+            icon = Icons.Default.Route,
+            value = "8.4 km",
+            label = "Jarak Tempuh",
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun StatItem(icon: androidx.compose.ui.graphics.vector.ImageVector, value: String, label: String, modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier,
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(15.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = PrimaryBlue,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Column {
+                Text(text = value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(text = label, style = MaterialTheme.typography.bodySmall, color = LightBlue)
+            }
+        }
+    }
+}
+
+/**
+ * --- BARU: Kartu untuk menampilkan misi terakhir yang diselesaikan ---
+ */
+@Composable
+private fun LastMissionCard() {
+    Column(modifier = Modifier.padding(horizontal = 25.dp, vertical = 10.dp)) {
+        Text(
+            text = "Misi Terakhir Kamu",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(15.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AsyncImage(
+                    model = "https://images.unsplash.com/photo-1593538465345-31381b45f492?q=80&w=1964&auto=format&fit=crop",
+                    contentDescription = "Misi Terakhir",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(50.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                )
+                Spacer(modifier = Modifier.width(15.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = "Cicipi Teh Talua Otentik", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(text = "2 hari yang lalu", style = MaterialTheme.typography.bodyMedium, color = LightBlue)
+                }
+            }
+        }
+    }
+}
+
+/**
  * Composable pribadi untuk daftar Misi Pilihan (scroll horizontal)
  */
 @Composable
 private fun MissionChoiceRow() {
     LazyRow(
         contentPadding = PaddingValues(horizontal = 25.dp),
-        horizontalArrangement = Arrangement.spacedBy(15.dp) // Jarak antar kartu
+        horizontalArrangement = Arrangement.spacedBy(15.dp)
     ) {
         item {
             MissionChoiceCard(
-                imageUrl = "https://i.ibb.co/JqDBLbf/placeholder-art.jpg",
+                imageUrl = "https://images.unsplash.com/photo-1511895426328-8727b6205733?q=80&w=1887&auto=format&fit=crop",
                 title = "Jelajahi Pameran Seni"
             )
         }
         item {
             MissionChoiceCard(
-                imageUrl = "https://i.ibb.co/mHjkfJ6/placeholder-tea.jpg",
-                title = "Cicipi Teh Talua Otentik"
-            )
-        }
-        item {
-            MissionChoiceCard(
-                imageUrl = "https://i.ibb.co/kH0C3bV/placeholder-bookstore.jpg",
+                imageUrl = "https://images.unsplash.com/photo-1550399105-c4db5fb85c18?q=80&w=2071&auto=format&fit=crop",
                 title = "Temukan Buku Langka"
             )
         }
@@ -212,12 +292,11 @@ private fun MissionChoiceRow() {
 @Composable
 private fun MissionChoiceCard(imageUrl: String, title: String) {
     Card(
-        modifier = Modifier.width(160.dp), // Lebar kartu
-        shape = MaterialTheme.shapes.large, // 16dp
+        modifier = Modifier.width(160.dp),
+        shape = MaterialTheme.shapes.large,
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {
-            // Gambar
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
                     .data(imageUrl)
@@ -229,7 +308,6 @@ private fun MissionChoiceCard(imageUrl: String, title: String) {
                     .fillMaxWidth()
                     .height(100.dp)
             )
-            // Judul
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium,
@@ -239,3 +317,4 @@ private fun MissionChoiceCard(imageUrl: String, title: String) {
         }
     }
 }
+

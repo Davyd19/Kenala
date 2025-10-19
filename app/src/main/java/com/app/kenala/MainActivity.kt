@@ -1,15 +1,17 @@
-package com.app.kenala // Pastikan package name ini sesuai
+package com.app.kenala
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.compose.rememberNavController
 import com.app.kenala.navigation.AppNavGraph
 import com.app.kenala.ui.theme.KenalaTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
 
         // 1. Mengaktifkan mode Edge-to-Edge (layar penuh)

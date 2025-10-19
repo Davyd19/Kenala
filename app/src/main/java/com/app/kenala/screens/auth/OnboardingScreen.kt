@@ -1,115 +1,90 @@
-package com.app.kenala.screens.auth // Pastikan ini ada di dalam package auth
+package com.app.kenala.screens.auth
 
-import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
-import com.app.kenala.ui.theme.PrimaryColor
-import com.app.kenala.ui.theme.PrimaryDark
-import androidx.compose.ui.unit.sp
+import com.app.kenala.R
+import com.app.kenala.ui.theme.BrightBlue
+import com.app.kenala.ui.theme.LightBlue
+import com.app.kenala.ui.theme.PrimaryBlue
 
-/**
- * Layar Onboarding (Selamat Datang)
- * Sesuai dengan Tampilan 1 di prototipe profesional.
- */
 @Composable
 fun OnboardingScreen(
-    onGetStartedClick: () -> Unit // Parameter untuk navigasi
+    onNavigateToLogin: () -> Unit
 ) {
-    Box(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        // 1. Gambar Latar Belakang (dari prototipe)
-        AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data("https://i.ibb.co/L5hY5M2/placeholder-nature.jpg")
-                .crossfade(true)
-                .build(),
-            contentDescription = "Background Alam",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
-
-        // 2. Gradien Gelap di Bagian Bawah
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            PrimaryDark.copy(alpha = 0.8f),
-                            PrimaryDark
-                        ),
-                        startY = 600f // Mulai gradien dari sekitar 60% layar
-                    )
-                )
-        )
-
-        // 3. Konten Teks dan Tombol
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 25.dp, vertical = 40.dp),
-            verticalArrangement = Arrangement.Bottom // Taruh konten di bawah
+                .padding(innerPadding)
+                .padding(top = 80.dp, bottom = 40.dp, start = 32.dp, end = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            // Arrangement ini akan mendorong konten pertama ke atas dan konten terakhir ke bawah
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Judul
-            Text(
-                text = "Temukan Kejutan di Kotamu",
-                style = MaterialTheme.typography.displaySmall,
-                color = Color.White,
-                fontWeight = FontWeight.Bold
-            )
+            // Konten utama (logo dan teks)
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.logo_kenala1),
+                    contentDescription = "Logo Kenala",
+                    modifier = Modifier.size(150.dp)
+                )
+                Text(
+                    text = "Temukan Petualangan Baru!",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    textAlign = TextAlign.Center
+                )
+                Text(
+                    text = "Biarkan Kenala mengejutkanmu dengan perjalanan tak terlupakan.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = LightBlue,
+                    textAlign = TextAlign.Center
+                )
+            }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Deskripsi
-            Text(
-                text = "Bosan dengan rutinitas? Dapatkan misi acak ke tempat-tempat tersembunyi yang menantimu.",
-                style = MaterialTheme.typography.bodyLarge,
-                color = Color.White.copy(alpha = 0.8f),
-                lineHeight = 24.sp
-            )
-
-            Spacer(modifier = Modifier.height(30.dp))
-
-            // Tombol Aksi
+            // Tombol akan secara otomatis didorong ke bawah
             Button(
-                onClick = onGetStartedClick, // Panggil fungsi navigasi
+                onClick = onNavigateToLogin,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
-                shape = MaterialTheme.shapes.large, // 16.dp
+                shape = MaterialTheme.shapes.large,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.White,
-                    contentColor = PrimaryColor
+                    containerColor = PrimaryBlue,
+                    contentColor = BrightBlue
                 )
             ) {
                 Text(
-                    text = "Mulai Petualangan",
+                    text = "Mulai",
                     style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.Bold
                 )
             }
         }
     }
 }
+

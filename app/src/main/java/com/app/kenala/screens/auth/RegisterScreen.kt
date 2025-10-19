@@ -15,18 +15,18 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.app.kenala.ui.theme.LightBlue
 import com.app.kenala.ui.theme.PrimaryBlue
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoginScreen(
-    onLoginClick: () -> Unit,
-    onNavigateToRegister: () -> Unit,
+fun RegisterScreen(
+    onRegisterClick: () -> Unit,
+    onNavigateToLogin: () -> Unit,
     onNavigateBack: () -> Unit
 ) {
+    var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
@@ -57,17 +57,27 @@ fun LoginScreen(
                 .padding(horizontal = 32.dp),
         ) {
             Text(
-                text = "Selamat Datang Kembali!",
+                text = "Buat Akun",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "Masuk ke akun Anda untuk melanjutkan.",
+                text = "Mulai perjalanan petualanganmu bersama Kenala.",
                 style = MaterialTheme.typography.bodyLarge,
                 color = LightBlue
             )
 
             Spacer(modifier = Modifier.height(32.dp))
+
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Nama Lengkap") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             OutlinedTextField(
                 value = email,
@@ -96,25 +106,16 @@ fun LoginScreen(
                 }
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            TextButton(
-                onClick = { /* TODO: Handle Lupa Password */ },
-                modifier = Modifier.align(Alignment.End)
-            ) {
-                Text("Lupa Password?", color = PrimaryBlue, fontWeight = FontWeight.SemiBold)
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
             Button(
-                onClick = onLoginClick,
+                onClick = onRegisterClick,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
                 shape = MaterialTheme.shapes.large
             ) {
-                Text("Masuk", fontWeight = FontWeight.Bold)
+                Text("Daftar", fontWeight = FontWeight.Bold)
             }
 
             Spacer(modifier = Modifier.weight(1f))
@@ -126,10 +127,10 @@ fun LoginScreen(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Belum punya akun? ", color = LightBlue)
+                Text("Sudah punya akun? ", color = LightBlue)
                 ClickableText(
-                    text = AnnotatedString("Daftar"),
-                    onClick = { onNavigateToRegister() },
+                    text = AnnotatedString("Masuk"),
+                    onClick = { onNavigateToLogin() },
                     style = TextStyle(
                         color = PrimaryBlue,
                         fontWeight = FontWeight.Bold

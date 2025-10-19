@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.app.kenala.ui.theme.BrightBlue
 import com.app.kenala.ui.theme.PrimaryBlue
+import com.app.kenala.ui.theme.WhiteColor
 
 /**
  * Layar untuk menulis entri jurnal baru setelah menyelesaikan misi.
@@ -116,7 +117,7 @@ fun JournalEntryScreen(
                 shape = MaterialTheme.shapes.large,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = PrimaryBlue,
-                    contentColor = BrightBlue
+                    contentColor = WhiteColor
                 )
             ) {
                 Text(

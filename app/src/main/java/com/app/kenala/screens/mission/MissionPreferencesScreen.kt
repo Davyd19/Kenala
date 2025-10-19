@@ -39,6 +39,7 @@ import com.app.kenala.ui.theme.BrightBlue
 import com.app.kenala.ui.theme.LightBlue
 import com.app.kenala.ui.theme.PrimaryBlue
 import com.app.kenala.ui.theme.PrimaryDark
+import com.app.kenala.ui.theme.WhiteColor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -107,7 +108,7 @@ fun MissionPreferencesScreen(
                 shape = MaterialTheme.shapes.large,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = PrimaryBlue,
-                    contentColor = BrightBlue
+                    contentColor = WhiteColor
                 )
             ) {
                 Icon(Icons.Default.Search, contentDescription = null)

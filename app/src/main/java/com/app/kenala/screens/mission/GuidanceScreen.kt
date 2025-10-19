@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.sp
 import com.app.kenala.ui.theme.BrightBlue
 import com.app.kenala.ui.theme.LightTextColor
 import com.app.kenala.ui.theme.PrimaryBlue
+import com.app.kenala.ui.theme.WhiteColor
 
 // --- Data Dummy Baru untuk Misi Multi-Langkah ---
 private data class MissionStep(
@@ -156,7 +157,7 @@ fun GuidanceScreen(
                         text = if (isLastStep) "SAYA SUDAH TIBA" else "LANGKAH BERIKUTNYA",
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Bold,
-                        color = BrightBlue
+                        color = WhiteColor
                     )
                 }
 

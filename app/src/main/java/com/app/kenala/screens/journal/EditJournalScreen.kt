@@ -35,6 +35,7 @@ import com.app.kenala.data.journalList
 import com.app.kenala.ui.theme.BrightBlue
 import com.app.kenala.ui.theme.LightTextColor
 import com.app.kenala.ui.theme.PrimaryBlue
+import com.app.kenala.ui.theme.WhiteColor
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -137,7 +138,7 @@ fun EditJournalScreen(
                 colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
                 shape = MaterialTheme.shapes.large
             ) {
-                Text("Simpan Perubahan", color = BrightBlue)
+                Text("Simpan Perubahan", color = WhiteColor)
             }
         }
     }

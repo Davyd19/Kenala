@@ -43,7 +43,9 @@ import com.app.kenala.ui.theme.SecondaryColor
 
 @Composable
 fun ProfileScreen(
-    onNavigateToStats: () -> Unit
+    onNavigateToStats: () -> Unit,
+    onNavigateToEditProfile: () -> Unit,
+    onNavigateToSettings: () -> Unit
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
@@ -61,7 +63,11 @@ fun ProfileScreen(
             )
             ProfileHeader()
             Spacer(modifier = Modifier.height(30.dp))
-            MenuCard(onNavigateToStats = onNavigateToStats)
+            MenuCard(
+                onNavigateToStats = onNavigateToStats,
+                onNavigateToEditProfile = onNavigateToEditProfile,
+                onNavigateToSettings = onNavigateToSettings
+            )
         }
     }
 }
@@ -102,7 +108,11 @@ private fun ProfileHeader() {
 }
 
 @Composable
-private fun MenuCard(onNavigateToStats: () -> Unit) {
+private fun MenuCard(
+    onNavigateToStats: () -> Unit,
+    onNavigateToEditProfile: () -> Unit,
+    onNavigateToSettings: () -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -117,7 +127,7 @@ private fun MenuCard(onNavigateToStats: () -> Unit) {
             MenuItem(
                 title = "Edit Profil",
                 icon = Icons.Filled.Edit,
-                onClick = { /* TODO: Navigasi ke EditProfileScreen */ }
+                onClick = onNavigateToEditProfile
             )
             Divider(color = BorderColor, modifier = Modifier.padding(horizontal = 20.dp))
             // Menu baru untuk Statistik
@@ -130,7 +140,7 @@ private fun MenuCard(onNavigateToStats: () -> Unit) {
             MenuItem(
                 title = "Pengaturan Akun",
                 icon = Icons.Filled.Settings,
-                onClick = { /* TODO: Navigasi ke SettingsScreen */ }
+                onClick = onNavigateToSettings
             )
         }
     }

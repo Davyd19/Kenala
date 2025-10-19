@@ -113,9 +113,17 @@ private fun MainNavGraph(mainNavController: NavHostController, appNavController:
             })
         }
         composable(Screen.Profile.route) {
-            ProfileScreen(onNavigateToStats = {
-                appNavController.navigate(Screen.Statistics.route)
-            })
+            ProfileScreen(
+                onNavigateToStats = {
+                    appNavController.navigate(Screen.Statistics.route)
+                },
+                onNavigateToEditProfile = {
+                    appNavController.navigate(Screen.EditProfile.route)
+                },
+                onNavigateToSettings = {
+                    appNavController.navigate(Screen.Settings.route)
+            }
+            )
         }
     }
 }

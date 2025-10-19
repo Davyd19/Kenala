@@ -17,7 +17,9 @@ import com.app.kenala.screens.mission.GachaScreen
 import com.app.kenala.screens.mission.GuidanceScreen
 import com.app.kenala.screens.mission.MissionPreferencesScreen
 import com.app.kenala.screens.notifications.NotificationsCenterScreen
+import com.app.kenala.screens.profile.EditProfileScreen
 import com.app.kenala.screens.stats.StatisticsScreen
+import com.app.kenala.screens.profile.SettingsScreen
 
 @Composable
 fun AppNavGraph(navController: NavHostController) {
@@ -159,6 +161,17 @@ fun AppNavGraph(navController: NavHostController) {
         // ======== NOTIFICATIONS ========
         composable(route = Screen.Notifications.route) {
             NotificationsCenterScreen(onBackClick = { navController.popBackStack() })
+        }
+
+        composable(route = Screen.EditProfile.route) {
+            EditProfileScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable(Screen.Settings.route) {
+            SettingsScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
     }
 }

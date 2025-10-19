@@ -70,18 +70,6 @@ fun AppNavGraph(navController: NavHostController) {
             )
         }
 
-        // Rute untuk Layar Gacha (Pencarian Misi)
-        composable(route = Screen.Gacha.route) {
-            GachaScreen(
-                onMissionFound = {
-                    // Pergi ke Layar Petunjuk & hapus Gacha dari tumpukan
-                    navController.navigate(Screen.Guidance.route) {
-                        popUpTo(Screen.Gacha.route) { inclusive = true }
-                    }
-                }
-            )
-        }
-
         // Rute untuk Layar Panduan Misi
         composable(route = Screen.Guidance.route) {
             GuidanceScreen(

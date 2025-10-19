@@ -1,4 +1,4 @@
-package com.app.kenala.screens.main // Pastikan ini ada di dalam package main
+package com.app.kenala.screens.main
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -28,23 +28,15 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.app.kenala.navigation.Screen
 
-/**
- * Layar Utama yang menampung Bottom Navigation Bar dan NavHost
- * untuk layar-layar utama (Home, History, Profile).
- */
 @Composable
 fun MainScreen(navController: NavHostController) {
-    // 1. Buat NavController BARU khusus untuk navigasi bawah
     val mainNavController = rememberNavController()
 
     Scaffold(
-        // 2. Tampilkan navigasi bawah
         bottomBar = {
             KenalaBottomNav(navController = mainNavController)
         }
     ) { innerPadding ->
-        // 3. Tampilkan "panggung" untuk layar-layar utama
-        //    di dalam padding yang diberikan oleh Scaffold
         MainNavGraph(
             mainNavController = mainNavController,
             appNavController = navController,
@@ -53,12 +45,9 @@ fun MainScreen(navController: NavHostController) {
     }
 }
 
-/**
- * Composable pribadi yang mendefinisikan tampilan Bottom Navigation Bar.
- */
 @Composable
 private fun KenalaBottomNav(navController: NavHostController) {
-    // Daftar item-item navigasi
+    // ... (kode tidak berubah) ...
     val items = listOf(
         BottomNavItem.Home,
         BottomNavItem.History,
@@ -66,8 +55,8 @@ private fun KenalaBottomNav(navController: NavHostController) {
     )
 
     NavigationBar(
-        containerColor = MaterialTheme.colorScheme.surface, // Putih (CardBackgroundColor)
-        contentColor = MaterialTheme.colorScheme.onSurfaceVariant // Abu-abu (LightTextColor)
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
     ) {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentDestination = navBackStackEntry?.destination
@@ -86,13 +75,10 @@ private fun KenalaBottomNav(navController: NavHostController) {
                 selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
                 onClick = {
                     navController.navigate(screen.route) {
-                        // Selalu kembali ke Home jika tombol back ditekan
                         popUpTo(navController.graph.findStartDestination().id) {
                             saveState = true
                         }
-                        // Hindari duplikasi layar
                         launchSingleTop = true
-                        // Pulihkan state saat kembali
                         restoreState = true
                     }
                 },
@@ -101,61 +87,47 @@ private fun KenalaBottomNav(navController: NavHostController) {
                     selectedTextColor = MaterialTheme.colorScheme.primary,
                     unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    indicatorColor = MaterialTheme.colorScheme.surface // Hapus indikator
+                    indicatorColor = MaterialTheme.colorScheme.surface
                 )
             )
         }
     }
 }
 
-/**
- * Composable pribadi yang mendefinisikan NavGraph untuk layar-layar
- * yang ada di dalam MainScreen.
- */
 @Composable
 private fun MainNavGraph(mainNavController: NavHostController, appNavController: NavHostController, modifier: Modifier = Modifier) {
     NavHost(
         navController = mainNavController,
-        startDestination = Screen.Home.route, // Mulai dari Home
+        startDestination = Screen.Home.route,
         modifier = modifier
     ) {
         composable(Screen.Home.route) {
-            HomeScreen(navController = appNavController)
+            HomeScreen(
+                navController = appNavController,
+                onNavigateToNotifications = { appNavController.navigate(Screen.Notifications.route) }
+            )
         }
         composable(Screen.History.route) {
-            HistoryScreen() // INI AKAN ERROR (NORMAL)
+            HistoryScreen(onJournalClick = { journalId ->
+                appNavController.navigate("${Screen.JournalDetail.route}/$journalId")
+            })
         }
         composable(Screen.Profile.route) {
-            ProfileScreen() // INI AKAN ERROR (NORMAL)
+            ProfileScreen(onNavigateToStats = {
+                appNavController.navigate(Screen.Statistics.route)
+            })
         }
     }
 }
 
-/**
- * Data class pribadi untuk merepresentasikan item di navigasi bawah.
- */
 private sealed class BottomNavItem(
     val title: String,
     val route: String,
     val filledIcon: ImageVector,
     val outlinedIcon: ImageVector
 ) {
-    object Home : BottomNavItem(
-        title = "Home",
-        route = Screen.Home.route,
-        filledIcon = Icons.Filled.Home,
-        outlinedIcon = Icons.Outlined.Home
-    )
-    object History : BottomNavItem(
-        title = "Riwayat",
-        route = Screen.History.route,
-        filledIcon = Icons.Filled.Book,
-        outlinedIcon = Icons.Outlined.Book
-    )
-    object Profile : BottomNavItem(
-        title = "Profil",
-        route = Screen.Profile.route,
-        filledIcon = Icons.Filled.Person,
-        outlinedIcon = Icons.Outlined.Person
-    )
+    object Home : BottomNavItem("Home", Screen.Home.route, Icons.Filled.Home, Icons.Outlined.Home)
+    object History : BottomNavItem("Riwayat", Screen.History.route, Icons.Filled.Book, Icons.Outlined.Book)
+    object Profile : BottomNavItem("Profil", Screen.Profile.route, Icons.Filled.Person, Icons.Outlined.Person)
 }
+

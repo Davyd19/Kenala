@@ -24,6 +24,7 @@ import com.app.kenala.R
 import com.app.kenala.ui.theme.BrightBlue
 import com.app.kenala.ui.theme.LightBlue
 import com.app.kenala.ui.theme.PrimaryBlue
+import com.app.kenala.ui.theme.WhiteColor
 
 @Composable
 fun OnboardingScreen(
@@ -75,7 +76,7 @@ fun OnboardingScreen(
                 shape = MaterialTheme.shapes.large,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = PrimaryBlue,
-                    contentColor = BrightBlue
+                    contentColor = WhiteColor
                 )
             ) {
                 Text(

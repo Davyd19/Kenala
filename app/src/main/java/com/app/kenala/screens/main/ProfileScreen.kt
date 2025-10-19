@@ -1,4 +1,4 @@
-package com.app.kenala.screens.main // Pastikan ini ada di dalam package main
+package com.app.kenala.screens.main
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -37,15 +37,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.app.kenala.ui.theme.AccentBlue
 import com.app.kenala.ui.theme.BorderColor
-import com.app.kenala.ui.theme.LightBlue
+import com.app.kenala.ui.theme.LightTextColor
 import com.app.kenala.ui.theme.PrimaryBlue
+import com.app.kenala.ui.theme.SecondaryColor
 
-/**
- * Layar Profile
- * Sesuai dengan Tampilan 8 di prototipe profesional.
- */
 @Composable
-fun ProfileScreen() {
+fun ProfileScreen(
+    onNavigateToStats: () -> Unit
+) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
@@ -54,29 +53,19 @@ fun ProfileScreen() {
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // Judul Halaman
             Text(
                 text = "Profil & Pencapaian",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(start = 25.dp, top = 20.dp),
-                color = MaterialTheme.colorScheme.onBackground
+                modifier = Modifier.padding(start = 25.dp, top = 20.dp)
             )
-
-            // Header Profil (Avatar & Nama)
             ProfileHeader()
-
             Spacer(modifier = Modifier.height(30.dp))
-
-            // Daftar Menu
-            MenuCard()
+            MenuCard(onNavigateToStats = onNavigateToStats)
         }
     }
 }
 
-/**
- * Composable pribadi untuk header profil (Avatar, Nama)
- */
 @Composable
 private fun ProfileHeader() {
     Column(
@@ -85,21 +74,20 @@ private fun ProfileHeader() {
             .padding(top = 30.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Avatar dengan gradien baru
         Box(
             modifier = Modifier
                 .size(100.dp)
                 .clip(CircleShape)
                 .background(
                     Brush.linearGradient(
-                        colors = listOf(PrimaryBlue, AccentBlue) // Gradien yang konsisten
+                        colors = listOf(PrimaryBlue, AccentBlue)
                     )
                 ),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = "N",
-                style = MaterialTheme.typography.displayMedium, // 45px
+                style = MaterialTheme.typography.displayMedium,
                 fontWeight = FontWeight.Bold,
                 color = Color.White
             )
@@ -107,25 +95,21 @@ private fun ProfileHeader() {
         Spacer(modifier = Modifier.height(15.dp))
         Text(
             text = "Nayla Nurul Afifah",
-            style = MaterialTheme.typography.titleLarge, // 22px
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
         )
     }
 }
 
-/**
- * Composable pribadi untuk kartu yang berisi menu
- */
 @Composable
-private fun MenuCard() {
+private fun MenuCard(onNavigateToStats: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 25.dp),
-        shape = MaterialTheme.shapes.large, // 16dp
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface // Putih
+            containerColor = MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -136,10 +120,11 @@ private fun MenuCard() {
                 onClick = { /* TODO: Navigasi ke EditProfileScreen */ }
             )
             Divider(color = BorderColor, modifier = Modifier.padding(horizontal = 20.dp))
+            // Menu baru untuk Statistik
             MenuItem(
-                title = "Papan Peringkat",
+                title = "Statistik & Pencapaian",
                 icon = Icons.Filled.Leaderboard,
-                onClick = { /* TODO: Navigasi ke LeaderboardScreen */ }
+                onClick = onNavigateToStats
             )
             Divider(color = BorderColor, modifier = Modifier.padding(horizontal = 20.dp))
             MenuItem(
@@ -151,15 +136,12 @@ private fun MenuCard() {
     }
 }
 
-/**
- * Composable pribadi untuk satu baris item menu
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MenuItem(title: String, icon: ImageVector, onClick: () -> Unit) {
-    Card( // Kita gunakan Card agar bisa merespon klik
+    Card(
         onClick = onClick,
-        shape = MaterialTheme.shapes.extraSmall, // 0dp
+        shape = MaterialTheme.shapes.extraSmall,
         colors = CardDefaults.cardColors(
             containerColor = Color.Transparent
         )
@@ -175,22 +157,23 @@ private fun MenuItem(title: String, icon: ImageVector, onClick: () -> Unit) {
                 Icon(
                     imageVector = icon,
                     contentDescription = title,
-                    tint = PrimaryBlue, // Warna ikon baru yang lebih menarik
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(15.dp))
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.bodyLarge, // 16px
+                    style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold
                 )
             }
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = "Panah",
-                tint = LightBlue, // Warna panah yang lebih lembut
+                tint = LightTextColor,
                 modifier = Modifier.size(20.dp)
             )
         }
     }
 }
+

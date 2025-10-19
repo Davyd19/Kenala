@@ -7,6 +7,7 @@ sealed class Screen(val route: String) {
     object Login : Screen("login_screen")
     object Register : Screen("register_screen")
 
+
     // --- Alur Utama (Setelah Login) ---
     object Main : Screen("main_screen")
 
@@ -19,10 +20,16 @@ sealed class Screen(val route: String) {
     object MissionPreferences : Screen("mission_preferences_screen")
     object Gacha : Screen("gacha_screen")
     object Guidance : Screen("guidance_screen")
-    object Arrival : Screen("arrival_screen")
-    object Journal : Screen("journal_screen")
 
-    // --- Alur Profil ---
-    object Settings : Screen("settings_screen")
+    // --- Alur Jurnal ---
+    object JournalEntry : Screen("journal_entry_screen")
+    object JournalDetail : Screen("journal_detail_screen")
+    object EditJournal : Screen("edit_journal_screen")
+
+    // --- Alur Statistik ---
+    object Statistics : Screen("statistics_screen")
+
+    // --- Alur Notifikasi ---
+    object Notifications : Screen("notifications_screen")
 }
 

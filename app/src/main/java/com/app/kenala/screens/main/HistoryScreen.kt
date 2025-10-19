@@ -43,21 +43,21 @@ private val journalList = listOf(
         title = "Secangkir Ketenangan di Kopi Seroja",
         date = "15 Okt 2025",
         snippet = "Menemukan kedai kopi tersembunyi ini adalah sebuah anugerah. Suasananya tenang, kopinya nikmat, dan aku bisa membaca buku selama berjam-jam tanpa gangguan...",
-        imageUrl = "https://i.ibb.co/6PpHx5t/placeholder-cafe.jpg"
+        imageUrl = "https://images.pexels.com/photos/312418/pexels-photo-312418.jpeg"
     ),
     JournalHistory(
         id = 2,
         title = "Pameran Seni Kontemporer 'Ruang Hening'",
         date = "11 Okt 2025",
         snippet = "Tidak menyangka ada galeri seni sekecil ini di tengah kota. Lukisan-lukisannya sangat menyentuh dan membuatku berpikir tentang banyak hal.",
-        imageUrl = "https://i.ibb.co/JqDBLbf/placeholder-art.jpg"
+        imageUrl = "https://images.pexels.com/photos/1025804/pexels-photo-1025804.jpeg"
     ),
     JournalHistory(
         id = 3,
         title = "Menyatu dengan Alam di Hutan Kota",
         date = "05 Okt 2025",
         snippet = "Udara segar dan suara alam di sini benar-benar menyegarkan. Tempat yang sempurna untuk lari pagi atau sekadar berjalan-jalan santai di akhir pekan.",
-        imageUrl = "https://i.ibb.co/L5hY5M2/placeholder-nature.jpg"
+        imageUrl = "https://images.pexels.com/photos/167699/pexels-photo-167699.jpeg"
     )
 )
 

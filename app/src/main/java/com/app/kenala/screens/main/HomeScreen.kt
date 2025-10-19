@@ -52,10 +52,10 @@ import com.app.kenala.ui.theme.PrimaryDark
 // --- Data Dummy Baru untuk Fitur Home Screen ---
 private data class InspirationCategory(val title: String, val imageUrl: String)
 private val inspirations = listOf(
-    InspirationCategory("Kuliner Tersembunyi", "https://i.ibb.co/6PpHx5t/placeholder-cafe.jpg"),
-    InspirationCategory("Seni & Budaya", "https://i.ibb.co/JqDBLbf/placeholder-art.jpg"),
-    InspirationCategory("Alam Kota", "https://i.ibb.co/L5hY5M2/placeholder-nature.jpg"),
-    InspirationCategory("Belanja Unik", "https://i.ibb.co/kH0C3bV/placeholder-bookstore.jpg")
+    InspirationCategory("Kuliner Tersembunyi", "https://images.pexels.com/photos/1267696/pexels-photo-1267696.jpeg"),
+    InspirationCategory("Seni & Budaya", "https://images.pexels.com/photos/269923/pexels-photo-269923.jpeg"),
+    InspirationCategory("Alam Kota", "https://images.pexels.com/photos/459225/pexels-photo-459225.jpeg"),
+    InspirationCategory("Belanja Unik", "https://images.pexels.com/photos/1106468/pexels-photo-1106468.jpeg")
 )
 
 @Composable

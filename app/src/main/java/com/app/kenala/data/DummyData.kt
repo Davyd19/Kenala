@@ -16,20 +16,20 @@ val journalList = listOf(
         title = "Secangkir Ketenangan di Kopi Seroja",
         date = "15 Okt 2025",
         story = "Menemukan kedai kopi tersembunyi ini adalah sebuah anugerah. Suasananya tenang, kopinya nikmat, dan aku bisa membaca buku selama berjam-jam tanpa gangguan. Dinding bata ekspos dan aroma biji kopi yang baru digiling menciptakan suasana yang sangat nyaman. Ini adalah tempat yang akan sering aku kunjungi untuk melarikan diri dari hiruk pikuk kota.",
-        imageUrl = "https://i.ibb.co/6PpHx5t/placeholder-cafe.jpg"
+        imageUrl = "https://images.pexels.com/photos/312418/pexels-photo-312418.jpeg"
     ),
     Journal(
         id = 2,
         title = "Pameran Seni Kontemporer 'Ruang Hening'",
         date = "11 Okt 2025",
         story = "Tidak menyangka ada galeri seni sekecil ini di tengah kota. Lukisan-lukisannya sangat menyentuh dan membuatku berpikir tentang banyak hal. Setiap karya seolah bercerita tentang keresahan dan harapan. Aku menghabiskan waktu hampir dua jam di sini, merenungi setiap detail. Pengalaman yang sangat introspektif.",
-        imageUrl = "https://i.ibb.co/JqDBLbf/placeholder-art.jpg"
+        imageUrl = "https://images.pexels.com/photos/1025804/pexels-photo-1025804.jpeg"
     ),
     Journal(
         id = 3,
         title = "Menyatu dengan Alam di Hutan Kota",
         date = "05 Okt 2025",
         story = "Udara segar dan suara alam di sini benar-benar menyegarkan. Tempat yang sempurna untuk lari pagi atau sekadar berjalan-jalan santai di akhir pekan. Aku mengikuti jalur setapak hingga ke puncak bukit kecil dan pemandangan kota dari atas sana sungguh luar biasa. Rasanya semua beban pikiran hilang seketika.",
-        imageUrl = "https://i.ibb.co/L5hY5M2/placeholder-nature.jpg"
+        imageUrl = "https://images.pexels.com/photos/167699/pexels-photo-167699.jpeg"
     )
 )

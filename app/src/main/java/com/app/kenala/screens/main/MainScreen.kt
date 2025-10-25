@@ -29,10 +29,6 @@ import androidx.navigation.compose.rememberNavController
 import com.app.kenala.navigation.Screen
 import com.app.kenala.ui.theme.*
 
-// IMPORTANT: Pastikan file HomeScreen.kt, HistoryScreen.kt, dan ProfileScreen.kt
-// sudah ada di package yang sama (com.app.kenala.screens.main)
-// Jika tidak, Anda perlu membuat atau memindahkan file-file tersebut
-
 @Composable
 fun MainScreen(navController: NavHostController) {
     val mainNavController = rememberNavController()
@@ -188,6 +184,18 @@ private fun MainNavGraph(
                 },
                 onNavigateToSettings = {
                     appNavController.navigate(Screen.Settings.route)
+                },
+                onNavigateToStreak = {
+                    appNavController.navigate(Screen.DailyStreak.route)
+                },
+                onNavigateToBadges = {
+                    appNavController.navigate(Screen.BadgeCollection.route)
+                },
+                onNavigateToDetailedStats = {
+                    appNavController.navigate(Screen.DetailedStats.route)
+                },
+                onNavigateToSuggestions = {
+                    appNavController.navigate(Screen.AdventureSuggestion.route)
                 }
             )
         }

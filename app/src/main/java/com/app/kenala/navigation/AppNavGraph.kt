@@ -19,6 +19,10 @@ import com.app.kenala.screens.mission.MissionPreferencesScreen
 import com.app.kenala.screens.notifications.NotificationsCenterScreen
 import com.app.kenala.screens.profile.EditProfileScreen
 import com.app.kenala.screens.profile.SettingsScreen
+import com.app.kenala.screens.profile.DailyStreakScreen
+import com.app.kenala.screens.profile.BadgeCollectionScreen
+import com.app.kenala.screens.profile.DetailedStatsScreen
+import com.app.kenala.screens.profile.AdventureSuggestionScreen
 import com.app.kenala.screens.stats.StatisticsScreen
 
 @Composable
@@ -163,6 +167,7 @@ fun AppNavGraph(navController: NavHostController) {
             NotificationsCenterScreen(onBackClick = { navController.popBackStack() })
         }
 
+        // ======== PROFILE SCREENS ========
         composable(Screen.EditProfile.route) {
             EditProfileScreen(
                 onNavigateBack = { navController.popBackStack() }
@@ -171,6 +176,31 @@ fun AppNavGraph(navController: NavHostController) {
 
         composable(Screen.Settings.route) {
             SettingsScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        // ======== NEW: PROFILE FEATURES ========
+        composable(Screen.DailyStreak.route) {
+            DailyStreakScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.BadgeCollection.route) {
+            BadgeCollectionScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.DetailedStats.route) {
+            DetailedStatsScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.AdventureSuggestion.route) {
+            AdventureSuggestionScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
         }

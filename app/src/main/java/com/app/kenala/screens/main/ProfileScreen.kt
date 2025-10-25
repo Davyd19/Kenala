@@ -2,12 +2,10 @@ package com.app.kenala.screens.main
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Leaderboard
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -24,29 +22,126 @@ import com.app.kenala.ui.theme.*
 fun ProfileScreen(
     onNavigateToStats: () -> Unit,
     onNavigateToEditProfile: () -> Unit,
-    onNavigateToSettings: () -> Unit
+    onNavigateToSettings: () -> Unit,
+    onNavigateToStreak: () -> Unit,
+    onNavigateToBadges: () -> Unit,
+    onNavigateToDetailedStats: () -> Unit,
+    onNavigateToSuggestions: () -> Unit
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            Text(
-                text = "Profil & Pencapaian",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(start = 25.dp, top = 20.dp)
-            )
-            ProfileHeader()
-            Spacer(modifier = Modifier.height(30.dp))
-            MenuCard(
-                onNavigateToStats = onNavigateToStats,
-                onNavigateToEditProfile = onNavigateToEditProfile,
-                onNavigateToSettings = onNavigateToSettings
-            )
+            item {
+                Text(
+                    text = "Profil & Pencapaian",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(start = 25.dp, top = 20.dp)
+                )
+            }
+            item { ProfileHeader() }
+            item { Spacer(modifier = Modifier.height(24.dp)) }
+
+            // Activity Section
+            item {
+                Text(
+                    text = "Aktivitas",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 25.dp, vertical = 8.dp)
+                )
+            }
+            item {
+                MenuCard {
+                    MenuItem(
+                        title = "Streak Harian",
+                        subtitle = "7 hari berturut-turut",
+                        icon = Icons.Filled.LocalFireDepartment,
+                        onClick = onNavigateToStreak
+                    )
+                    HorizontalDivider(
+                        color = BorderColor,
+                        modifier = Modifier.padding(horizontal = 20.dp)
+                    )
+                    MenuItem(
+                        title = "Koleksi Badge",
+                        subtitle = "4 dari 10 badge terbuka",
+                        icon = Icons.Filled.EmojiEvents,
+                        onClick = onNavigateToBadges
+                    )
+                    HorizontalDivider(
+                        color = BorderColor,
+                        modifier = Modifier.padding(horizontal = 20.dp)
+                    )
+                    MenuItem(
+                        title = "Statistik Detail",
+                        subtitle = "Lihat progres lengkap",
+                        icon = Icons.Filled.Analytics,
+                        onClick = onNavigateToDetailedStats
+                    )
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(16.dp)) }
+
+            // Contribution Section
+            item {
+                Text(
+                    text = "Kontribusi",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 25.dp, vertical = 8.dp)
+                )
+            }
+            item {
+                MenuCard {
+                    MenuItem(
+                        title = "Saran Lokasi",
+                        subtitle = "Usulkan tempat petualangan",
+                        icon = Icons.Filled.AddLocation,
+                        onClick = onNavigateToSuggestions
+                    )
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(16.dp)) }
+
+            // Account Section
+            item {
+                Text(
+                    text = "Akun",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 25.dp, vertical = 8.dp)
+                )
+            }
+            item {
+                MenuCard {
+                    MenuItem(
+                        title = "Edit Profil",
+                        subtitle = "Ubah informasi pribadi",
+                        icon = Icons.Filled.Edit,
+                        onClick = onNavigateToEditProfile
+                    )
+                    HorizontalDivider(
+                        color = BorderColor,
+                        modifier = Modifier.padding(horizontal = 20.dp)
+                    )
+                    MenuItem(
+                        title = "Pengaturan Akun",
+                        subtitle = "Preferensi & keamanan",
+                        icon = Icons.Filled.Settings,
+                        onClick = onNavigateToSettings
+                    )
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(32.dp)) }
         }
     }
 }
@@ -83,15 +178,16 @@ private fun ProfileHeader() {
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
+        Text(
+            text = "Level 5 • Petualang Lokal",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
 @Composable
-private fun MenuCard(
-    onNavigateToStats: () -> Unit,
-    onNavigateToEditProfile: () -> Unit,
-    onNavigateToSettings: () -> Unit
-) {
+private fun MenuCard(content: @Composable ColumnScope.() -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -103,36 +199,19 @@ private fun MenuCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {
-            MenuItem(
-                title = "Edit Profil",
-                icon = Icons.Filled.Edit,
-                onClick = onNavigateToEditProfile
-            )
-            HorizontalDivider(
-                color = BorderColor,
-                modifier = Modifier.padding(horizontal = 20.dp)
-            )
-            MenuItem(
-                title = "Statistik & Pencapaian",
-                icon = Icons.Filled.Leaderboard,
-                onClick = onNavigateToStats
-            )
-            HorizontalDivider(
-                color = BorderColor,
-                modifier = Modifier.padding(horizontal = 20.dp)
-            )
-            MenuItem(
-                title = "Pengaturan Akun",
-                icon = Icons.Filled.Settings,
-                onClick = onNavigateToSettings
-            )
+            content()
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MenuItem(title: String, icon: ImageVector, onClick: () -> Unit) {
+private fun MenuItem(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    onClick: () -> Unit
+) {
     Card(
         onClick = onClick,
         shape = MaterialTheme.shapes.extraSmall,
@@ -147,19 +226,28 @@ private fun MenuItem(title: String, icon: ImageVector, onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(15.dp)
+            ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = title,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(24.dp)
                 )
-                Spacer(modifier = Modifier.width(15.dp))
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Column {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
             Icon(
                 imageVector = Icons.Default.ChevronRight,

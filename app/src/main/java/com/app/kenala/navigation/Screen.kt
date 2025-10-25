@@ -33,5 +33,10 @@ sealed class Screen(val route: String) {
 
     // --- Alur Notifikasi ---
     object Notifications : Screen("notifications_screen")
-}
 
+    // --- NEW: Fitur Profil Tambahan ---
+    object DailyStreak : Screen("daily_streak_screen")
+    object BadgeCollection : Screen("badge_collection_screen")
+    object DetailedStats : Screen("detailed_stats_screen")
+    object AdventureSuggestion : Screen("adventure_suggestion_screen")
+}

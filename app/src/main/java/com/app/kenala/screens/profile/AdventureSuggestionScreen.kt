@@ -205,7 +205,7 @@ fun AdventureSuggestionScreen(onNavigateBack: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SuggestionCard(
+private fun SuggestionCard(
     suggestion: AdventureSuggestion,
     onClick: () -> Unit
 ) {
@@ -249,288 +249,288 @@ fun SuggestionCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    </Column>
-                    Spacer(modifier = Modifier.width(8.dp))
-                    StatusBadge(suggestion.status)
                 }
+                Spacer(modifier = Modifier.width(8.dp))
+                StatusBadge(suggestion.status)
+            }
 
-                Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
+            Text(
+                text = suggestion.description,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Icon(
+                    Icons.Default.CalendarToday,
+                    contentDescription = null,
+                    modifier = Modifier.size(12.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Text(
-                    text = suggestion.description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
+                    text = "Diusulkan ${suggestion.submittedDate}",
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Icon(
-                        Icons.Default.CalendarToday,
-                        contentDescription = null,
-                        modifier = Modifier.size(12.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "Diusulkan ${suggestion.submittedDate}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
             }
         }
     }
+}
 
-    @Composable
-    fun StatusBadge(status: SuggestionStatus) {
-        val (text, color) = when (status) {
-            SuggestionStatus.PENDING -> "Menunggu" to Color(0xFFF59E0B)
-            SuggestionStatus.APPROVED -> "Disetujui" to ForestGreen
-            SuggestionStatus.REJECTED -> "Ditolak" to ErrorColor
-        }
-
-        Surface(
-            color = color.copy(alpha = 0.12f),
-            shape = MaterialTheme.shapes.small
-        ) {
-            Text(
-                text = text,
-                style = MaterialTheme.typography.labelSmall,
-                color = color,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-            )
-        }
+@Composable
+private fun StatusBadge(status: SuggestionStatus) {
+    val (text, color) = when (status) {
+        SuggestionStatus.PENDING -> "Menunggu" to Color(0xFFF59E0B)
+        SuggestionStatus.APPROVED -> "Disetujui" to ForestGreen
+        SuggestionStatus.REJECTED -> "Ditolak" to ErrorColor
     }
 
-    @OptIn(ExperimentalMaterial3Api::class)
-    @Composable
-    fun AddSuggestionDialog(
-        onDismiss: () -> Unit,
-        onConfirm: (String, String, String) -> Unit
+    Surface(
+        color = color.copy(alpha = 0.12f),
+        shape = MaterialTheme.shapes.small
     ) {
-        var locationName by remember { mutableStateOf("") }
-        var selectedCategory by remember { mutableStateOf("Kuliner") }
-        var description by remember { mutableStateOf("") }
-        var showCategoryMenu by remember { mutableStateOf(false) }
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            color = color,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+        )
+    }
+}
 
-        val categories = listOf("Kuliner", "Rekreasi", "Seni & Budaya", "Sejarah", "Belanja", "Alam")
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AddSuggestionDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (String, String, String) -> Unit
+) {
+    var locationName by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf("Kuliner") }
+    var description by remember { mutableStateOf("") }
+    var showCategoryMenu by remember { mutableStateOf(false) }
 
-        AlertDialog(
-            onDismissRequest = onDismiss,
-            title = { Text("Usulkan Lokasi Baru") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    val categories = listOf("Kuliner", "Rekreasi", "Seni & Budaya", "Sejarah", "Belanja", "Alam")
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Usulkan Lokasi Baru") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                OutlinedTextField(
+                    value = locationName,
+                    onValueChange = { locationName = it },
+                    label = { Text("Nama Lokasi") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                ExposedDropdownMenuBox(
+                    expanded = showCategoryMenu,
+                    onExpandedChange = { showCategoryMenu = !showCategoryMenu }
+                ) {
                     OutlinedTextField(
-                        value = locationName,
-                        onValueChange = { locationName = it },
-                        label = { Text("Nama Lokasi") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        value = selectedCategory,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Kategori") },
+                        trailingIcon = {
+                            Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor()
                     )
-
-                    ExposedDropdownMenuBox(
+                    ExposedDropdownMenu(
                         expanded = showCategoryMenu,
-                        onExpandedChange = { showCategoryMenu = !showCategoryMenu }
+                        onDismissRequest = { showCategoryMenu = false }
                     ) {
-                        OutlinedTextField(
-                            value = selectedCategory,
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Kategori") },
-                            trailingIcon = {
-                                Icon(Icons.Default.ArrowDropDown, contentDescription = null)
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .menuAnchor()
-                        )
-                        ExposedDropdownMenu(
-                            expanded = showCategoryMenu,
-                            onDismissRequest = { showCategoryMenu = false }
-                        ) {
-                            categories.forEach { category ->
-                                DropdownMenuItem(
-                                    text = { Text(category) },
-                                    onClick = {
-                                        selectedCategory = category
-                                        showCategoryMenu = false
-                                    }
-                                )
-                            }
+                        categories.forEach { category ->
+                            DropdownMenuItem(
+                                text = { Text(category) },
+                                onClick = {
+                                    selectedCategory = category
+                                    showCategoryMenu = false
+                                }
+                            )
                         }
                     }
+                }
 
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("Deskripsi") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3,
+                    maxLines = 5
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (locationName.isNotBlank() && description.isNotBlank()) {
+                        onConfirm(locationName, selectedCategory, description)
+                    }
+                },
+                enabled = locationName.isNotBlank() && description.isNotBlank()
+            ) {
+                Text("Kirim")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Batal")
+            }
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SuggestionDetailDialog(
+    suggestion: AdventureSuggestion,
+    onDismiss: () -> Unit,
+    onEdit: (AdventureSuggestion) -> Unit,
+    onDelete: (Int) -> Unit
+) {
+    var isEditing by remember { mutableStateOf(false) }
+    var editedName by remember { mutableStateOf(suggestion.locationName) }
+    var editedDescription by remember { mutableStateOf(suggestion.description) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(if (isEditing) "Edit Saran" else "Detail Saran")
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (isEditing) {
                     OutlinedTextField(
-                        value = description,
-                        onValueChange = { description = it },
+                        value = editedName,
+                        onValueChange = { editedName = it },
+                        label = { Text("Nama Lokasi") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editedDescription,
+                        onValueChange = { editedDescription = it },
                         label = { Text("Deskripsi") },
                         modifier = Modifier.fillMaxWidth(),
-                        minLines = 3,
-                        maxLines = 5
+                        minLines = 3
                     )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (locationName.isNotBlank() && description.isNotBlank()) {
-                            onConfirm(locationName, selectedCategory, description)
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        StatusBadge(suggestion.status)
+                        Text(
+                            text = suggestion.locationName,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Category,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(suggestion.category, style = MaterialTheme.typography.bodySmall)
                         }
-                    },
-                    enabled = locationName.isNotBlank() && description.isNotBlank()
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = suggestion.description,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Diusulkan ${suggestion.submittedDate}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            if (isEditing) {
+                TextButton(
+                    onClick = {
+                        onEdit(
+                            suggestion.copy(
+                                locationName = editedName,
+                                description = editedDescription
+                            )
+                        )
+                    }
                 ) {
-                    Text("Kirim")
+                    Text("Simpan")
+                }
+            } else {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (suggestion.status == SuggestionStatus.PENDING) {
+                        IconButton(onClick = { isEditing = true }) {
+                            Icon(Icons.Default.Edit, contentDescription = "Edit")
+                        }
+                        IconButton(onClick = { showDeleteConfirm = true }) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = "Hapus",
+                                tint = ErrorColor
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = {
+                    if (isEditing) {
+                        isEditing = false
+                    } else {
+                        onDismiss()
+                    }
+                }
+            ) {
+                Text(if (isEditing) "Batal" else "Tutup")
+            }
+        }
+    )
+
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            icon = { Icon(Icons.Default.Warning, contentDescription = null) },
+            title = { Text("Hapus Saran?") },
+            text = { Text("Apakah Anda yakin ingin menghapus saran lokasi ini?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDelete(suggestion.id)
+                        showDeleteConfirm = false
+                    }
+                ) {
+                    Text("Hapus", color = ErrorColor)
                 }
             },
             dismissButton = {
-                TextButton(onClick = onDismiss) {
+                TextButton(onClick = { showDeleteConfirm = false }) {
                     Text("Batal")
                 }
             }
         )
     }
-
-    @OptIn(ExperimentalMaterial3Api::class)
-    @Composable
-    fun SuggestionDetailDialog(
-        suggestion: AdventureSuggestion,
-        onDismiss: () -> Unit,
-        onEdit: (AdventureSuggestion) -> Unit,
-        onDelete: (Int) -> Unit
-    ) {
-        var isEditing by remember { mutableStateOf(false) }
-        var editedName by remember { mutableStateOf(suggestion.locationName) }
-        var editedDescription by remember { mutableStateOf(suggestion.description) }
-        var showDeleteConfirm by remember { mutableStateOf(false) }
-
-        AlertDialog(
-            onDismissRequest = onDismiss,
-            title = {
-                Text(if (isEditing) "Edit Saran" else "Detail Saran")
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    if (isEditing) {
-                        OutlinedTextField(
-                            value = editedName,
-                            onValueChange = { editedName = it },
-                            label = { Text("Nama Lokasi") },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        OutlinedTextField(
-                            value = editedDescription,
-                            onValueChange = { editedDescription = it },
-                            label = { Text("Deskripsi") },
-                            modifier = Modifier.fillMaxWidth(),
-                            minLines = 3
-                        )
-                    } else {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            StatusBadge(suggestion.status)
-                            Text(
-                                text = suggestion.locationName,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.Category,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Text(suggestion.category, style = MaterialTheme.typography.bodySmall)
-                            }
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = suggestion.description,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "Diusulkan ${suggestion.submittedDate}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                if (isEditing) {
-                    TextButton(
-                        onClick = {
-                            onEdit(
-                                suggestion.copy(
-                                    locationName = editedName,
-                                    description = editedDescription
-                                )
-                            )
-                        }
-                    ) {
-                        Text("Simpan")
-                    }
-                } else {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (suggestion.status == SuggestionStatus.PENDING) {
-                            IconButton(onClick = { isEditing = true }) {
-                                Icon(Icons.Default.Edit, contentDescription = "Edit")
-                            }
-                            IconButton(onClick = { showDeleteConfirm = true }) {
-                                Icon(
-                                    Icons.Default.Delete,
-                                    contentDescription = "Hapus",
-                                    tint = ErrorColor
-                                )
-                            }
-                        }
-                    }
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        if (isEditing) {
-                            isEditing = false
-                        } else {
-                            onDismiss()
-                        }
-                    }
-                ) {
-                    Text(if (isEditing) "Batal" else "Tutup")
-                }
-            }
-        )
-
-        if (showDeleteConfirm) {
-            AlertDialog(
-                onDismissRequest = { showDeleteConfirm = false },
-                icon = { Icon(Icons.Default.Warning, contentDescription = null) },
-                title = { Text("Hapus Saran?") },
-                text = { Text("Apakah Anda yakin ingin menghapus saran lokasi ini?") },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            onDelete(suggestion.id)
-                            showDeleteConfirm = false
-                        }
-                    ) {
-                        Text("Hapus", color = ErrorColor)
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showDeleteConfirm = false }) {
-                        Text("Batal")
-                    }
-                }
-            )
-        }
-    }
+}

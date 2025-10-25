@@ -12,7 +12,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -128,12 +127,13 @@ fun GachaScreen(onMissionFound: () -> Unit) {
                 )
 
                 if (gachaState == GachaState.Searching) {
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = "Sedang menganalisis preferensimu...",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.White.copy(alpha = 0.7f),
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(top = 8.dp, horizontal = 20.dp)
+                        modifier = Modifier.padding(horizontal = 20.dp)
                     )
                 }
 

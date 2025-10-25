@@ -38,22 +38,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.app.kenala.ui.theme.AccentBlue
-import com.app.kenala.ui.theme.LightBlue
-import com.app.kenala.ui.theme.PrimaryBlue
+import com.app.kenala.ui.theme.AccentColor
+import com.app.kenala.ui.theme.PrimaryColor
+import com.app.kenala.ui.theme.SecondaryColor
 
 private data class Stat(val icon: ImageVector, val value: String, val label: String, val color: Color)
 private val statsList = listOf(
-    Stat(Icons.Default.Flag, "12", "Misi Selesai", PrimaryBlue),
-    Stat(Icons.Default.Map, "42 km", "Jarak Tempuh", AccentBlue)
+    Stat(Icons.Default.Flag, "12", "Misi Selesai", PrimaryColor),
+    Stat(Icons.Default.Map, "42 km", "Jarak Tempuh", SecondaryColor)
 )
 
 private data class Achievement(val icon: ImageVector, val name: String, val description: String)
 private val achievementsList = listOf(
     Achievement(Icons.Default.Hiking, "Petualang Pemula", "Menyelesaikan 1 misi pertama."),
     Achievement(Icons.Default.CardGiftcard, "Penjelajah Kota", "Menyelesaikan 10 misi."),
-    // Tambahkan pencapaian lain di sini
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -105,7 +105,7 @@ fun StatisticsScreen(onBackClick: () -> Unit) {
             item {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
-                    modifier = Modifier.height(300.dp), // Beri tinggi agar bisa di-scroll
+                    modifier = Modifier.height(300.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
@@ -155,7 +155,7 @@ private fun StatCard(stat: Stat, modifier: Modifier = Modifier) {
 @Composable
 private fun AchievementCard(achievement: Achievement) {
     Card(
-        modifier = Modifier.aspectRatio(1f), // Membuat kartu menjadi persegi
+        modifier = Modifier.aspectRatio(1f),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
@@ -167,13 +167,13 @@ private fun AchievementCard(achievement: Achievement) {
             Box(
                 modifier = Modifier
                     .size(60.dp)
-                    .background(LightBlue.copy(alpha = 0.1f), shape = MaterialTheme.shapes.large),
+                    .background(AccentColor.copy(alpha = 0.1f), shape = MaterialTheme.shapes.large),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = achievement.icon,
                     contentDescription = achievement.name,
-                    tint = PrimaryBlue,
+                    tint = AccentColor,
                     modifier = Modifier.size(32.dp)
                 )
             }
@@ -182,7 +182,7 @@ private fun AchievementCard(achievement: Achievement) {
                 text = achievement.name,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                textAlign = TextAlign.Center
             )
         }
     }

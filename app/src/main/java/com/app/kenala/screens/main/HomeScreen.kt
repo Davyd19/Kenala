@@ -1,18 +1,10 @@
 package com.app.kenala.screens.main
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -20,19 +12,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -43,13 +28,8 @@ import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.app.kenala.navigation.Screen
-import com.app.kenala.ui.theme.AccentBlue
-import com.app.kenala.ui.theme.BrightBlue
-import com.app.kenala.ui.theme.LightTextColor
-import com.app.kenala.ui.theme.PrimaryBlue
-import com.app.kenala.ui.theme.PrimaryDark
+import com.app.kenala.ui.theme.*
 
-// --- Data Dummy Baru untuk Fitur Home Screen ---
 private data class InspirationCategory(val title: String, val imageUrl: String)
 private val inspirations = listOf(
     InspirationCategory("Kuliner Tersembunyi", "https://images.pexels.com/photos/1267696/pexels-photo-1267696.jpeg"),
@@ -73,10 +53,13 @@ fun HomeScreen(
             contentPadding = PaddingValues(bottom = 25.dp)
         ) {
             item { HomeHeader(onNavigateToNotifications = onNavigateToNotifications) }
+            item { Spacer(modifier = Modifier.height(8.dp)) }
             item { MainMissionCard(navController = navController) }
-            // --- STATISTIK DIKEMBALIKAN KE SINI ---
+            item { Spacer(modifier = Modifier.height(20.dp)) }
             item { StatsHighlightCard() }
+            item { Spacer(modifier = Modifier.height(20.dp)) }
             item { WeeklyChallengeCard() }
+            item { Spacer(modifier = Modifier.height(20.dp)) }
             item { AdventureInspirationSection() }
         }
     }
@@ -95,19 +78,36 @@ private fun HomeHeader(onNavigateToNotifications: () -> Unit) {
             Text(
                 text = "Hai, Nayla!",
                 style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
             )
-            Text(
-                text = "Level 5: Petualang Lokal",
-                style = MaterialTheme.typography.bodyMedium,
-                color = LightTextColor
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Star,
+                    contentDescription = null,
+                    tint = AccentColor,
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    text = "Level 5: Petualang Lokal",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Medium
+                )
+            }
         }
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             IconButton(onClick = onNavigateToNotifications) {
                 Icon(
                     imageVector = Icons.Outlined.Notifications,
-                    contentDescription = "Notifikasi"
+                    contentDescription = "Notifikasi",
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
             AsyncImage(
@@ -123,40 +123,80 @@ private fun HomeHeader(onNavigateToNotifications: () -> Unit) {
 
 @Composable
 private fun MainMissionCard(navController: NavHostController) {
+    var isPressed by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.95f else 1f,
+        animationSpec = tween(100, easing = FastOutSlowInEasing),
+        label = "cardScale"
+    )
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 25.dp, vertical = 10.dp),
+            .padding(horizontal = 25.dp)
+            .scale(scale),
         shape = MaterialTheme.shapes.extraLarge,
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 12.dp),
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Brush.linearGradient(colors = listOf(PrimaryBlue, AccentBlue)))
-                .padding(25.dp)
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(
+                            GradientStart,
+                            GradientEnd
+                        )
+                    )
+                )
+                .padding(28.dp)
         ) {
             Column {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Star,
+                        contentDescription = null,
+                        tint = AccentColor,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Text(
+                        text = "Misi Baru Menantimu",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = AccentColor
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Siap untuk Misi Baru?",
-                    style = MaterialTheme.typography.titleLarge,
+                    text = "Jelajahi Tempat\nTersembunyi di Kota",
+                    style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
-                    color = BrightBlue
+                    color = Color.White,
+                    lineHeight = MaterialTheme.typography.headlineSmall.lineHeight
                 )
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(24.dp))
                 Button(
-                    onClick = { navController.navigate(Screen.MissionPreferences.route) },
+                    onClick = {
+                        navController.navigate(Screen.MissionPreferences.route)
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
                     shape = MaterialTheme.shapes.large,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.White,
-                        contentColor = PrimaryBlue
+                        containerColor = AccentColor,
+                        contentColor = DeepBlue
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(
+                        defaultElevation = 4.dp,
+                        pressedElevation = 8.dp
                     )
                 ) {
                     Text(
-                        text = "CARI MISI SEKARANG",
+                        text = "MULAI PETUALANGAN",
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -168,70 +208,128 @@ private fun MainMissionCard(navController: NavHostController) {
 
 @Composable
 private fun StatsHighlightCard() {
-    Column(modifier = Modifier.padding(start = 25.dp, end = 25.dp, top = 25.dp)) {
+    Column(modifier = Modifier.padding(horizontal = 25.dp)) {
         Text(
-            text = "Ringkasan Petualangan",
+            text = "Pencapaianmu",
             style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(bottom = 15.dp)
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(bottom = 12.dp)
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            StatItem(label = "Misi Selesai", value = "12", modifier = Modifier.weight(1f))
-            StatItem(label = "Jarak Tempuh", value = "42 km", modifier = Modifier.weight(1f))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            StatItem(
+                label = "Misi Selesai",
+                value = "12",
+                color = ForestGreen,
+                modifier = Modifier.weight(1f)
+            )
+            StatItem(
+                label = "Jarak Tempuh",
+                value = "42 km",
+                color = SkyBlue,
+                modifier = Modifier.weight(1f)
+            )
         }
     }
 }
 
 @Composable
-private fun StatItem(label: String, value: String, modifier: Modifier = Modifier) {
+private fun StatItem(
+    label: String,
+    value: String,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
     Card(
         modifier = modifier,
         shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(
+            containerColor = color.copy(alpha = 0.08f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = label, style = MaterialTheme.typography.bodyMedium, color = LightTextColor)
-            Text(text = value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Column(
+            modifier = Modifier
+                .padding(20.dp)
+                .fillMaxWidth(),
+            horizontalAlignment = Alignment.Start
+        ) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = color
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = color.copy(alpha = 0.8f),
+                fontWeight = FontWeight.Medium
+            )
         }
     }
 }
 
 @Composable
 private fun WeeklyChallengeCard() {
-    Column(modifier = Modifier.padding(start = 25.dp, end = 25.dp, top = 25.dp)) {
+    Column(modifier = Modifier.padding(horizontal = 25.dp)) {
         Text(
             text = "Tantangan Mingguan",
             style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(bottom = 15.dp)
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(bottom = 12.dp)
         )
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.large,
-            colors = CardDefaults.cardColors(containerColor = PrimaryDark)
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
             Row(
-                modifier = Modifier.padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier.padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Star,
-                    contentDescription = "Tantangan",
-                    tint = AccentBlue,
-                    modifier = Modifier.size(32.dp)
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(MaterialTheme.shapes.medium)
+                        .background(AccentColor.copy(alpha = 0.1f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Star,
+                        contentDescription = "Tantangan",
+                        tint = AccentColor,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Jelajah Kuliner",
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Selesaikan 2 misi kuliner minggu ini.",
+                        text = "Selesaikan 2 misi kuliner minggu ini",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = BrightBlue.copy(alpha = 0.8f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LinearProgressIndicator(
+                        progress = { 0.5f },
+                        modifier = Modifier.fillMaxWidth(),
+                        color = AccentColor,
+                        trackColor = AccentColor.copy(alpha = 0.2f),
                     )
                 }
             }
@@ -241,12 +339,13 @@ private fun WeeklyChallengeCard() {
 
 @Composable
 private fun AdventureInspirationSection() {
-    Column(modifier = Modifier.padding(top = 25.dp)) {
+    Column(modifier = Modifier.padding(top = 8.dp)) {
         Text(
             text = "Inspirasi Petualangan",
             style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(start = 25.dp, bottom = 15.dp)
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(start = 25.dp, bottom = 12.dp)
         )
         LazyRow(
             contentPadding = PaddingValues(horizontal = 25.dp),
@@ -262,12 +361,12 @@ private fun AdventureInspirationSection() {
 @Composable
 private fun InspirationCard(item: InspirationCategory) {
     Card(
-        modifier = Modifier.width(160.dp),
+        modifier = Modifier.width(180.dp),
         shape = MaterialTheme.shapes.large,
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Box(
-            modifier = Modifier.height(200.dp),
+            modifier = Modifier.height(240.dp),
             contentAlignment = Alignment.BottomStart
         ) {
             AsyncImage(
@@ -279,24 +378,26 @@ private fun InspirationCard(item: InspirationCategory) {
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
-            Box( // Gradien untuk keterbacaan teks
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(
                         Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.8f)),
-                            startY = 300f
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.Black.copy(alpha = 0.7f)
+                            ),
+                            startY = 200f
                         )
                     )
             )
             Text(
                 text = item.title,
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
-                modifier = Modifier.padding(12.dp)
+                modifier = Modifier.padding(16.dp)
             )
         }
     }
 }
-

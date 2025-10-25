@@ -1,31 +1,14 @@
 package com.app.kenala.screens.main
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Leaderboard
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,15 +18,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.app.kenala.ui.theme.AccentBlue
-import com.app.kenala.ui.theme.BorderColor
-import com.app.kenala.ui.theme.LightTextColor
-import com.app.kenala.ui.theme.PrimaryBlue
-import com.app.kenala.ui.theme.SecondaryColor
+import com.app.kenala.ui.theme.*
 
 @Composable
 fun ProfileScreen(
-    onNavigateToStats: () -> Unit
+    onNavigateToStats: () -> Unit,
+    onNavigateToEditProfile: () -> Unit,
+    onNavigateToSettings: () -> Unit
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
@@ -61,7 +42,11 @@ fun ProfileScreen(
             )
             ProfileHeader()
             Spacer(modifier = Modifier.height(30.dp))
-            MenuCard(onNavigateToStats = onNavigateToStats)
+            MenuCard(
+                onNavigateToStats = onNavigateToStats,
+                onNavigateToEditProfile = onNavigateToEditProfile,
+                onNavigateToSettings = onNavigateToSettings
+            )
         }
     }
 }
@@ -80,7 +65,7 @@ private fun ProfileHeader() {
                 .clip(CircleShape)
                 .background(
                     Brush.linearGradient(
-                        colors = listOf(PrimaryBlue, AccentBlue)
+                        colors = listOf(OceanBlue, DeepBlue)
                     )
                 ),
             contentAlignment = Alignment.Center
@@ -102,7 +87,11 @@ private fun ProfileHeader() {
 }
 
 @Composable
-private fun MenuCard(onNavigateToStats: () -> Unit) {
+private fun MenuCard(
+    onNavigateToStats: () -> Unit,
+    onNavigateToEditProfile: () -> Unit,
+    onNavigateToSettings: () -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -117,20 +106,25 @@ private fun MenuCard(onNavigateToStats: () -> Unit) {
             MenuItem(
                 title = "Edit Profil",
                 icon = Icons.Filled.Edit,
-                onClick = { /* TODO: Navigasi ke EditProfileScreen */ }
+                onClick = onNavigateToEditProfile
             )
-            Divider(color = BorderColor, modifier = Modifier.padding(horizontal = 20.dp))
-            // Menu baru untuk Statistik
+            HorizontalDivider(
+                color = BorderColor,
+                modifier = Modifier.padding(horizontal = 20.dp)
+            )
             MenuItem(
                 title = "Statistik & Pencapaian",
                 icon = Icons.Filled.Leaderboard,
                 onClick = onNavigateToStats
             )
-            Divider(color = BorderColor, modifier = Modifier.padding(horizontal = 20.dp))
+            HorizontalDivider(
+                color = BorderColor,
+                modifier = Modifier.padding(horizontal = 20.dp)
+            )
             MenuItem(
                 title = "Pengaturan Akun",
                 icon = Icons.Filled.Settings,
-                onClick = { /* TODO: Navigasi ke SettingsScreen */ }
+                onClick = onNavigateToSettings
             )
         }
     }
@@ -170,10 +164,9 @@ private fun MenuItem(title: String, icon: ImageVector, onClick: () -> Unit) {
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = "Panah",
-                tint = LightTextColor,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp)
             )
         }
     }
 }
-

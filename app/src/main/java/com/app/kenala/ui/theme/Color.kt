@@ -2,26 +2,54 @@ package com.app.kenala.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Color Palette Baru Sesuai Permintaan
-val DarkBlue = Color(0xFF000F22) // Untuk background gelap atau teks di background terang
-val PrimaryBlue = Color(0xFF052355) // Warna utama aplikasi, bisa untuk header atau tombol utama
-val AccentBlue = Color(0xFF4B76A4) // Aksen atau highlight
-val MediumBlue = Color(0xFF4A719B) // Warna sekunder
-val LightBlue = Color(0xFF7393BC) // Untuk teks sekunder atau ikon
-val BrightBlue = Color(0xFFC2E8FF) // Untuk highlight paling terang atau teks di background gelap
+// === NEW COLOR PALETTE ===
+// Primary Colors - Kuning sebagai aksen utama
+val PrimaryYellow = Color(0xFFF8C104)      // Kuning cerah - untuk CTA & highlights
+val YellowLight = Color(0xFFFDD835)        // Kuning terang - untuk hover states
+val YellowDark = Color(0xFFF9A825)         // Kuning gelap - untuk pressed states
 
-// Definisi Warna Fungsional (menggunakan palet baru)
-val PrimaryColor = PrimaryBlue
-val PrimaryDark = DarkBlue
-val SecondaryColor = AccentBlue
-val AccentColor = BrightBlue // Mengganti warna aksen kuning sebelumnya
+// Blue Scale - Dari terang ke gelap
+val SkyBlue = Color(0xFF0058A7)            // Biru terang - untuk secondary actions
+val OceanBlue = Color(0xFF00398C)          // Biru medium - untuk backgrounds
+val DeepBlue = Color(0xFF002364)           // Biru gelap - untuk text & primary elements
+val MidnightBlue = Color(0xFF001845)       // Biru sangat gelap - untuk dark backgrounds
 
-// Warna standar yang disesuaikan
-val BackgroundColor = Color(0xFFF8F9FA) // Background terang tetap sama untuk kontras
-val CardBackgroundColor = Color(0xFFFFFFFF)
-val TextColor = DarkBlue // Teks utama menggunakan biru paling gelap
-val LightTextColor = LightBlue // Teks sekunder
-val WhiteColor = Color(0xFFFFFFFF)
-val BorderColor = Color(0xFFE9ECEF)
-val SuccessColor = Color(0xFF28A745)
-val DangerColor = Color(0xFFE53E3E)
+// Green Accent
+val ForestGreen = Color(0xFF004608)        // Hijau gelap - untuk success states
+
+// Neutral & Support Colors
+val BackgroundLight = Color(0xFFF8F9FA)    // Background terang
+val BackgroundWhite = Color(0xFFFFFFFF)    // Card backgrounds
+val TextPrimary = DeepBlue                 // Text utama
+val TextSecondary = Color(0xFF6B7280)      // Text sekunder
+val BorderColor = Color(0xFFE5E7EB)        // Borders
+val ErrorColor = Color(0xFFDC2626)         // Error states
+val SuccessColor = ForestGreen             // Success states
+
+// Gradient Colors
+val GradientStart = OceanBlue
+val GradientEnd = DeepBlue
+
+// === FUNCTIONAL COLOR MAPPING ===
+val PrimaryColor = DeepBlue                // Primary brand color
+val PrimaryDark = MidnightBlue             // Darker variant
+val SecondaryColor = SkyBlue               // Secondary actions
+val AccentColor = PrimaryYellow            // Accent & highlights
+val BackgroundColor = BackgroundLight
+val CardBackgroundColor = BackgroundWhite
+val TextColor = TextPrimary
+val LightTextColor = TextSecondary
+val WhiteColor = BackgroundWhite
+val DangerColor = ErrorColor
+
+// Deprecated colors (for backward compatibility)
+@Deprecated("Use AccentColor instead", ReplaceWith("AccentColor"))
+val BrightBlue = PrimaryYellow
+@Deprecated("Use SecondaryColor instead", ReplaceWith("SecondaryColor"))
+val AccentBlue = SkyBlue
+@Deprecated("Use PrimaryColor instead", ReplaceWith("PrimaryColor"))
+val PrimaryBlue = DeepBlue
+@Deprecated("Use TextSecondary instead", ReplaceWith("TextSecondary"))
+val LightBlue = TextSecondary
+@Deprecated("Use MidnightBlue instead", ReplaceWith("MidnightBlue"))
+val DarkBlue = MidnightBlue

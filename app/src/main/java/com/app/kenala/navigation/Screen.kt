@@ -15,6 +15,8 @@ sealed class Screen(val route: String) {
     object Home : Screen("home_screen")
     object History : Screen("history_screen")
     object Profile : Screen("profile_screen")
+    object EditProfile : Screen("edit_profile_screen")
+    object Settings : Screen("settings_screen")
 
     // --- Alur Misi ---
     object MissionPreferences : Screen("mission_preferences_screen")

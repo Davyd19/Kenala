@@ -1,6 +1,9 @@
 package com.app.kenala.screens.mission
 
-import androidx.compose.animation.core.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -11,17 +14,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.app.kenala.R
 import com.app.kenala.ui.theme.*
-import kotlinx.coroutines.delay
+
 
 private val dummyMissions = listOf(
     "Kedai Kopi Seroja",
@@ -41,50 +42,6 @@ private enum class GachaState {
 fun GachaScreen(onMissionFound: () -> Unit) {
     var gachaState by remember { mutableStateOf(GachaState.Idle) }
     var revealedMission by remember { mutableStateOf<String?>(null) }
-    var rotation by remember { mutableFloatStateOf(0f) }
-    var shimmerAlpha by remember { mutableFloatStateOf(0f) }
-
-    val animatedRotation by animateFloatAsState(
-        targetValue = rotation,
-        animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing),
-        label = "CardFlip"
-    )
-
-    val shimmerAnimation by animateFloatAsState(
-        targetValue = shimmerAlpha,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "Shimmer"
-    )
-
-    LaunchedEffect(gachaState) {
-        if (gachaState == GachaState.Searching) {
-            shimmerAlpha = 1f
-            val totalSearchTime = 3500L
-            val startTime = System.currentTimeMillis()
-            var flipDelay = 150L
-
-            while (System.currentTimeMillis() - startTime < totalSearchTime) {
-                rotation += 180f
-                delay(flipDelay)
-
-                val elapsed = System.currentTimeMillis() - startTime
-                if (elapsed > totalSearchTime * 0.6f) {
-                    flipDelay = 400L
-                }
-            }
-
-            revealedMission = dummyMissions.random()
-            gachaState = GachaState.Finished
-            shimmerAlpha = 0f
-
-            if (rotation.toInt() % 360 != 0) {
-                rotation += 180f
-            }
-        }
-    }
 
     Scaffold(
         containerColor = Color.Transparent
@@ -108,17 +65,15 @@ fun GachaScreen(onMissionFound: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                // Animated sparkles background
-                if (gachaState == GachaState.Searching) {
-                    SparkleEffect(modifier = Modifier.size(300.dp))
+
+                val (title, subtitle) = when (gachaState) {
+                    GachaState.Idle -> "Tarik Kartu Petualanganmu" to ""
+                    GachaState.Searching -> "Mencari Misi Sempurna..." to "Menganalisis preferensimu..."
+                    GachaState.Finished -> "🎉 Misi Ditemukan!" to (revealedMission ?: "")
                 }
 
                 Text(
-                    text = when (gachaState) {
-                        GachaState.Idle -> "Tarik Kartu Petualanganmu"
-                        GachaState.Searching -> "Mencari Misi Sempurna..."
-                        GachaState.Finished -> "🎉 Misi Ditemukan!"
-                    },
+                    text = title,
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = if (gachaState == GachaState.Finished) AccentColor else Color.White,
@@ -126,10 +81,10 @@ fun GachaScreen(onMissionFound: () -> Unit) {
                     modifier = Modifier.padding(horizontal = 20.dp)
                 )
 
-                if (gachaState == GachaState.Searching) {
+                if (gachaState == GachaState.Searching || gachaState == GachaState.Finished) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Sedang menganalisis preferensimu...",
+                        text = subtitle,
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.White.copy(alpha = 0.7f),
                         textAlign = TextAlign.Center,
@@ -140,56 +95,69 @@ fun GachaScreen(onMissionFound: () -> Unit) {
                 Spacer(modifier = Modifier.height(60.dp))
 
                 Box(
-                    modifier = Modifier
-                        .graphicsLayer {
-                            rotationY = animatedRotation
-                            cameraDistance = 12f * density
-                        },
+                    modifier = Modifier.size(width = 200.dp, height = 280.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (gachaState == GachaState.Idle) {
-                        MissionCardBack()
-                    } else {
-                        val normalizedRotation = animatedRotation % 360
-                        if (normalizedRotation < 90 || normalizedRotation > 270) {
-                            MissionCardFront(missionName = revealedMission ?: "")
-                        } else {
+                    when (gachaState) {
+                        GachaState.Idle -> {
+                            // Tampilkan kartu belakang statis
                             MissionCardBack()
+                        }
+                        GachaState.Searching -> {
+                            // Putar video
+                            VideoGachaPlayer( // Pastikan file VideoGachaPlayer.kt ada di paket yang sama
+                                modifier = Modifier.fillMaxSize(),
+                                onVideoEnded = {
+                                    revealedMission = dummyMissions.random()
+                                    gachaState = GachaState.Finished
+                                }
+                            )
+                        }
+                        GachaState.Finished -> {
+                            // Tampilkan kartu depan dengan transisi mulus
+                            AnimatedVisibility(
+                                visible = true,
+                                enter = fadeIn(animationSpec = tween(500)) +
+                                        scaleIn(animationSpec = tween(500))
+                            ) {
+                                MissionCardFront(missionName = revealedMission ?: "")
+                            }
                         }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(60.dp))
 
-                Button(
-                    onClick = {
-                        when (gachaState) {
-                            GachaState.Idle -> gachaState = GachaState.Searching
-                            GachaState.Finished -> onMissionFound()
-                            else -> {}
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                        .padding(horizontal = 40.dp),
-                    shape = MaterialTheme.shapes.large,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = AccentColor,
-                        contentColor = DeepBlue,
-                        disabledContainerColor = AccentColor.copy(alpha = 0.4f)
-                    ),
-                    elevation = ButtonDefaults.buttonElevation(
-                        defaultElevation = 8.dp,
-                        pressedElevation = 12.dp
-                    ),
-                    enabled = gachaState != GachaState.Searching
-                ) {
-                    Text(
-                        text = if (gachaState == GachaState.Finished) "LIHAT MISI" else "TARIK KARTU",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold
-                    )
+                // Tombol ini akan muncul kembali saat Finished
+                AnimatedVisibility(visible = gachaState != GachaState.Searching) {
+                    Button(
+                        onClick = {
+                            when (gachaState) {
+                                GachaState.Idle -> gachaState = GachaState.Searching
+                                GachaState.Finished -> onMissionFound()
+                                else -> {}
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                            .padding(horizontal = 40.dp),
+                        shape = MaterialTheme.shapes.large,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = AccentColor,
+                            contentColor = DeepBlue,
+                        ),
+                        elevation = ButtonDefaults.buttonElevation(
+                            defaultElevation = 8.dp,
+                            pressedElevation = 12.dp
+                        )
+                    ) {
+                        Text(
+                            text = if (gachaState == GachaState.Finished) "LIHAT MISI" else "TARIK KARTU",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }
@@ -258,7 +226,6 @@ private fun MissionCardBack() {
     Card(
         modifier = Modifier
             .size(width = 200.dp, height = 280.dp)
-            .graphicsLayer { rotationY = 180f }
             .border(
                 width = 3.dp,
                 brush = Brush.linearGradient(
@@ -287,40 +254,9 @@ private fun MissionCardBack() {
             contentAlignment = Alignment.Center
         ) {
             Image(
-                painter = painterResource(id = R.drawable.logo_kenala),
+                painter = painterResource(id = R.drawable.logo_kenala), // Pastikan logo_kenala ada di res/drawable
                 contentDescription = "Logo Kenala",
-                modifier = Modifier
-                    .size(120.dp)
-                    .graphicsLayer { rotationY = 180f }
-            )
-        }
-    }
-}
-
-@Composable
-private fun SparkleEffect(modifier: Modifier = Modifier) {
-    var rotation by remember { mutableFloatStateOf(0f) }
-
-    LaunchedEffect(Unit) {
-        while (true) {
-            rotation += 2f
-            delay(16)
-        }
-    }
-
-    Box(
-        modifier = modifier
-            .rotate(rotation),
-        contentAlignment = Alignment.Center
-    ) {
-        repeat(8) { index ->
-            val angle = (360f / 8f) * index
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .offset(x = 100.dp)
-                    .rotate(angle)
-                    .background(AccentColor.copy(alpha = 0.6f), MaterialTheme.shapes.small)
+                modifier = Modifier.size(120.dp)
             )
         }
     }

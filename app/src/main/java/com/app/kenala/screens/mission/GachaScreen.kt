@@ -1,9 +1,6 @@
 package com.app.kenala.screens.mission
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.scaleIn
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -14,6 +11,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -94,46 +93,43 @@ fun GachaScreen(onMissionFound: () -> Unit) {
 
                 Spacer(modifier = Modifier.height(60.dp))
 
+                // Card Container with animations
                 Box(
                     modifier = Modifier.size(width = 200.dp, height = 280.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    when (gachaState) {
-                        GachaState.Idle -> {
-                            // Tampilkan kartu belakang statis
-                            MissionCardBack()
-                        }
-                        GachaState.Searching -> {
-                            // Putar video
-                            VideoGachaPlayer( // Pastikan file VideoGachaPlayer.kt ada di paket yang sama
-                                modifier = Modifier.fillMaxSize(),
-                                onVideoEnded = {
-                                    revealedMission = dummyMissions.random()
-                                    gachaState = GachaState.Finished
-                                }
-                            )
-                        }
-                        GachaState.Finished -> {
-                            // Tampilkan kartu depan dengan transisi mulus
-                            AnimatedVisibility(
-                                visible = true,
-                                enter = fadeIn(animationSpec = tween(500)) +
-                                        scaleIn(animationSpec = tween(500))
-                            ) {
-                                MissionCardFront(missionName = revealedMission ?: "")
+                    // Back Card - visible when Idle
+                    if (gachaState == GachaState.Idle) {
+                        MissionCardBack()
+                    }
+
+                    // Video - visible when Searching
+                    if (gachaState == GachaState.Searching) {
+                        VideoGachaPlayer(
+                            modifier = Modifier.fillMaxSize(),
+                            onVideoEnded = {
+                                revealedMission = dummyMissions.random()
+                                gachaState = GachaState.Finished
                             }
-                        }
+                        )
+                    }
+
+                    // Front Card - visible when Finished with animation
+                    if (gachaState == GachaState.Finished && revealedMission != null) {
+                        AnimatedMissionCard(missionName = revealedMission!!)
                     }
                 }
 
                 Spacer(modifier = Modifier.height(60.dp))
 
-                // Tombol ini akan muncul kembali saat Finished
-                AnimatedVisibility(visible = gachaState != GachaState.Searching) {
+                // Button - visible when not Searching
+                if (gachaState != GachaState.Searching) {
                     Button(
                         onClick = {
                             when (gachaState) {
-                                GachaState.Idle -> gachaState = GachaState.Searching
+                                GachaState.Idle -> {
+                                    gachaState = GachaState.Searching
+                                }
                                 GachaState.Finished -> onMissionFound()
                                 else -> {}
                             }
@@ -161,6 +157,38 @@ fun GachaScreen(onMissionFound: () -> Unit) {
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun AnimatedMissionCard(missionName: String) {
+    var animationPlayed by remember { mutableStateOf(false) }
+
+    val scale by animateFloatAsState(
+        targetValue = if (animationPlayed) 1f else 0.7f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "scale"
+    )
+
+    val alpha by animateFloatAsState(
+        targetValue = if (animationPlayed) 1f else 0f,
+        animationSpec = tween(durationMillis = 600),
+        label = "alpha"
+    )
+
+    LaunchedEffect(Unit) {
+        animationPlayed = true
+    }
+
+    Box(
+        modifier = Modifier
+            .scale(scale)
+            .alpha(alpha)
+    ) {
+        MissionCardFront(missionName = missionName)
     }
 }
 
@@ -254,7 +282,7 @@ private fun MissionCardBack() {
             contentAlignment = Alignment.Center
         ) {
             Image(
-                painter = painterResource(id = R.drawable.logo_kenala), // Pastikan logo_kenala ada di res/drawable
+                painter = painterResource(id = R.drawable.logo_kenala),
                 contentDescription = "Logo Kenala",
                 modifier = Modifier.size(120.dp)
             )

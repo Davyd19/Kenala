@@ -1,73 +1,65 @@
 package com.app.kenala.screens.stats
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.CardGiftcard
-import androidx.compose.material.icons.filled.Flag
-import androidx.compose.material.icons.filled.Hiking
-import androidx.compose.material.icons.filled.Map
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.app.kenala.ui.theme.AccentColor
-import com.app.kenala.ui.theme.PrimaryColor
-import com.app.kenala.ui.theme.SecondaryColor
+import com.app.kenala.ui.theme.*
 
-private data class Stat(val icon: ImageVector, val value: String, val label: String, val color: Color)
-private val statsList = listOf(
-    Stat(Icons.Default.Flag, "12", "Misi Selesai", PrimaryColor),
-    Stat(Icons.Default.Map, "42 km", "Jarak Tempuh", SecondaryColor)
+private data class MainStat(
+    val icon: ImageVector,
+    val value: String,
+    val label: String,
+    val color: Color
 )
 
-private data class Achievement(val icon: ImageVector, val name: String, val description: String)
-private val achievementsList = listOf(
-    Achievement(Icons.Default.Hiking, "Petualang Pemula", "Menyelesaikan 1 misi pertama."),
-    Achievement(Icons.Default.CardGiftcard, "Penjelajah Kota", "Menyelesaikan 10 misi."),
+private data class CategoryStat(
+    val name: String,
+    val count: String,
+    val icon: ImageVector,
+    val color: Color
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatisticsScreen(onBackClick: () -> Unit) {
+    val mainStats = listOf(
+        MainStat(Icons.Default.Flag, "12", "Misi Selesai", ForestGreen),
+        MainStat(Icons.Default.DirectionsRun, "42 km", "Jarak Tempuh", OceanBlue),
+        MainStat(Icons.Default.LocalFireDepartment, "7 hari", "Streak Saat Ini", AccentColor),
+        MainStat(Icons.Default.CalendarMonth, "45 hari", "Total Hari Aktif", SkyBlue)
+    )
+
+    val categoryStats = listOf(
+        CategoryStat("Kuliner", "5 misi", Icons.Default.Restaurant, AccentColor),
+        CategoryStat("Seni & Budaya", "4 misi", Icons.Default.Palette, OceanBlue),
+        CategoryStat("Alam", "2 misi", Icons.Default.Park, ForestGreen),
+        CategoryStat("Sejarah", "1 misi", Icons.Default.Museum, SkyBlue)
+    )
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Statistik & Pencapaian") },
+                title = { Text("Statistik", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
         },
         containerColor = MaterialTheme.colorScheme.background
@@ -76,41 +68,71 @@ fun StatisticsScreen(onBackClick: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
-            contentPadding = PaddingValues(25.dp),
-            verticalArrangement = Arrangement.spacedBy(25.dp)
+            contentPadding = PaddingValues(horizontal = 25.dp, vertical = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // Bagian Statistik Utama
+            // Overview Card
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(20.dp)
-                ) {
-                    statsList.forEach { stat ->
-                        StatCard(
-                            stat = stat,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
+                OverviewCard()
             }
 
-            // Bagian Pencapaian
+            // Main Stats Grid
             item {
                 Text(
-                    "Pencapaian Kamu",
-                    style = MaterialTheme.typography.titleLarge,
+                    text = "Ringkasan Aktivitas",
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
             }
             item {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    modifier = Modifier.height(300.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        mainStats.take(2).forEach { stat ->
+                            MainStatCard(stat = stat, modifier = Modifier.weight(1f))
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        mainStats.drop(2).forEach { stat ->
+                            MainStatCard(stat = stat, modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
+
+            // Category Stats
+            item {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Kategori Favorit",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.large,
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
-                    items(achievementsList) { achievement ->
-                        AchievementCard(achievement = achievement)
+                    Column {
+                        categoryStats.forEachIndexed { index, stat ->
+                            CategoryStatItem(stat = stat)
+                            if (index < categoryStats.size - 1) {
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(horizontal = 20.dp),
+                                    color = BorderColor
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -119,71 +141,161 @@ fun StatisticsScreen(onBackClick: () -> Unit) {
 }
 
 @Composable
-private fun StatCard(stat: Stat, modifier: Modifier = Modifier) {
+private fun OverviewCard() {
     Card(
-        modifier = modifier,
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = stat.color.copy(alpha = 0.1f))
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.cardColors(
+            containerColor = Color.Transparent
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(GradientStart, GradientEnd)
+                    )
+                )
+                .padding(28.dp)
         ) {
-            Icon(
-                imageVector = stat.icon,
-                contentDescription = stat.label,
-                tint = stat.color,
-                modifier = Modifier.size(32.dp)
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = stat.value,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = stat.color
-            )
-            Text(
-                text = stat.label,
-                style = MaterialTheme.typography.bodyMedium,
-                color = stat.color
-            )
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Icon(
+                    Icons.Default.Star,
+                    contentDescription = null,
+                    tint = AccentColor,
+                    modifier = Modifier.size(48.dp)
+                )
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "Level 5",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Text(
+                        text = "Petualang Lokal",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White.copy(alpha = 0.9f)
+                    )
+                }
+                LinearProgressIndicator(
+                    progress = { 0.6f },
+                    modifier = Modifier
+                        .fillMaxWidth(0.7f)
+                        .height(8.dp),
+                    color = AccentColor,
+                    trackColor = Color.White.copy(alpha = 0.3f),
+                )
+                Text(
+                    text = "60% menuju Level 6",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.8f)
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun AchievementCard(achievement: Achievement) {
+private fun MainStatCard(
+    stat: MainStat,
+    modifier: Modifier = Modifier
+) {
     Card(
-        modifier = Modifier.aspectRatio(1f),
+        modifier = modifier.height(110.dp),
         shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(
+            containerColor = stat.color.copy(alpha = 0.1f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
             Box(
                 modifier = Modifier
-                    .size(60.dp)
-                    .background(AccentColor.copy(alpha = 0.1f), shape = MaterialTheme.shapes.large),
+                    .size(40.dp)
+                    .background(
+                        stat.color.copy(alpha = 0.15f),
+                        CircleShape
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = achievement.icon,
-                    contentDescription = achievement.name,
-                    tint = AccentColor,
-                    modifier = Modifier.size(32.dp)
+                    imageVector = stat.icon,
+                    contentDescription = null,
+                    tint = stat.color,
+                    modifier = Modifier.size(22.dp)
                 )
             }
-            Spacer(modifier = Modifier.height(12.dp))
+            Column {
+                Text(
+                    text = stat.value,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = stat.color
+                )
+                Text(
+                    text = stat.label,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CategoryStatItem(stat: CategoryStat) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(
+                        stat.color.copy(alpha = 0.12f),
+                        CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = stat.icon,
+                    contentDescription = null,
+                    tint = stat.color,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
             Text(
-                text = achievement.name,
+                text = stat.name,
                 style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.Center
+                fontWeight = FontWeight.Medium
             )
         }
+        Text(
+            text = stat.count,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = stat.color
+        )
     }
 }

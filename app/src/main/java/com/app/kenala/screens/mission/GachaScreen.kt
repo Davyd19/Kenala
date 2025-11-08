@@ -1,5 +1,8 @@
 package com.app.kenala.screens.mission
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -16,42 +19,94 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.app.kenala.R
 import com.app.kenala.ui.theme.*
+import com.app.kenala.utils.LocationManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.math.absoluteValue
 import kotlin.random.Random
 
+private data class MissionData(
+    val name: String,
+    val latitude: Double,
+    val longitude: Double
+)
+
 private val dummyMissions = listOf(
-    "Kedai Kopi Seroja",
-    "Taman Hutan Kota",
-    "Galeri Seni Lokal",
-    "Pasar Raya Padang",
-    "Museum Adityawarman",
-    "Pantai Air Manis",
-    "Jembatan Siti Nurbaya"
+    MissionData("Kedai Kopi Seroja", -0.9471, 100.4172),
+    MissionData("Taman Hutan Kota", -0.9489, 100.4183),
+    MissionData("Galeri Seni Lokal", -0.9500, 100.4194),
+    MissionData("Pasar Raya Padang", -0.9520, 100.4205),
+    MissionData("Museum Adityawarman", -0.9510, 100.4215),
+    MissionData("Pantai Air Manis", -0.9950, 100.3550),
+    MissionData("Jembatan Siti Nurbaya", -0.9480, 100.3620)
 )
 
 private enum class GachaState {
-    Idle, ReadyToPull, Searching, Finished
+    Idle, ReadyToPull, Searching, ShowingInfo, Finished
 }
 
 @Composable
 fun GachaScreen(onMissionFound: () -> Unit) {
     var gachaState by remember { mutableStateOf(GachaState.Idle) }
-    var revealedMission by remember { mutableStateOf<String?>(null) }
+    var revealedMission by remember { mutableStateOf<MissionData?>(null) }
+    var missionDistance by remember { mutableStateOf<String?>(null) }
+    var estimatedTime by remember { mutableStateOf(0) }
     var dragOffset by remember { mutableFloatStateOf(0f) }
+
+    val context = LocalContext.current
+    val locationManager = remember { LocationManager(context) }
     val coroutineScope = rememberCoroutineScope()
+
+    // Permission launcher
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { }
+
+    // Request location permission
+    LaunchedEffect(Unit) {
+        permissionLauncher.launch(
+            arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            )
+        )
+    }
+
+    // Calculate distance when mission is revealed
+    LaunchedEffect(revealedMission) {
+        revealedMission?.let { mission ->
+            if (locationManager.hasLocationPermission()) {
+                locationManager.getCurrentLocation { location ->
+                    location?.let {
+                        val distanceMeters = LocationManager.calculateDistance(
+                            it.latitude,
+                            it.longitude,
+                            mission.latitude,
+                            mission.longitude
+                        )
+                        missionDistance = LocationManager.formatDistance(distanceMeters)
+                        estimatedTime = LocationManager.estimateTime(distanceMeters)
+                        gachaState = GachaState.ShowingInfo
+                    }
+                }
+            } else {
+                // No permission, use default values
+                missionDistance = "Tidak diketahui"
+                estimatedTime = 0
+                gachaState = GachaState.ShowingInfo
+            }
+        }
+    }
 
     Scaffold(
         containerColor = Color.Transparent
@@ -70,10 +125,7 @@ fun GachaScreen(onMissionFound: () -> Unit) {
                 )
                 .padding(innerPadding)
         ) {
-            // Enhanced Animated Background Particles
             EnhancedFloatingParticles(isActive = gachaState == GachaState.Searching)
-
-            // Ambient floating particles always visible
             AmbientParticles()
 
             Column(
@@ -85,16 +137,16 @@ fun GachaScreen(onMissionFound: () -> Unit) {
                     GachaState.Idle -> Triple("Tarik Kartu Petualanganmu", "", "Ketuk kartu untuk memulai")
                     GachaState.ReadyToPull -> Triple("Siap Untuk Petualangan?", "", "Tarik kartu ke bawah!")
                     GachaState.Searching -> Triple("Mencari Misi Sempurna...", "Menganalisis preferensimu...", "")
-                    GachaState.Finished -> Triple("🎉 Misi Ditemukan!", revealedMission ?: "", "")
+                    GachaState.ShowingInfo, GachaState.Finished -> Triple("🎉 Misi Ditemukan!", revealedMission?.name ?: "", "")
                 }
 
                 AnimatedText(
                     text = title,
                     style = MaterialTheme.typography.headlineSmall,
-                    color = if (gachaState == GachaState.Finished) AccentColor else Color.White
+                    color = if (gachaState == GachaState.Finished || gachaState == GachaState.ShowingInfo) AccentColor else Color.White
                 )
 
-                if (subtitle.isNotEmpty()) {
+                if (subtitle.isNotEmpty() && gachaState != GachaState.ShowingInfo && gachaState != GachaState.Finished) {
                     Spacer(modifier = Modifier.height(8.dp))
                     AnimatedText(
                         text = subtitle,
@@ -113,7 +165,6 @@ fun GachaScreen(onMissionFound: () -> Unit) {
 
                 Spacer(modifier = Modifier.height(60.dp))
 
-                // Interactive Card Container
                 Box(
                     modifier = Modifier.size(width = 200.dp, height = 280.dp),
                     contentAlignment = Alignment.Center
@@ -148,27 +199,36 @@ fun GachaScreen(onMissionFound: () -> Unit) {
                             EpicShufflingCards(
                                 onAnimationComplete = {
                                     revealedMission = dummyMissions.random()
-                                    gachaState = GachaState.Finished
                                 }
                             )
                         }
-                        GachaState.Finished -> {
+                        GachaState.ShowingInfo, GachaState.Finished -> {
                             revealedMission?.let { mission ->
-                                EpicRevealCard(missionName = mission)
+                                EpicRevealCard(missionName = mission.name)
                             }
                         }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(60.dp))
+            }
 
-                // Button
-                if (gachaState == GachaState.Finished) {
-                    AnimatedButton(
-                        text = "LIHAT MISI",
-                        onClick = onMissionFound
-                    )
-                }
+            // Mission Info Dialog
+            if (gachaState == GachaState.ShowingInfo && revealedMission != null && missionDistance != null) {
+                MissionInfoDialog(
+                    missionName = revealedMission!!.name,
+                    distance = missionDistance!!,
+                    estimatedTime = estimatedTime,
+                    onDismiss = {
+                        gachaState = GachaState.Idle
+                        revealedMission = null
+                        missionDistance = null
+                    },
+                    onAccept = {
+                        gachaState = GachaState.Finished
+                        onMissionFound()
+                    }
+                )
             }
         }
     }
@@ -230,41 +290,6 @@ private fun PulsingText(text: String, color: Color) {
 }
 
 @Composable
-private fun AnimatedButton(text: String, onClick: () -> Unit) {
-    var scale by remember { mutableFloatStateOf(0.8f) }
-
-    LaunchedEffect(Unit) {
-        animate(0.8f, 1f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)) { value, _ ->
-            scale = value
-        }
-    }
-
-    Button(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .padding(horizontal = 40.dp)
-            .scale(scale),
-        shape = MaterialTheme.shapes.large,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = AccentColor,
-            contentColor = DeepBlue,
-        ),
-        elevation = ButtonDefaults.buttonElevation(
-            defaultElevation = 8.dp,
-            pressedElevation = 12.dp
-        )
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Bold
-        )
-    }
-}
-
-@Composable
 private fun AmbientParticles() {
     val particles = remember {
         (1..25).map {
@@ -322,13 +347,9 @@ private fun AnimatedParticle(particle: ParticleData, isIntense: Boolean) {
         delay(particle.delay.toLong())
 
         while (true) {
-            // Fade in
             animate(0f, 0.8f, animationSpec = tween(300)) { value, _ ->
                 alpha = value
             }
-
-            // Move up with slight horizontal sway
-            val endX = particle.startX + Random.nextFloat() * 100f - 50f
 
             animate(
                 initialValue = particle.startY,
@@ -336,16 +357,13 @@ private fun AnimatedParticle(particle: ParticleData, isIntense: Boolean) {
                 animationSpec = tween(particle.duration, easing = LinearEasing)
             ) { value, _ ->
                 offsetY = value
-                // Add sway effect
                 offsetX = particle.startX + kotlin.math.sin(value / 50f) * 20f
             }
 
-            // Fade out
             animate(0.8f, 0f, animationSpec = tween(300)) { value, _ ->
                 alpha = value
             }
 
-            // Reset
             offsetY = particle.startY
             offsetX = particle.startX
 
@@ -509,14 +527,11 @@ private fun EpicShufflingCards(onAnimationComplete: () -> Unit) {
     var alpha by remember { mutableFloatStateOf(1f) }
 
     LaunchedEffect(Unit) {
-        // Phase 1: Wild spinning and movement
         repeat(3) { cycle ->
-            // Spin dramatically
             animate(0f, 720f, animationSpec = tween(800, easing = FastOutSlowInEasing)) { value, _ ->
                 rotation = value
             }
 
-            // Scale pulse
             animate(1f, 1.3f, animationSpec = tween(200)) { value, _ ->
                 scale = value
             }
@@ -524,7 +539,6 @@ private fun EpicShufflingCards(onAnimationComplete: () -> Unit) {
                 scale = value
             }
 
-            // Circular motion
             val angle = cycle * 120f
             animate(0f, 60f, animationSpec = tween(400)) { value, _ ->
                 offsetX = kotlin.math.cos(Math.toRadians((angle + value).toDouble())).toFloat() * 50f
@@ -532,7 +546,6 @@ private fun EpicShufflingCards(onAnimationComplete: () -> Unit) {
             }
         }
 
-        // Phase 2: Return to center with multiple flips
         animate(offsetX, 0f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)) { value, _ ->
             offsetX = value
         }
@@ -540,7 +553,6 @@ private fun EpicShufflingCards(onAnimationComplete: () -> Unit) {
             offsetY = value
         }
 
-        // Phase 3: Final rapid flips
         repeat(5) {
             animate(rotation, rotation + 180f, animationSpec = tween(150)) { value, _ ->
                 rotation = value
@@ -554,7 +566,6 @@ private fun EpicShufflingCards(onAnimationComplete: () -> Unit) {
             delay(50)
         }
 
-        // Phase 4: Fade out
         animate(1f, 0f, animationSpec = tween(300)) { value, _ ->
             alpha = value
         }
@@ -618,7 +629,6 @@ private fun EpicRevealCard(missionName: String) {
 
     LaunchedEffect(Unit) {
         delay(200)
-        // Epic entrance
         animate(0f, 1.2f, animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessLow
@@ -634,7 +644,6 @@ private fun EpicRevealCard(missionName: String) {
             alpha = value
         }
 
-        // Settle
         animate(1.2f, 1f, animationSpec = spring()) { value, _ ->
             scale = value
         }

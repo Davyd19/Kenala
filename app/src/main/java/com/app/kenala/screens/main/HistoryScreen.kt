@@ -1,74 +1,31 @@
 package com.app.kenala.screens.main
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.app.kenala.data.local.entities.JournalEntity
 import com.app.kenala.ui.theme.LightTextColor
+import com.app.kenala.viewmodel.JournalViewModel
 
-// Data dummy yang lebih kaya untuk riwayat jurnal
-private data class JournalHistory(
-    val id: Int,
-    val title: String,
-    val date: String,
-    val snippet: String,
-    val imageUrl: String
-)
-
-private val journalList = listOf(
-    JournalHistory(
-        id = 1,
-        title = "Secangkir Ketenangan di Kopi Seroja",
-        date = "15 Okt 2025",
-        snippet = "Menemukan kedai kopi tersembunyi ini adalah sebuah anugerah. Suasananya tenang, kopinya nikmat, dan aku bisa membaca buku selama berjam-jam tanpa gangguan...",
-        imageUrl = "https://images.pexels.com/photos/312418/pexels-photo-312418.jpeg"
-    ),
-    JournalHistory(
-        id = 2,
-        title = "Pameran Seni Kontemporer 'Ruang Hening'",
-        date = "11 Okt 2025",
-        snippet = "Tidak menyangka ada galeri seni sekecil ini di tengah kota. Lukisan-lukisannya sangat menyentuh dan membuatku berpikir tentang banyak hal.",
-        imageUrl = "https://images.pexels.com/photos/1025804/pexels-photo-1025804.jpeg"
-    ),
-    JournalHistory(
-        id = 3,
-        title = "Menyatu dengan Alam di Hutan Kota",
-        date = "05 Okt 2025",
-        snippet = "Udara segar dan suara alam di sini benar-benar menyegarkan. Tempat yang sempurna untuk lari pagi atau sekadar berjalan-jalan santai di akhir pekan.",
-        imageUrl = "https://images.pexels.com/photos/167699/pexels-photo-167699.jpeg"
-    )
-)
-
-/**
- * Layar History (Riwayat Jurnal)
- * Menampilkan daftar semua petualangan yang pernah dijalani.
- */
 @Composable
 fun HistoryScreen(
     onJournalClick: (String) -> Unit,
-    viewModel: JournalViewModel = viewModel() // Inject ViewModel
+    viewModel: JournalViewModel = viewModel()
 ) {
     val journals by viewModel.journals.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -151,36 +108,35 @@ fun HistoryScreen(
     }
 }
 
-/**
- * Composable pribadi untuk satu kartu jurnal dalam daftar.
- */
 @Composable
-private fun JournalCard(journal: JournalHistory, onClick: () -> Unit) {
+private fun JournalCard(journal: JournalEntity, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = MaterialTheme.shapes.large, // 16dp
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface // Putih
+            containerColor = MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {
             // Gambar Jurnal
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(journal.imageUrl)
-                    .crossfade(true)
-                    .build(),
-                contentDescription = journal.title,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(150.dp)
-            )
+            journal.imageUrl?.let { url ->
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(url)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = journal.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(150.dp)
+                )
+            }
 
-            // Konten Teks (Judul, Tanggal, Snippet)
+            // Konten Teks
             Column(modifier = Modifier.padding(15.dp)) {
                 Text(
                     text = journal.title,
@@ -196,7 +152,7 @@ private fun JournalCard(journal: JournalHistory, onClick: () -> Unit) {
                     modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
                 )
                 Text(
-                    text = journal.snippet,
+                    text = journal.story,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 3,
@@ -206,4 +162,3 @@ private fun JournalCard(journal: JournalHistory, onClick: () -> Unit) {
         }
     }
 }
-

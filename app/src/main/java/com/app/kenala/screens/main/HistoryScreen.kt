@@ -67,31 +67,85 @@ private val journalList = listOf(
  */
 @Composable
 fun HistoryScreen(
-    onJournalClick: (Int) -> Unit // Navigasi ke detail jurnal dengan ID
+    onJournalClick: (String) -> Unit,
+    viewModel: JournalViewModel = viewModel() // Inject ViewModel
 ) {
+    val journals by viewModel.journals.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val error by viewModel.error.collectAsState()
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            contentPadding = PaddingValues(all = 25.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp) // Jarak antar kartu
-        ) {
-            // Judul Halaman
-            item {
-                Text(
-                    text = "Riwayat Petualangan",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 10.dp)
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                contentPadding = PaddingValues(all = 25.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Riwayat Petualangan",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        // Refresh button
+                        IconButton(onClick = { viewModel.syncJournals() }) {
+                            Icon(Icons.Default.Refresh, "Refresh")
+                        }
+                    }
+                }
+
+                if (journals.isEmpty() && !isLoading) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 60.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Belum ada jurnal")
+                        }
+                    }
+                }
+
+                items(journals) { journal ->
+                    JournalCard(
+                        journal = journal,
+                        onClick = { onJournalClick(journal.id) }
+                    )
+                }
+            }
+
+            // Loading indicator
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center)
                 )
             }
 
-            // Daftar Kartu Riwayat
-            items(journalList) { journal ->
-                JournalCard(journal = journal, onClick = { onJournalClick(journal.id) })
+            // Error snackbar
+            error?.let { errorMessage ->
+                Snackbar(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(16.dp),
+                    action = {
+                        TextButton(onClick = { viewModel.clearError() }) {
+                            Text("OK")
+                        }
+                    }
+                ) {
+                    Text(errorMessage)
+                }
             }
         }
     }

@@ -1,6 +1,5 @@
 package com.app.kenala.api
 
-import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -18,13 +17,9 @@ object RetrofitClient {
         token = newToken
     }
 
-    private val authInterceptor = Interceptor { chain ->
-        val requestBuilder = chain.request().newBuilder()
-        token?.let {
-            requestBuilder.addHeader("Authorization", "Bearer $it")
-        }
-        chain.proceed(requestBuilder.build())
-    }
+    private fun getToken(): String? = token
+
+    private val authInterceptor = AuthInterceptor { getToken() }
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY

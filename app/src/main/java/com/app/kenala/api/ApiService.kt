@@ -89,3 +89,10 @@ data class UpdateJournalRequest(
     val story: String,
     val imageUrl: String?
 )
+
+data class UpdateProfileRequest(
+    val name: String?,
+    val phone: String?,
+    val bio: String?,
+    val profile_image_url: String?
+)

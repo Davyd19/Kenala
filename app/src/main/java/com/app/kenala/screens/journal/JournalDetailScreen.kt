@@ -6,10 +6,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -19,19 +19,22 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.app.kenala.data.journalList
 import com.app.kenala.ui.theme.*
+import com.app.kenala.viewmodel.JournalViewModel // Pastikan path sesuai dengan lokasi ViewModel kamu
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JournalDetailScreen(
-    journalId: Int,
+    journalId: String,
     onBackClick: () -> Unit,
-    onEditClick: (Int) -> Unit
+    onEditClick: (String) -> Unit,
+    viewModel: JournalViewModel = viewModel()
 ) {
-    val journal = journalList.find { it.id == journalId }
+    val journals by viewModel.journals.collectAsState()
+    val journal = journals.find { it.id == journalId }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -87,15 +90,38 @@ fun JournalDetailScreen(
                         .fillMaxWidth()
                         .height(320.dp)
                 ) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(journal.imageUrl)
-                            .crossfade(true)
-                            .build(),
-                        contentDescription = journal.title,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
+                    if (journal.imageUrl != null) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(journal.imageUrl)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = journal.title,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        // Fallback gradient + text
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(
+                                            DeepBlue.copy(alpha = 0.6f),
+                                            AccentColor.copy(alpha = 0.3f)
+                                        )
+                                    )
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Tidak ada foto",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Color.White.copy(alpha = 0.9f)
+                            )
+                        }
+                    }
 
                     // Gradient overlay
                     Box(
@@ -224,6 +250,7 @@ fun JournalDetailScreen(
                     Spacer(modifier = Modifier.height(32.dp))
                 }
             } else {
+                // Journal not found
                 Box(
                     modifier = Modifier
                         .fillMaxSize()

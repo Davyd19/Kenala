@@ -2,6 +2,8 @@ package com.app.kenala.screens.profile
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -53,116 +55,128 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 25.dp, vertical = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Preferences Section
-            SettingsSection(title = "Preferensi") {
-                SettingsSwitchItem(
-                    title = "Notifikasi",
-                    description = "Terima notifikasi misi baru",
-                    checked = notificationsEnabled,
-                    onCheckedChange = { notificationsEnabled = it },
-                    icon = Icons.Default.Notifications
-                )
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    color = BorderColor
-                )
-                SettingsSwitchItem(
-                    title = "Lokasi",
-                    description = "Izinkan akses lokasi untuk misi",
-                    checked = locationEnabled,
-                    onCheckedChange = { locationEnabled = it },
-                    icon = Icons.Default.LocationOn
-                )
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    color = BorderColor
-                )
-                SettingsSwitchItem(
-                    title = "Mode Gelap",
-                    description = "Tampilan dengan tema gelap",
-                    checked = darkModeEnabled,
-                    onCheckedChange = { darkModeEnabled = it },
-                    icon = Icons.Default.DarkMode
-                )
-            }
-
-            // Account Section
-            SettingsSection(title = "Akun") {
-                SettingsActionItem(
-                    title = "Ganti Password",
-                    description = "Perbarui kata sandi Anda",
-                    icon = Icons.Default.Lock,
-                    onClick = { /* TODO */ }
-                )
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    color = BorderColor
-                )
-                SettingsActionItem(
-                    title = "Bahasa",
-                    description = "Indonesia",
-                    icon = Icons.Default.Language,
-                    onClick = { /* TODO */ }
-                )
-            }
-
-            // About Section
-            SettingsSection(title = "Tentang") {
-                SettingsActionItem(
-                    title = "Versi Aplikasi",
-                    description = "1.0.0",
-                    icon = Icons.Default.Info,
-                    onClick = { }
-                )
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    color = BorderColor
-                )
-                SettingsActionItem(
-                    title = "Kebijakan Privasi",
-                    description = "Baca kebijakan privasi kami",
-                    icon = Icons.Default.PrivacyTip,
-                    onClick = { /* TODO */ }
-                )
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    color = BorderColor
-                )
-                SettingsActionItem(
-                    title = "Syarat & Ketentuan",
-                    description = "Baca syarat dan ketentuan",
-                    icon = Icons.Default.Description,
-                    onClick = { /* TODO */ }
-                )
-            }
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Logout Button
-            Button(
-                onClick = { showLogoutDialog = true },
+            // Scrollable Content
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = MaterialTheme.shapes.large,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = ErrorColor
-                )
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 25.dp, vertical = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Icon(
-                    Icons.Default.Logout,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    "Keluar",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold
-                )
+                // Preferences Section
+                SettingsSection(title = "Preferensi") {
+                    SettingsSwitchItem(
+                        title = "Notifikasi",
+                        description = "Terima notifikasi misi baru",
+                        checked = notificationsEnabled,
+                        onCheckedChange = { notificationsEnabled = it },
+                        icon = Icons.Default.Notifications
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        color = BorderColor
+                    )
+                    SettingsSwitchItem(
+                        title = "Lokasi",
+                        description = "Izinkan akses lokasi untuk misi",
+                        checked = locationEnabled,
+                        onCheckedChange = { locationEnabled = it },
+                        icon = Icons.Default.LocationOn
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        color = BorderColor
+                    )
+                    SettingsSwitchItem(
+                        title = "Mode Gelap",
+                        description = "Tampilan dengan tema gelap",
+                        checked = darkModeEnabled,
+                        onCheckedChange = { darkModeEnabled = it },
+                        icon = Icons.Default.DarkMode
+                    )
+                }
+
+                // Account Section
+                SettingsSection(title = "Akun") {
+                    SettingsActionItem(
+                        title = "Ganti Password",
+                        description = "Perbarui kata sandi Anda",
+                        icon = Icons.Default.Lock,
+                        onClick = { /* TODO */ }
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        color = BorderColor
+                    )
+                    SettingsActionItem(
+                        title = "Bahasa",
+                        description = "Indonesia",
+                        icon = Icons.Default.Language,
+                        onClick = { /* TODO */ }
+                    )
+                }
+
+                // About Section
+                SettingsSection(title = "Tentang") {
+                    SettingsActionItem(
+                        title = "Versi Aplikasi",
+                        description = "1.0.0",
+                        icon = Icons.Default.Info,
+                        onClick = { }
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        color = BorderColor
+                    )
+                    SettingsActionItem(
+                        title = "Kebijakan Privasi",
+                        description = "Baca kebijakan privasi kami",
+                        icon = Icons.Default.PrivacyTip,
+                        onClick = { /* TODO */ }
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        color = BorderColor
+                    )
+                    SettingsActionItem(
+                        title = "Syarat & Ketentuan",
+                        description = "Baca syarat dan ketentuan",
+                        icon = Icons.Default.Description,
+                        onClick = { /* TODO */ }
+                    )
+                }
+            }
+
+            // Fixed Logout Button at Bottom
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.surface,
+                shadowElevation = 8.dp
+            ) {
+                Button(
+                    onClick = { showLogoutDialog = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .padding(horizontal = 25.dp, vertical = 8.dp),
+                    shape = MaterialTheme.shapes.large,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ErrorColor
+                    )
+                ) {
+                    Icon(
+                        Icons.Default.Logout,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Keluar",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }

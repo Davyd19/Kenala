@@ -2,7 +2,9 @@ package com.app.kenala.screens.profile
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -50,117 +52,131 @@ fun EditProfileScreen(onNavigateBack: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 25.dp)
         ) {
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Profile Photo Section
+            // Scrollable Content
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 25.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Box(contentAlignment = Alignment.BottomEnd) {
-                    Box(
-                        modifier = Modifier
-                            .size(120.dp)
-                            .clip(CircleShape)
-                            .background(
-                                Brush.linearGradient(
-                                    colors = listOf(OceanBlue, DeepBlue)
-                                )
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "N",
-                            style = MaterialTheme.typography.displayLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Profile Photo Section
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(contentAlignment = Alignment.BottomEnd) {
+                        Box(
+                            modifier = Modifier
+                                .size(120.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.linearGradient(
+                                        colors = listOf(OceanBlue, DeepBlue)
+                                    )
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "N",
+                                style = MaterialTheme.typography.displayLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                        FilledIconButton(
+                            onClick = { /* TODO: Image picker */ },
+                            modifier = Modifier.size(36.dp),
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = AccentColor,
+                                contentColor = DeepBlue
+                            )
+                        ) {
+                            Icon(
+                                Icons.Default.CameraAlt,
+                                contentDescription = "Ubah Foto",
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
-                    FilledIconButton(
-                        onClick = { /* TODO: Image picker */ },
-                        modifier = Modifier.size(36.dp),
-                        colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = AccentColor,
-                            contentColor = DeepBlue
-                        )
-                    ) {
-                        Icon(
-                            Icons.Default.CameraAlt,
-                            contentDescription = "Ubah Foto",
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Ubah Foto Profil",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Ubah Foto Profil",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                // Form Fields
+                ProfileTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = "Nama Lengkap",
+                    icon = Icons.Default.Person
                 )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                ProfileTextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = "Email",
+                    icon = Icons.Default.Email
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                ProfileTextField(
+                    value = phone,
+                    onValueChange = { phone = it },
+                    label = "Nomor Telepon",
+                    icon = Icons.Default.Phone
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                ProfileTextField(
+                    value = bio,
+                    onValueChange = { bio = it },
+                    label = "Bio",
+                    icon = Icons.Default.Description,
+                    singleLine = false,
+                    maxLines = 3
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Form Fields
-            ProfileTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = "Nama Lengkap",
-                icon = Icons.Default.Person
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-
-            ProfileTextField(
-                value = email,
-                onValueChange = { email = it },
-                label = "Email",
-                icon = Icons.Default.Email
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-
-            ProfileTextField(
-                value = phone,
-                onValueChange = { phone = it },
-                label = "Nomor Telepon",
-                icon = Icons.Default.Phone
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-
-            ProfileTextField(
-                value = bio,
-                onValueChange = { bio = it },
-                label = "Bio",
-                icon = Icons.Default.Description,
-                singleLine = false,
-                maxLines = 3
-            )
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Save Button
-            Button(
-                onClick = { onNavigateBack() },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .padding(bottom = 16.dp),
-                shape = MaterialTheme.shapes.large,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = AccentColor,
-                    contentColor = DeepBlue
-                ),
-                elevation = ButtonDefaults.buttonElevation(
-                    defaultElevation = 4.dp
-                )
+            // Fixed Button at Bottom
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.surface,
+                shadowElevation = 8.dp
             ) {
-                Text(
-                    "Simpan Perubahan",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold
-                )
+                Button(
+                    onClick = { onNavigateBack() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .padding(horizontal = 25.dp, vertical = 8.dp),
+                    shape = MaterialTheme.shapes.large,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = AccentColor,
+                        contentColor = DeepBlue
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(
+                        defaultElevation = 4.dp
+                    )
+                ) {
+                    Text(
+                        "Simpan Perubahan",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }

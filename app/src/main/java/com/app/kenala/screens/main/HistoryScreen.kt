@@ -31,6 +31,11 @@ fun HistoryScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
 
+    // Trigger initial sync
+    LaunchedEffect(Unit) {
+        viewModel.syncJournals()
+    }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
@@ -54,7 +59,6 @@ fun HistoryScreen(
                             fontWeight = FontWeight.Bold
                         )
 
-                        // Refresh button
                         IconButton(onClick = { viewModel.syncJournals() }) {
                             Icon(Icons.Default.Refresh, "Refresh")
                         }
@@ -69,7 +73,20 @@ fun HistoryScreen(
                                 .padding(vertical = 60.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("Belum ada jurnal")
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    "Belum ada jurnal",
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                Text(
+                                    "Selesaikan misi pertamamu dan tulis jurnal!",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                 }
@@ -82,26 +99,35 @@ fun HistoryScreen(
                 }
             }
 
-            // Loading indicator
             if (isLoading) {
                 CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.Center)
                 )
             }
 
-            // Error snackbar
             error?.let { errorMessage ->
-                Snackbar(
+                Surface(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .padding(16.dp),
-                    action = {
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = errorMessage,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.weight(1f)
+                        )
                         TextButton(onClick = { viewModel.clearError() }) {
                             Text("OK")
                         }
                     }
-                ) {
-                    Text(errorMessage)
                 }
             }
         }
@@ -121,7 +147,6 @@ private fun JournalCard(journal: JournalEntity, onClick: () -> Unit) {
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {
-            // Gambar Jurnal
             journal.imageUrl?.let { url ->
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
@@ -136,7 +161,6 @@ private fun JournalCard(journal: JournalEntity, onClick: () -> Unit) {
                 )
             }
 
-            // Konten Teks
             Column(modifier = Modifier.padding(15.dp)) {
                 Text(
                     text = journal.title,

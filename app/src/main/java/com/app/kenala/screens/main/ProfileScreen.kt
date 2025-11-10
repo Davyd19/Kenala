@@ -76,7 +76,7 @@ fun ProfileScreen(
 
             item { Spacer(modifier = Modifier.height(20.dp)) }
 
-            // Streak Card - Featured prominently
+            // Streak Card
             item {
                 StreakCard(
                     currentStreak = 7,

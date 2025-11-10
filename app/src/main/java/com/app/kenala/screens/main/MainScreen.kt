@@ -19,7 +19,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -29,13 +28,9 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.app.kenala.navigation.Screen
 import com.app.kenala.ui.theme.*
-import com.app.kenala.viewmodel.AuthViewModel
 
 @Composable
-fun MainScreen(
-    navController: NavHostController,
-    authViewModel: AuthViewModel = viewModel()
-) {
+fun MainScreen(navController: NavHostController) {
     val mainNavController = rememberNavController()
 
     Scaffold(
@@ -46,7 +41,6 @@ fun MainScreen(
         MainNavGraph(
             mainNavController = mainNavController,
             appNavController = navController,
-            authViewModel = authViewModel,
             modifier = Modifier.padding(innerPadding)
         )
     }
@@ -158,7 +152,6 @@ private fun RowScope.BottomNavItem(
 private fun MainNavGraph(
     mainNavController: NavHostController,
     appNavController: NavHostController,
-    authViewModel: AuthViewModel,
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -203,8 +196,7 @@ private fun MainNavGraph(
                 },
                 onNavigateToSuggestions = {
                     appNavController.navigate(Screen.AdventureSuggestion.route)
-                },
-                authViewModel = authViewModel
+                }
             )
         }
     }

@@ -1,6 +1,8 @@
 package com.app.kenala.navigation
 
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -9,28 +11,65 @@ import androidx.navigation.navArgument
 import com.app.kenala.screens.auth.LoginScreen
 import com.app.kenala.screens.auth.OnboardingScreen
 import com.app.kenala.screens.auth.RegisterScreen
-import com.app.kenala.screens.journal.EditJournalScreen
-import com.app.kenala.screens.journal.JournalDetailScreen
-import com.app.kenala.screens.journal.JournalEntryScreen
+import com.app.kenala.screens.journal.*
 import com.app.kenala.screens.main.MainScreen
-import com.app.kenala.screens.mission.GachaScreen
-import com.app.kenala.screens.mission.GuidanceScreen
-import com.app.kenala.screens.mission.MissionPreferencesScreen
+import com.app.kenala.screens.mission.*
 import com.app.kenala.screens.notifications.NotificationsCenterScreen
-import com.app.kenala.screens.profile.EditProfileScreen
-import com.app.kenala.screens.profile.SettingsScreen
-import com.app.kenala.screens.profile.DailyStreakScreen
-import com.app.kenala.screens.profile.BadgeCollectionScreen
-import com.app.kenala.screens.profile.DetailedStatsScreen
-import com.app.kenala.screens.profile.AdventureSuggestionScreen
+import com.app.kenala.screens.profile.*
 import com.app.kenala.screens.stats.StatisticsScreen
+import com.app.kenala.viewmodel.AuthState
+import com.app.kenala.viewmodel.AuthViewModel
+import kotlinx.coroutines.delay
 
 @Composable
 fun AppNavGraph(navController: NavHostController) {
+    val authViewModel: AuthViewModel = viewModel()
+    val authState by authViewModel.authState.collectAsState()
+    val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
+
+    // State untuk menampilkan error dan loading
+    var loginError by remember { mutableStateOf<String?>(null) }
+    var registerError by remember { mutableStateOf<String?>(null) }
+    var isLoading by remember { mutableStateOf(false) }
+
+    // Handle auth state changes
+    LaunchedEffect(authState) {
+        when (val state = authState) {
+            is AuthState.Loading -> {
+                isLoading = true
+            }
+            is AuthState.Success -> {
+                isLoading = false
+                loginError = null
+                registerError = null
+                // Navigate to main screen on success
+                navController.navigate(Screen.Main.route) {
+                    popUpTo(navController.graph.id) { inclusive = true }
+                }
+                authViewModel.resetAuthState()
+            }
+            is AuthState.Error -> {
+                isLoading = false
+                // Set error based on current screen
+                if (navController.currentDestination?.route == Screen.Login.route) {
+                    loginError = state.message
+                } else if (navController.currentDestination?.route == Screen.Register.route) {
+                    registerError = state.message
+                }
+                authViewModel.resetAuthState()
+            }
+            is AuthState.Idle -> {
+                isLoading = false
+            }
+        }
+    }
+
+    // Determine start destination based on login status
+    val startDestination = if (isLoggedIn) Screen.Main.route else Screen.Onboarding.route
 
     NavHost(
         navController = navController,
-        startDestination = Screen.Onboarding.route
+        startDestination = startDestination
     ) {
 
         // ======== AUTH SCREENS ========
@@ -43,28 +82,42 @@ fun AppNavGraph(navController: NavHostController) {
         }
 
         composable(route = Screen.Login.route) {
+            LaunchedEffect(Unit) {
+                loginError = null
+            }
+
             LoginScreen(
-                onLoginClick = {
-                    navController.navigate(Screen.Main.route) {
-                        popUpTo(navController.graph.id) { inclusive = true }
-                    }
+                onLoginClick = { email, password ->
+                    authViewModel.login(email, password)
                 },
                 onNavigateToRegister = {
                     navController.navigate(Screen.Register.route)
                 },
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                errorMessage = loginError,
+                isLoading = isLoading
             )
         }
 
         composable(route = Screen.Register.route) {
+            LaunchedEffect(Unit) {
+                registerError = null
+            }
+
             RegisterScreen(
-                onRegisterClick = {
-                    navController.navigate(Screen.Main.route) {
-                        popUpTo(navController.graph.id) { inclusive = true }
-                    }
+                onRegisterClick = { name, email, password ->
+                    authViewModel.register(name, email, password)
                 },
-                onNavigateToLogin = { navController.popBackStack() },
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateToLogin = {
+                    navController.popBackStack()
+                },
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                errorMessage = registerError,
+                isLoading = isLoading
             )
         }
 
@@ -124,12 +177,12 @@ fun AppNavGraph(navController: NavHostController) {
 
         composable(
             route = "${Screen.JournalDetail.route}/{journalId}",
-            arguments = listOf(navArgument("journalId") { type = NavType.IntType })
+            arguments = listOf(navArgument("journalId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val journalId = backStackEntry.arguments?.getInt("journalId")
+            val journalId = backStackEntry.arguments?.getString("journalId")
             if (journalId != null) {
                 JournalDetailScreen(
-                    journalId = journalId,
+                    journalId = journalId.toIntOrNull() ?: 0,
                     onBackClick = { navController.popBackStack() },
                     onEditClick = { id ->
                         navController.navigate("${Screen.EditJournal.route}/$id")
@@ -140,12 +193,12 @@ fun AppNavGraph(navController: NavHostController) {
 
         composable(
             route = "${Screen.EditJournal.route}/{journalId}",
-            arguments = listOf(navArgument("journalId") { type = NavType.IntType })
+            arguments = listOf(navArgument("journalId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val journalId = backStackEntry.arguments?.getInt("journalId")
+            val journalId = backStackEntry.arguments?.getString("journalId")
             if (journalId != null) {
                 EditJournalScreen(
-                    journalId = journalId,
+                    journalId = journalId.toIntOrNull() ?: 0,
                     onBackClick = { navController.popBackStack() },
                     onSaveClick = { navController.popBackStack() },
                     onDeleteClick = {
@@ -180,7 +233,6 @@ fun AppNavGraph(navController: NavHostController) {
             )
         }
 
-        // ======== NEW: PROFILE FEATURES ========
         composable(Screen.DailyStreak.route) {
             DailyStreakScreen(
                 onNavigateBack = { navController.popBackStack() }

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Untuk development - izinkan cleartext traffic ke localhost dan IP lokal -->
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- Untuk emulator -->
+        <domain includeSubdomains="true">10.0.2.2</domain>
+
+        <!-- Untuk device fisik - ganti dengan IP laptop Anda -->
+        <domain includeSubdomains="true">192.168.1.100</domain>
+        <domain includeSubdomains="true">192.168.0.100</domain>
+
+        <!-- Localhost -->
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+    </domain-config>
+
+    <!-- PRODUCTION: Uncomment ini saat deploy, hapus domain-config di atas -->
+    <!--
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+    -->
+</network-security-config>

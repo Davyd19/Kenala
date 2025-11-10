@@ -23,13 +23,45 @@ import com.app.kenala.ui.theme.PrimaryBlue
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
-    onLoginClick: () -> Unit,
+    onLoginClick: (email: String, password: String) -> Unit,
     onNavigateToRegister: () -> Unit,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    errorMessage: String? = null,
+    isLoading: Boolean = false
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    var emailError by remember { mutableStateOf<String?>(null) }
+    var passwordError by remember { mutableStateOf<String?>(null) }
+
+    // Validation
+    fun validateEmail(): Boolean {
+        emailError = when {
+            email.isBlank() -> "Email tidak boleh kosong"
+            !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches() -> "Format email tidak valid"
+            else -> null
+        }
+        return emailError == null
+    }
+
+    fun validatePassword(): Boolean {
+        passwordError = when {
+            password.isBlank() -> "Password tidak boleh kosong"
+            password.length < 6 -> "Password minimal 6 karakter"
+            else -> null
+        }
+        return passwordError == null
+    }
+
+    fun handleLogin() {
+        val isEmailValid = validateEmail()
+        val isPasswordValid = validatePassword()
+
+        if (isEmailValid && isPasswordValid) {
+            onLoginClick(email, password)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -62,26 +94,57 @@ fun LoginScreen(
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "Masuk ke akun Anda untuk melanjutkan.",
+                text = "Masuk ke akun Anda untuk melanjutkan petualangan.",
                 style = MaterialTheme.typography.bodyLarge,
                 color = LightBlue
             )
 
             Spacer(modifier = Modifier.height(32.dp))
 
+            // Error Message
+            if (errorMessage != null) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    )
+                ) {
+                    Text(
+                        text = errorMessage,
+                        modifier = Modifier.padding(12.dp),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
             OutlinedTextField(
                 value = email,
-                onValueChange = { email = it },
+                onValueChange = {
+                    email = it
+                    emailError = null
+                },
                 label = { Text("Email") },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                singleLine = true,
+                isError = emailError != null,
+                supportingText = {
+                    if (emailError != null) {
+                        Text(emailError!!)
+                    }
+                },
+                enabled = !isLoading
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             OutlinedTextField(
                 value = password,
-                onValueChange = { password = it },
+                onValueChange = {
+                    password = it
+                    passwordError = null
+                },
                 label = { Text("Password") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
@@ -93,14 +156,22 @@ fun LoginScreen(
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
                         Icon(imageVector = image, "toggle password visibility")
                     }
-                }
+                },
+                isError = passwordError != null,
+                supportingText = {
+                    if (passwordError != null) {
+                        Text(passwordError!!)
+                    }
+                },
+                enabled = !isLoading
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
             TextButton(
                 onClick = { /* TODO: Handle Lupa Password */ },
-                modifier = Modifier.align(Alignment.End)
+                modifier = Modifier.align(Alignment.End),
+                enabled = !isLoading
             ) {
                 Text("Lupa Password?", color = PrimaryBlue, fontWeight = FontWeight.SemiBold)
             }
@@ -108,13 +179,53 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             Button(
-                onClick = onLoginClick,
+                onClick = { handleLogin() },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
-                shape = MaterialTheme.shapes.large
+                shape = MaterialTheme.shapes.large,
+                enabled = !isLoading
             ) {
-                Text("Masuk", fontWeight = FontWeight.Bold)
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text("Masuk", fontWeight = FontWeight.Bold)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Divider dengan text
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                HorizontalDivider(modifier = Modifier.weight(1f))
+                Text(
+                    text = "atau",
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = LightBlue
+                )
+                HorizontalDivider(modifier = Modifier.weight(1f))
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Google Sign In Button (placeholder)
+            OutlinedButton(
+                onClick = { /* TODO: Implement Google Sign In */ },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = MaterialTheme.shapes.large,
+                enabled = !isLoading
+            ) {
+                // TODO: Add Google icon
+                Text("Masuk dengan Google", fontWeight = FontWeight.SemiBold)
             }
 
             Spacer(modifier = Modifier.weight(1f))
@@ -132,11 +243,11 @@ fun LoginScreen(
                     onClick = { onNavigateToRegister() },
                     style = TextStyle(
                         color = PrimaryBlue,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        fontSize = MaterialTheme.typography.bodyLarge.fontSize
                     )
                 )
             }
         }
     }
 }
-

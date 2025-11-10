@@ -13,14 +13,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.app.kenala.ui.theme.*
+import com.app.kenala.viewmodel.AuthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(onNavigateBack: () -> Unit) {
+fun SettingsScreen(
+    onNavigateBack: () -> Unit,
+    authViewModel: AuthViewModel = viewModel()
+) {
     var notificationsEnabled by remember { mutableStateOf(true) }
     var locationEnabled by remember { mutableStateOf(true) }
     var darkModeEnabled by remember { mutableStateOf(false) }
+    var showLogoutDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -136,17 +142,14 @@ fun SettingsScreen(onNavigateBack: () -> Unit) {
             Spacer(modifier = Modifier.weight(1f))
 
             // Logout Button
-            OutlinedButton(
-                onClick = { /* TODO: Logout */ },
+            Button(
+                onClick = { showLogoutDialog = true },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
                 shape = MaterialTheme.shapes.large,
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = ErrorColor
-                ),
-                border = ButtonDefaults.outlinedButtonBorder.copy(
-                    width = 2.dp
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = ErrorColor
                 )
             ) {
                 Icon(
@@ -162,6 +165,34 @@ fun SettingsScreen(onNavigateBack: () -> Unit) {
                 )
             }
         }
+    }
+
+    // Logout Confirmation Dialog
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            icon = { Icon(Icons.Default.Logout, contentDescription = null) },
+            title = { Text("Keluar dari Akun?") },
+            text = { Text("Apakah Anda yakin ingin keluar? Anda perlu login kembali untuk mengakses aplikasi.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showLogoutDialog = false
+                        authViewModel.logout()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ErrorColor
+                    )
+                ) {
+                    Text("Keluar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) {
+                    Text("Batal")
+                }
+            }
+        )
     }
 }
 
@@ -272,14 +303,13 @@ private fun SettingsActionItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(horizontal = 20.dp, vertical = 18.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
-                modifier = Modifier.weight(1f),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(15.dp)
             ) {
                 Box(
                     modifier = Modifier
@@ -299,8 +329,7 @@ private fun SettingsActionItem(
                     Text(
                         text = title,
                         style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        fontWeight = FontWeight.SemiBold
                     )
                     Text(
                         text = description,

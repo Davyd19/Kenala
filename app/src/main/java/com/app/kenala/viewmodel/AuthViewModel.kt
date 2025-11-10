@@ -8,9 +8,11 @@ import com.app.kenala.api.RegisterRequest
 import com.app.kenala.api.RetrofitClient
 import com.app.kenala.data.local.AppDatabase
 import com.app.kenala.data.local.entities.UserEntity
+import com.app.kenala.utils.DataStoreManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 sealed class AuthState {
@@ -24,6 +26,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     private val database = AppDatabase.getDatabase(application)
     private val userDao = database.userDao()
+    private val dataStoreManager = DataStoreManager(application)
 
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
     val authState: StateFlow<AuthState> = _authState.asStateFlow()
@@ -37,8 +40,13 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun checkLoginStatus() {
         viewModelScope.launch {
-            userDao.getUser().collect { user ->
-                _isLoggedIn.value = user != null
+            // Cek dari DataStore
+            val token = dataStoreManager.getToken()
+            _isLoggedIn.value = !token.isNullOrEmpty()
+
+            // Set token ke RetrofitClient jika ada
+            if (!token.isNullOrEmpty()) {
+                RetrofitClient.setToken(token)
             }
         }
     }
@@ -55,7 +63,15 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 if (response.isSuccessful && response.body() != null) {
                     val authResponse = response.body()!!
 
-                    // Save token
+                    // Save token ke DataStore
+                    dataStoreManager.saveAuthData(
+                        token = authResponse.token,
+                        userId = authResponse.user.id,
+                        userName = authResponse.user.name,
+                        userEmail = authResponse.user.email
+                    )
+
+                    // Save token ke RetrofitClient
                     RetrofitClient.setToken(authResponse.token)
 
                     // Save user to local database
@@ -105,7 +121,15 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 if (response.isSuccessful && response.body() != null) {
                     val authResponse = response.body()!!
 
-                    // Save token
+                    // Save token ke DataStore
+                    dataStoreManager.saveAuthData(
+                        token = authResponse.token,
+                        userId = authResponse.user.id,
+                        userName = authResponse.user.name,
+                        userEmail = authResponse.user.email
+                    )
+
+                    // Save token ke RetrofitClient
                     RetrofitClient.setToken(authResponse.token)
 
                     // Save user to local database
@@ -144,7 +168,10 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     fun logout() {
         viewModelScope.launch {
-            // Clear token
+            // Clear DataStore
+            dataStoreManager.clearAuthData()
+
+            // Clear token from RetrofitClient
             RetrofitClient.setToken(null)
 
             // Clear local database

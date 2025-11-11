@@ -24,11 +24,14 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.app.kenala.data.remote.dto.StatsDto
 import com.app.kenala.navigation.Screen
 import com.app.kenala.ui.theme.*
+import com.app.kenala.viewmodel.ProfileViewModel
 
 private data class InspirationCategory(val title: String, val imageUrl: String)
 private val inspirations = listOf(
@@ -41,8 +44,13 @@ private val inspirations = listOf(
 @Composable
 fun HomeScreen(
     navController: NavHostController,
+    profileViewModel: ProfileViewModel = viewModel(), // Terima ViewModel
     onNavigateToNotifications: () -> Unit
 ) {
+    // Ambil data dari ViewModel
+    val user by profileViewModel.user.collectAsState()
+    val stats by profileViewModel.stats.collectAsState()
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
@@ -52,13 +60,20 @@ fun HomeScreen(
                 .padding(innerPadding),
             contentPadding = PaddingValues(bottom = 25.dp)
         ) {
-            item { HomeHeader(onNavigateToNotifications = onNavigateToNotifications) }
+            item {
+                HomeHeader(
+                    userName = user?.name,
+                    userLevel = stats?.level,
+                    avatarUrl = user?.profile_image_url,
+                    onNavigateToNotifications = onNavigateToNotifications
+                )
+            }
             item { Spacer(modifier = Modifier.height(8.dp)) }
             item { MainMissionCard(navController = navController) }
             item { Spacer(modifier = Modifier.height(20.dp)) }
-            item { StatsHighlightCard() }
+            item { StatsHighlightCard(stats = stats) } // Pass stats
             item { Spacer(modifier = Modifier.height(20.dp)) }
-            item { WeeklyChallengeCard() }
+            item { WeeklyChallengeCard() } // Biarkan statis dulu
             item { Spacer(modifier = Modifier.height(20.dp)) }
             item { AdventureInspirationSection() }
         }
@@ -66,7 +81,12 @@ fun HomeScreen(
 }
 
 @Composable
-private fun HomeHeader(onNavigateToNotifications: () -> Unit) {
+private fun HomeHeader(
+    userName: String?,
+    userLevel: Int?,
+    avatarUrl: String?,
+    onNavigateToNotifications: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -76,7 +96,7 @@ private fun HomeHeader(onNavigateToNotifications: () -> Unit) {
     ) {
         Column {
             Text(
-                text = "Hai, Nayla!",
+                text = "Hai, ${userName ?: "Petualang"}!", // Gunakan data dinamis
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
@@ -92,7 +112,7 @@ private fun HomeHeader(onNavigateToNotifications: () -> Unit) {
                     modifier = Modifier.size(16.dp)
                 )
                 Text(
-                    text = "Level 5: Petualang Lokal",
+                    text = "Level ${userLevel ?: 1}: Petualang Lokal", // Gunakan data dinamis
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = FontWeight.Medium
@@ -111,11 +131,12 @@ private fun HomeHeader(onNavigateToNotifications: () -> Unit) {
                 )
             }
             AsyncImage(
-                model = "https://i.pravatar.cc/100?u=nayla",
+                model = avatarUrl ?: "https://i.pravatar.cc/100", // Gunakan avatarUrl
                 contentDescription = "Avatar Profil",
                 modifier = Modifier
                     .size(44.dp)
                     .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant) // Fallback background
             )
         }
     }
@@ -207,7 +228,7 @@ private fun MainMissionCard(navController: NavHostController) {
 }
 
 @Composable
-private fun StatsHighlightCard() {
+private fun StatsHighlightCard(stats: StatsDto?) { // Terima stats
     Column(modifier = Modifier.padding(horizontal = 25.dp)) {
         Text(
             text = "Pencapaianmu",
@@ -222,13 +243,13 @@ private fun StatsHighlightCard() {
         ) {
             StatItem(
                 label = "Misi Selesai",
-                value = "12",
+                value = stats?.total_missions?.toString() ?: "0", // Data dinamis
                 color = ForestGreen,
                 modifier = Modifier.weight(1f)
             )
             StatItem(
                 label = "Jarak Tempuh",
-                value = "42 km",
+                value = "${stats?.total_distance?.toInt() ?: 0} km", // Data dinamis
                 color = SkyBlue,
                 modifier = Modifier.weight(1f)
             )

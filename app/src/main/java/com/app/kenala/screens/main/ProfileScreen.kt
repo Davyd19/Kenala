@@ -18,10 +18,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
+import com.app.kenala.data.local.entities.UserEntity
+import com.app.kenala.data.remote.dto.StatsDto
 import com.app.kenala.ui.theme.*
+import com.app.kenala.viewmodel.ProfileViewModel
 
 @Composable
 fun ProfileScreen(
+    profileViewModel: ProfileViewModel = viewModel(), // Terima ViewModel
     onNavigateToStats: () -> Unit,
     onNavigateToEditProfile: () -> Unit,
     onNavigateToSettings: () -> Unit,
@@ -30,6 +36,10 @@ fun ProfileScreen(
     onNavigateToDetailedStats: () -> Unit,
     onNavigateToSuggestions: () -> Unit
 ) {
+    // Ambil data dari ViewModel
+    val user by profileViewModel.user.collectAsState()
+    val stats by profileViewModel.stats.collectAsState()
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
@@ -46,7 +56,7 @@ fun ProfileScreen(
                     modifier = Modifier.padding(start = 25.dp, top = 20.dp)
                 )
             }
-            item { ProfileHeader() }
+            item { ProfileHeader(user = user, stats = stats) } // Pass data
             item { Spacer(modifier = Modifier.height(24.dp)) }
 
             // Quick Stats Cards
@@ -58,14 +68,14 @@ fun ProfileScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     QuickStatCard(
-                        value = "12",
+                        value = stats?.total_missions?.toString() ?: "0", // Data dinamis
                         label = "Misi Selesai",
                         icon = Icons.Default.Flag,
                         gradient = listOf(ForestGreen, ForestGreen.copy(alpha = 0.7f)),
                         modifier = Modifier.weight(1f)
                     )
                     QuickStatCard(
-                        value = "42 km",
+                        value = "${stats?.total_distance?.toInt() ?: 0} km", // Data dinamis
                         label = "Jarak Tempuh",
                         icon = Icons.Default.DirectionsRun,
                         gradient = listOf(OceanBlue, SkyBlue),
@@ -79,8 +89,9 @@ fun ProfileScreen(
             // Streak Card
             item {
                 StreakCard(
-                    currentStreak = 7,
-                    longestStreak = 15,
+                    currentStreak = stats?.current_streak ?: 0, // Data dinamis
+                    longestStreak = stats?.longest_streak ?: 0, // Data dinamis
+                    totalActiveDays = stats?.total_active_days ?: 0, // Data dinamis
                     onClick = onNavigateToStreak
                 )
             }
@@ -107,6 +118,7 @@ fun ProfileScreen(
                 }
             }
             item {
+                // TODO: Hubungkan ke data /api/profile/badges di langkah berikutnya
                 AchievementPreviewCard(onClick = onNavigateToBadges)
             }
 
@@ -168,7 +180,7 @@ fun ProfileScreen(
 }
 
 @Composable
-private fun ProfileHeader() {
+private fun ProfileHeader(user: UserEntity?, stats: StatsDto?) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -186,16 +198,25 @@ private fun ProfileHeader() {
                 ),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = "N",
-                style = MaterialTheme.typography.displayMedium,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
+            // Gunakan AsyncImage jika ada URL, jika tidak, gunakan inisial
+            if (!user?.profile_image_url.isNullOrEmpty()) {
+                AsyncImage(
+                    model = user?.profile_image_url,
+                    contentDescription = "Avatar Profil",
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Text(
+                    text = user?.name?.firstOrNull()?.toString()?.uppercase() ?: "K", // Data dinamis
+                    style = MaterialTheme.typography.displayMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
         }
         Spacer(modifier = Modifier.height(15.dp))
         Text(
-            text = "Nayla Nurul Afifah",
+            text = user?.name ?: "Pengguna Kenala", // Data dinamis
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
@@ -210,7 +231,7 @@ private fun ProfileHeader() {
                 modifier = Modifier.size(16.dp)
             )
             Text(
-                text = "Level 5 • Petualang Lokal",
+                text = "Level ${stats?.level ?: 1} • Petualang Lokal", // Data dinamis
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = FontWeight.Medium
@@ -228,8 +249,7 @@ private fun QuickStatCard(
     modifier: Modifier
 ) {
     Card(
-        modifier = Modifier
-            .width(140.dp)
+        modifier = modifier // Hapus modifier ukuran tetap
             .height(100.dp),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
@@ -278,6 +298,7 @@ private fun QuickStatCard(
 private fun StreakCard(
     currentStreak: Int,
     longestStreak: Int,
+    totalActiveDays: Int,
     onClick: () -> Unit
 ) {
     var rotation by remember { mutableFloatStateOf(0f) }
@@ -428,7 +449,7 @@ private fun StreakCard(
                             )
                             Column {
                                 Text(
-                                    text = "45 hari",
+                                    text = "$totalActiveDays hari",
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White
@@ -490,7 +511,7 @@ private fun AchievementPreviewCard(onClick: () -> Unit) {
                 }
                 Column {
                     Text(
-                        text = "4 dari 10 Badge",
+                        text = "4 dari 10 Badge", // TODO: Ganti dengan data dinamis
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -501,7 +522,7 @@ private fun AchievementPreviewCard(onClick: () -> Unit) {
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     LinearProgressIndicator(
-                        progress = { 0.4f },
+                        progress = { 0.4f }, // TODO: Ganti dengan data dinamis
                         modifier = Modifier.width(150.dp),
                         color = AccentColor,
                         trackColor = AccentColor.copy(alpha = 0.2f),

@@ -19,6 +19,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -28,10 +29,13 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.app.kenala.navigation.Screen
 import com.app.kenala.ui.theme.*
+import com.app.kenala.viewmodel.ProfileViewModel
 
 @Composable
-fun MainScreen(navController: NavHostController) {
+fun MainScreen(navController: NavHostController, ) {
     val mainNavController = rememberNavController()
+    // Inisialisasi ProfileViewModel di sini agar bisa di-pass ke HomeScreen & ProfileScreen
+    val profileViewModel: ProfileViewModel = viewModel()
 
     Scaffold(
         bottomBar = {
@@ -41,6 +45,7 @@ fun MainScreen(navController: NavHostController) {
         MainNavGraph(
             mainNavController = mainNavController,
             appNavController = navController,
+            profileViewModel = profileViewModel, // Pass ViewModel
             modifier = Modifier.padding(innerPadding)
         )
     }
@@ -152,6 +157,7 @@ private fun RowScope.BottomNavItem(
 private fun MainNavGraph(
     mainNavController: NavHostController,
     appNavController: NavHostController,
+    profileViewModel: ProfileViewModel, // Terima ViewModel
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -162,6 +168,7 @@ private fun MainNavGraph(
         composable(Screen.Home.route) {
             HomeScreen(
                 navController = appNavController,
+                profileViewModel = profileViewModel, // Pass ViewModel ke HomeScreen
                 onNavigateToNotifications = {
                     appNavController.navigate(Screen.Notifications.route)
                 }
@@ -176,6 +183,7 @@ private fun MainNavGraph(
         }
         composable(Screen.Profile.route) {
             ProfileScreen(
+                profileViewModel = profileViewModel, // Pass ViewModel ke ProfileScreen
                 onNavigateToStats = {
                     appNavController.navigate(Screen.Statistics.route)
                 },

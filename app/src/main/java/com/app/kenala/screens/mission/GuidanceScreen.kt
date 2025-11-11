@@ -27,6 +27,8 @@ import androidx.compose.ui.unit.sp
 import com.app.kenala.ui.theme.*
 import com.app.kenala.utils.LocationManager
 import com.app.kenala.utils.NotificationHelper
+import com.app.kenala.viewmodel.MissionViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
 
 private data class MissionStep(
@@ -48,8 +50,10 @@ private val missionSteps = listOf(
 @Composable
 fun GuidanceScreen(
     onGiveUpClick: () -> Unit,
-    onArrivedClick: () -> Unit
+    onArrivedClick: () -> Unit,
+    missionViewModel: MissionViewModel = viewModel()
 ) {
+    val selectedMission by missionViewModel.selectedMission.collectAsState()
     var currentStepIndex by remember { mutableStateOf(0) }
     var currentDistance by remember { mutableStateOf<Double?>(null) }
     var hasArrived by remember { mutableStateOf(false) }
@@ -66,6 +70,10 @@ fun GuidanceScreen(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         // Handle permission result
+    }
+
+    selectedMission?.let { mission ->
+        // Display mission location, navigate to it, etc
     }
 
     // Request permissions on start

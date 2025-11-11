@@ -44,9 +44,13 @@ import com.app.kenala.ui.theme.WhiteColor
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MissionPreferencesScreen(
-    onNavigateToGacha: () -> Unit,
+    onNavigateToGacha: (category: String?, budget: String?, distance: String?) -> Unit,
     onNavigateBack: () -> Unit
 ) {
+    var selectedCategory by remember { mutableStateOf("Acak") }
+    var selectedBudget by remember { mutableStateOf("Acak") }
+    var selectedDistance by remember { mutableStateOf("Acak") }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
@@ -85,22 +89,35 @@ fun MissionPreferencesScreen(
 
                 PreferenceSection(
                     title = "Jenis Aktivitas",
-                    options = listOf("Kuliner", "Rekreasi", "Seni", "Sejarah", "Belanja")
+                    options = listOf("Kuliner", "Rekreasi", "Seni & Budaya", "Sejarah", "Belanja", "Alam"),
+                    selectedOption = selectedCategory,
+                    onOptionSelected = { selectedCategory = it }
                 )
                 Spacer(modifier = Modifier.height(24.dp))
                 PreferenceSection(
                     title = "Anggaran",
-                    options = listOf("Gratis", "Terjangkau", "Menengah", "Mewah")
+                    options = listOf("Gratis", "Terjangkau", "Menengah", "Mewah"),
+                    selectedOption = selectedBudget,
+                    onOptionSelected = { selectedBudget = it }
                 )
                 Spacer(modifier = Modifier.height(24.dp))
                 PreferenceSection(
                     title = "Jarak",
-                    options = listOf("Sangat Dekat", "Dekat", "Sedang", "Jauh")
+                    options = listOf("Sangat Dekat", "Dekat", "Sedang", "Jauh"),
+                    selectedOption = selectedDistance,
+                    onOptionSelected = { selectedDistance = it }
                 )
             }
 
             Button(
-                onClick = onNavigateToGacha,
+                onClick = {
+                    // Pass selected preferences to Gacha screen
+                    onNavigateToGacha(
+                        if (selectedCategory != "Acak") selectedCategory else null,
+                        if (selectedBudget != "Acak") selectedBudget else null,
+                        if (selectedDistance != "Acak") selectedDistance else null
+                    )
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
@@ -125,10 +142,13 @@ fun MissionPreferencesScreen(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun PreferenceSection(title: String, options: List<String>) {
-    // --- PENAMBAHAN OPSI "ACAK" ---
+private fun PreferenceSection(
+    title: String,
+    options: List<String>,
+    selectedOption: String,
+    onOptionSelected: (String) -> Unit
+) {
     val optionsWithRandom = listOf("Acak") + options
-    var selectedOption by remember { mutableStateOf("Acak") }
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
@@ -147,7 +167,7 @@ private fun PreferenceSection(title: String, options: List<String>) {
                 PreferenceChip(
                     text = option,
                     selected = selectedOption == option,
-                    onClick = { selectedOption = option }
+                    onClick = { onOptionSelected(option) }
                 )
             }
         }
@@ -170,4 +190,3 @@ private fun PreferenceChip(text: String, selected: Boolean, onClick: () -> Unit)
         border = if (selected) null else BorderStroke(1.dp, LightBlue)
     )
 }
-

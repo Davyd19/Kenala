@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-// File ini diisi untuk menyediakan data User dan Stats ke UI
 class ProfileViewModel(application: Application) : AndroidViewModel(application) {
 
     private val database = AppDatabase.getDatabase(application)
@@ -44,6 +43,10 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    // State untuk refresh
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
     init {
         // Langsung sinkronkan data user dan ambil stats saat ViewModel dibuat
         syncUserProfile()
@@ -54,6 +57,10 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             _isLoading.value = true
             userRepository.syncUserProfile()
+                .onSuccess {
+                    // Setelah sync profile, fetch stats juga
+                    fetchStats()
+                }
                 .onFailure {
                     _error.value = "Gagal sinkronisasi user: ${it.message}"
                 }
@@ -63,15 +70,29 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
 
     fun fetchStats() {
         viewModelScope.launch {
-            _isLoading.value = true
+            if (!_isLoading.value) {
+                _isLoading.value = true
+            }
+
             userRepository.getStats()
                 .onSuccess { statsData ->
                     _stats.value = statsData
+                    _error.value = null
                 }
                 .onFailure {
                     _error.value = "Gagal mengambil stats: ${it.message}"
                 }
+
             _isLoading.value = false
+            _isRefreshing.value = false
+        }
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            syncUserProfile()
+            fetchStats()
         }
     }
 

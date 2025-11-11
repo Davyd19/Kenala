@@ -103,16 +103,44 @@ fun AppNavGraph(navController: NavHostController) {
             MainScreen(navController = navController)
         }
 
-        // ======== MISSION FLOW ========
         composable(Screen.MissionPreferences.route) {
             MissionPreferencesScreen(
-                onNavigateToGacha = { navController.navigate(Screen.Gacha.route) },
+                onNavigateToGacha = { category, budget, distance ->
+                    val route = "${Screen.Gacha.route}?category=$category&budget=$budget&distance=$distance"
+                    navController.navigate(route)
+                },
                 onNavigateBack = { navController.popBackStack() }
             )
         }
 
-        composable(Screen.Gacha.route) {
+        composable(
+            route = "${Screen.Gacha.route}?category={category}&budget={budget}&distance={distance}",
+            arguments = listOf(
+                navArgument("category") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("budget") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("distance") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { backStackEntry ->
+            val category = backStackEntry.arguments?.getString("category")
+            val budget = backStackEntry.arguments?.getString("budget")
+            val distance = backStackEntry.arguments?.getString("distance")
+
             GachaScreen(
+                category = category,
+                budget = budget,
+                distance = distance,
                 onMissionFound = {
                     navController.navigate(Screen.Guidance.route) {
                         popUpTo(Screen.Gacha.route) { inclusive = true }

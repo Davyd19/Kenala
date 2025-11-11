@@ -23,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,9 +31,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.app.kenala.ui.theme.BrightBlue
 import com.app.kenala.ui.theme.PrimaryBlue
 import com.app.kenala.ui.theme.WhiteColor
+import com.app.kenala.viewmodel.JournalViewModel
+import com.app.kenala.viewmodel.MissionViewModel
 
 /**
  * Layar untuk menulis entri jurnal baru setelah menyelesaikan misi.
@@ -41,10 +45,29 @@ import com.app.kenala.ui.theme.WhiteColor
 @Composable
 fun JournalEntryScreen(
     onBackClick: () -> Unit,
-    onSaveClick: () -> Unit
+    onSaveClick: () -> Unit,
+    missionViewModel: MissionViewModel = viewModel(),
+    journalViewModel: JournalViewModel = viewModel()
 ) {
+    val selectedMission by missionViewModel.selectedMission.collectAsState()
     var journalTitle by remember { mutableStateOf("") }
     var journalStory by remember { mutableStateOf("") }
+
+    // When saving journal
+    fun handleSave() {
+        // 1. Complete mission
+        selectedMission?.let { mission ->
+            missionViewModel.completeMission(mission.id) {
+                // 2. Create journal
+                journalViewModel.createJournal(
+                    title = journalTitle,
+                    story = journalStory,
+                    imageUrl = null
+                )
+                onSaveClick()
+            }
+        }
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,

@@ -28,44 +28,40 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.app.kenala.R
 import com.app.kenala.ui.theme.*
 import com.app.kenala.utils.LocationManager
+import com.app.kenala.viewmodel.MissionViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.random.Random
-
-private data class MissionData(
-    val name: String,
-    val latitude: Double,
-    val longitude: Double
-)
-
-private val dummyMissions = listOf(
-    MissionData("Kedai Kopi Seroja", -0.9471, 100.4172),
-    MissionData("Taman Hutan Kota", -0.9489, 100.4183),
-    MissionData("Galeri Seni Lokal", -0.9500, 100.4194),
-    MissionData("Pasar Raya Padang", -0.9520, 100.4205),
-    MissionData("Museum Adityawarman", -0.9510, 100.4215),
-    MissionData("Pantai Air Manis", -0.9950, 100.3550),
-    MissionData("Jembatan Siti Nurbaya", -0.9480, 100.3620)
-)
 
 private enum class GachaState {
     Idle, ReadyToPull, Searching, ShowingInfo, Finished
 }
 
 @Composable
-fun GachaScreen(onMissionFound: () -> Unit) {
+fun GachaScreen(
+    onMissionFound: () -> Unit,
+    category: String? = null,
+    budget: String? = null,
+    distance: String? = null,
+    missionViewModel: MissionViewModel = viewModel()
+) {
     var gachaState by remember { mutableStateOf(GachaState.Idle) }
-    var revealedMission by remember { mutableStateOf<MissionData?>(null) }
     var missionDistance by remember { mutableStateOf<String?>(null) }
-    var estimatedTime by remember { mutableStateOf(0) }
+    var estimatedTime by remember { mutableIntStateOf(0) }
     var dragOffset by remember { mutableFloatStateOf(0f) }
 
     val context = LocalContext.current
     val locationManager = remember { LocationManager(context) }
     val coroutineScope = rememberCoroutineScope()
+
+    // Observe mission dari ViewModel
+    val selectedMission by missionViewModel.selectedMission.collectAsState()
+    val isLoading by missionViewModel.isLoading.collectAsState()
+    val error by missionViewModel.error.collectAsState()
 
     // Permission launcher
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -83,8 +79,8 @@ fun GachaScreen(onMissionFound: () -> Unit) {
     }
 
     // Calculate distance when mission is revealed
-    LaunchedEffect(revealedMission) {
-        revealedMission?.let { mission ->
+    LaunchedEffect(selectedMission) {
+        selectedMission?.let { mission ->
             if (locationManager.hasLocationPermission()) {
                 locationManager.getCurrentLocation { location ->
                     location?.let {
@@ -100,11 +96,19 @@ fun GachaScreen(onMissionFound: () -> Unit) {
                     }
                 }
             } else {
-                // No permission, use default values
                 missionDistance = "Tidak diketahui"
                 estimatedTime = 0
                 gachaState = GachaState.ShowingInfo
             }
+        }
+    }
+
+    // Handle error
+    LaunchedEffect(error) {
+        error?.let {
+            // Show error dan reset state
+            gachaState = GachaState.Idle
+            // TODO: Show snackbar or error dialog
         }
     }
 
@@ -137,13 +141,18 @@ fun GachaScreen(onMissionFound: () -> Unit) {
                     GachaState.Idle -> Triple("Tarik Kartu Petualanganmu", "", "Ketuk kartu untuk memulai")
                     GachaState.ReadyToPull -> Triple("Siap Untuk Petualangan?", "", "Tarik kartu ke bawah!")
                     GachaState.Searching -> Triple("Mencari Misi Sempurna...", "Menganalisis preferensimu...", "")
-                    GachaState.ShowingInfo, GachaState.Finished -> Triple("🎉 Misi Ditemukan!", revealedMission?.name ?: "", "")
+                    GachaState.ShowingInfo, GachaState.Finished -> Triple(
+                        "🎉 Misi Ditemukan!",
+                        selectedMission?.name ?: "",
+                        ""
+                    )
                 }
 
                 AnimatedText(
                     text = title,
                     style = MaterialTheme.typography.headlineSmall,
-                    color = if (gachaState == GachaState.Finished || gachaState == GachaState.ShowingInfo) AccentColor else Color.White
+                    color = if (gachaState == GachaState.Finished || gachaState == GachaState.ShowingInfo)
+                        AccentColor else Color.White
                 )
 
                 if (subtitle.isNotEmpty() && gachaState != GachaState.ShowingInfo && gachaState != GachaState.Finished) {
@@ -184,6 +193,8 @@ fun GachaScreen(onMissionFound: () -> Unit) {
                                     if (dragOffset > 150f) {
                                         gachaState = GachaState.Searching
                                         dragOffset = 0f
+                                        // Fetch random mission from API
+                                        missionViewModel.getRandomMission(category, budget, distance)
                                     }
                                 },
                                 onDragEnd = {
@@ -196,14 +207,16 @@ fun GachaScreen(onMissionFound: () -> Unit) {
                             )
                         }
                         GachaState.Searching -> {
-                            EpicShufflingCards(
-                                onAnimationComplete = {
-                                    revealedMission = dummyMissions.random()
-                                }
-                            )
+                            if (isLoading) {
+                                EpicShufflingCards(
+                                    onAnimationComplete = {
+                                        // Animation selesai, tunggu response dari API
+                                    }
+                                )
+                            }
                         }
                         GachaState.ShowingInfo, GachaState.Finished -> {
-                            revealedMission?.let { mission ->
+                            selectedMission?.let { mission ->
                                 EpicRevealCard(missionName = mission.name)
                             }
                         }
@@ -214,14 +227,14 @@ fun GachaScreen(onMissionFound: () -> Unit) {
             }
 
             // Mission Info Dialog
-            if (gachaState == GachaState.ShowingInfo && revealedMission != null && missionDistance != null) {
+            if (gachaState == GachaState.ShowingInfo && selectedMission != null && missionDistance != null) {
                 MissionInfoDialog(
-                    missionName = revealedMission!!.name,
+                    missionName = selectedMission!!.name,
                     distance = missionDistance!!,
                     estimatedTime = estimatedTime,
                     onDismiss = {
                         gachaState = GachaState.Idle
-                        revealedMission = null
+                        missionViewModel.clearSelectedMission()
                         missionDistance = null
                     },
                     onAccept = {
@@ -230,10 +243,25 @@ fun GachaScreen(onMissionFound: () -> Unit) {
                     }
                 )
             }
+
+            // Error message
+            error?.let { errorMsg ->
+                Snackbar(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(16.dp),
+                    action = {
+                        TextButton(onClick = { missionViewModel.clearError() }) {
+                            Text("OK")
+                        }
+                    }
+                ) {
+                    Text(errorMsg)
+                }
+            }
         }
     }
 }
-
 @Composable
 private fun AnimatedText(
     text: String,

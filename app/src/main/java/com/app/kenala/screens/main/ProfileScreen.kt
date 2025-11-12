@@ -22,6 +22,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.app.kenala.data.local.entities.UserEntity
 import com.app.kenala.data.remote.dto.StatsDto
+import com.app.kenala.screens.profile.AchievementPreviewCard // <-- 1. IMPORT SUDAH DITAMBAHKAN
 import com.app.kenala.ui.theme.*
 import com.app.kenala.viewmodel.ProfileViewModel
 
@@ -118,7 +119,7 @@ fun ProfileScreen(
                 }
             }
             item {
-                // TODO: Hubungkan ke data /api/profile/badges di langkah berikutnya
+                // <-- 2. PANGGILAN INI SEKARANG MENGGUNAKAN IMPORT DI ATAS
                 AchievementPreviewCard(onClick = onNavigateToBadges)
             }
 
@@ -468,75 +469,7 @@ private fun StreakCard(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun AchievementPreviewCard(onClick: () -> Unit) {
-    Card(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 25.dp),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(56.dp)
-                        .background(
-                            AccentColor.copy(alpha = 0.12f),
-                            MaterialTheme.shapes.medium
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.EmojiEvents,
-                        contentDescription = null,
-                        tint = AccentColor,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-                Column {
-                    Text(
-                        text = "4 dari 10 Badge", // TODO: Ganti dengan data dinamis
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Terus kumpulkan badge-mu!",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    LinearProgressIndicator(
-                        progress = { 0.4f }, // TODO: Ganti dengan data dinamis
-                        modifier = Modifier.width(150.dp),
-                        color = AccentColor,
-                        trackColor = AccentColor.copy(alpha = 0.2f),
-                    )
-                }
-            }
-            Icon(
-                Icons.Default.ChevronRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
+// <-- 3. FUNGSI ACHIEVEMENTPREVIEWCARD PALSU TELAH DIHAPUS DARI SINI
 
 @Composable
 private fun MenuCard(content: @Composable ColumnScope.() -> Unit) {

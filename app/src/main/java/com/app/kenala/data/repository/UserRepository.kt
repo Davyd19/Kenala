@@ -1,6 +1,7 @@
 package com.app.kenala.data.repository
 
 import com.app.kenala.api.ApiService
+import com.app.kenala.api.UpdateProfileRequest
 import com.app.kenala.data.local.dao.UserDao
 import com.app.kenala.data.local.entities.UserEntity
 import com.app.kenala.data.remote.dto.StatsDto
@@ -40,6 +41,35 @@ class UserRepository(
                 Result.success(response.body()!!)
             } else {
                 Result.failure(Exception("Gagal mengambil statistik: ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // FUNGSI BARU: Update profil user
+    suspend fun updateProfile(
+        name: String,
+        phone: String?,
+        bio: String?,
+        profileImageUrl: String?
+    ): Result<Unit> {
+        return try {
+            val request = UpdateProfileRequest(
+                name = name,
+                phone = phone,
+                bio = bio,
+                profile_image_url = profileImageUrl
+            )
+            // Panggil API untuk update
+            val response = apiService.updateProfile(request)
+
+            if (response.isSuccessful && response.body() != null) {
+                // Jika sukses, update juga database lokal (Room)
+                userDao.insertUser(response.body()!!.toEntity())
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("Gagal update profil: ${response.message()}"))
             }
         } catch (e: Exception) {
             Result.failure(e)

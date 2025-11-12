@@ -24,7 +24,7 @@ import com.app.kenala.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AchievementPreviewCard(
+fun AchievementPreviewCard(
     onClick: () -> Unit,
     badgeViewModel: BadgeViewModel = viewModel()
 ) {

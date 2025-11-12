@@ -1,6 +1,10 @@
 package com.app.kenala.screens.profile
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -15,17 +19,52 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.app.kenala.ui.theme.*
+import com.app.kenala.viewmodel.ProfileViewModel
+import com.app.kenala.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditProfileScreen(onNavigateBack: () -> Unit) {
-    var name by remember { mutableStateOf("Nayla Nurul Afifah") }
-    var email by remember { mutableStateOf("nayla@kenala.app") }
-    var phone by remember { mutableStateOf("+62 812 3456 7890") }
-    var bio by remember { mutableStateOf("Pecinta petualangan dan eksplorasi kota") }
+fun EditProfileScreen(
+    onNavigateBack: () -> Unit,
+    viewModel: ProfileViewModel = viewModel()
+) {
+    val user by viewModel.user.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val error by viewModel.error.collectAsState()
+
+    var name by remember(user) { mutableStateOf(user?.name ?: "") }
+    var email by remember(user) { mutableStateOf(user?.email ?: "") }
+    var phone by remember(user) { mutableStateOf(user?.phone ?: "") }
+    var bio by remember(user) { mutableStateOf(user?.bio ?: "") }
+
+    // --- TAMBAHAN BARU: State untuk Image Picker ---
+    var imageUri by remember { mutableStateOf<Uri?>(null) }
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        imageUri = uri
+    }
+    // ---------------------------------------------
+
+    // State untuk validasi
+    var nameError by remember { mutableStateOf<String?>(null) }
+
+    fun validate(): Boolean {
+        if (name.isBlank()) {
+            nameError = "Nama tidak boleh kosong"
+            return false
+        }
+        nameError = null
+        return true
+    }
 
     Scaffold(
         topBar = {
@@ -37,7 +76,7 @@ fun EditProfileScreen(onNavigateBack: () -> Unit) {
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = onNavigateBack, enabled = !isLoading) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
                     }
                 },
@@ -69,7 +108,18 @@ fun EditProfileScreen(onNavigateBack: () -> Unit) {
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Box(contentAlignment = Alignment.BottomEnd) {
-                        Box(
+                        // --- PERUBAHAN: Tampilkan gambar dari URI jika ada ---
+                        val displayImage: Any? = imageUri ?: user?.profile_image_url
+
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(displayImage)
+                                .placeholder(R.drawable.logo_kenala1) // Ganti dengan placeholder Anda
+                                .error(R.drawable.logo_kenala1) // Ganti dengan placeholder error
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = "Avatar Profil",
+                            contentScale = ContentScale.Crop,
                             modifier = Modifier
                                 .size(120.dp)
                                 .clip(CircleShape)
@@ -77,19 +127,16 @@ fun EditProfileScreen(onNavigateBack: () -> Unit) {
                                     Brush.linearGradient(
                                         colors = listOf(OceanBlue, DeepBlue)
                                     )
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "N",
-                                style = MaterialTheme.typography.displayLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                        }
+                                )
+                                .clickable(enabled = !isLoading) {
+                                    imagePickerLauncher.launch("image/*") // Panggil dari sini juga
+                                }
+                        )
+
                         FilledIconButton(
-                            onClick = { /* TODO: Image picker */ },
+                            onClick = { imagePickerLauncher.launch("image/*") }, // Panggil picker
                             modifier = Modifier.size(36.dp),
+                            enabled = !isLoading,
                             colors = IconButtonDefaults.filledIconButtonColors(
                                 containerColor = AccentColor,
                                 contentColor = DeepBlue
@@ -113,12 +160,33 @@ fun EditProfileScreen(onNavigateBack: () -> Unit) {
 
                 Spacer(modifier = Modifier.height(32.dp))
 
+                // Tampilkan jika ada error dari ViewModel
+                error?.let {
+                    Text(
+                        text = it,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                    // Hapus error setelah ditampilkan
+                    LaunchedEffect(error) {
+                        kotlinx.coroutines.delay(3000)
+                        viewModel.clearError()
+                    }
+                }
+
                 // Form Fields
                 ProfileTextField(
                     value = name,
-                    onValueChange = { name = it },
+                    onValueChange = {
+                        name = it
+                        nameError = null
+                    },
                     label = "Nama Lengkap",
-                    icon = Icons.Default.Person
+                    icon = Icons.Default.Person,
+                    isError = nameError != null,
+                    supportingText = nameError,
+                    enabled = !isLoading
                 )
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -126,7 +194,8 @@ fun EditProfileScreen(onNavigateBack: () -> Unit) {
                     value = email,
                     onValueChange = { email = it },
                     label = "Email",
-                    icon = Icons.Default.Email
+                    icon = Icons.Default.Email,
+                    enabled = false
                 )
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -134,7 +203,8 @@ fun EditProfileScreen(onNavigateBack: () -> Unit) {
                     value = phone,
                     onValueChange = { phone = it },
                     label = "Nomor Telepon",
-                    icon = Icons.Default.Phone
+                    icon = Icons.Default.Phone,
+                    enabled = !isLoading
                 )
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -144,7 +214,8 @@ fun EditProfileScreen(onNavigateBack: () -> Unit) {
                     label = "Bio",
                     icon = Icons.Default.Description,
                     singleLine = false,
-                    maxLines = 3
+                    maxLines = 3,
+                    enabled = !isLoading
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -157,12 +228,27 @@ fun EditProfileScreen(onNavigateBack: () -> Unit) {
                 shadowElevation = 8.dp
             ) {
                 Button(
-                    onClick = { onNavigateBack() },
+                    // --- PERUBAHAN: Hubungkan tombol Simpan ke ViewModel ---
+                    onClick = {
+                        if (validate()) {
+                            viewModel.updateProfile(
+                                name = name,
+                                phone = phone.ifBlank { null },
+                                bio = bio.ifBlank { null },
+                                imageUri = imageUri, // Kirim Uri
+                                existingImageUrl = user?.profile_image_url, // Kirim URL lama
+                                onSuccess = {
+                                    onNavigateBack()
+                                }
+                            )
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp)
                         .padding(horizontal = 25.dp, vertical = 8.dp),
                     shape = MaterialTheme.shapes.large,
+                    enabled = !isLoading,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = AccentColor,
                         contentColor = DeepBlue
@@ -171,11 +257,18 @@ fun EditProfileScreen(onNavigateBack: () -> Unit) {
                         defaultElevation = 4.dp
                     )
                 ) {
-                    Text(
-                        "Simpan Perubahan",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold
-                    )
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = DeepBlue
+                        )
+                    } else {
+                        Text(
+                            "Simpan Perubahan",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }
@@ -189,7 +282,10 @@ private fun ProfileTextField(
     label: String,
     icon: ImageVector,
     singleLine: Boolean = true,
-    maxLines: Int = 1
+    maxLines: Int = 1,
+    isError: Boolean = false,
+    supportingText: String? = null,
+    enabled: Boolean = true
 ) {
     OutlinedTextField(
         value = value,
@@ -205,6 +301,13 @@ private fun ProfileTextField(
         modifier = Modifier.fillMaxWidth(),
         singleLine = singleLine,
         maxLines = maxLines,
+        isError = isError,
+        supportingText = {
+            if (supportingText != null) {
+                Text(text = supportingText)
+            }
+        },
+        enabled = enabled,
         shape = MaterialTheme.shapes.large,
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = AccentColor,

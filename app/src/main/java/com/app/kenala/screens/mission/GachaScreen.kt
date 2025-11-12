@@ -38,12 +38,18 @@ import kotlinx.coroutines.launch
 import kotlin.random.Random
 
 private enum class GachaState {
-    Idle, ReadyToPull, Searching, ShowingInfo, Finished
+    Idle,
+    ReadyToPull,
+    Searching, // Animasi shuffle & API call berjalan
+    Revealing, // Animasi reveal kartu hasil
+    ShowingInfo, // Dialog muncul
+    Finished // Menunggu navigasi
 }
 
 @Composable
 fun GachaScreen(
-    onMissionFound: () -> Unit,
+    // PERUBAHAN: Menerima missionId, bukan () -> Unit
+    onMissionFound: (missionId: String) -> Unit,
     category: String? = null,
     budget: String? = null,
     distance: String? = null,
@@ -54,21 +60,20 @@ fun GachaScreen(
     var estimatedTime by remember { mutableIntStateOf(0) }
     var dragOffset by remember { mutableFloatStateOf(0f) }
 
+    var isAnimatingSearch by remember { mutableStateOf(false) }
+
     val context = LocalContext.current
     val locationManager = remember { LocationManager(context) }
     val coroutineScope = rememberCoroutineScope()
 
-    // Observe mission dari ViewModel
     val selectedMission by missionViewModel.selectedMission.collectAsState()
     val isLoading by missionViewModel.isLoading.collectAsState()
     val error by missionViewModel.error.collectAsState()
 
-    // Permission launcher
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { }
 
-    // Request location permission
     LaunchedEffect(Unit) {
         permissionLauncher.launch(
             arrayOf(
@@ -78,17 +83,16 @@ fun GachaScreen(
         )
     }
 
-    // Calculate distance when mission is revealed
-    LaunchedEffect(selectedMission) {
-        selectedMission?.let { mission ->
+    LaunchedEffect(selectedMission, gachaState) {
+        if (selectedMission != null && gachaState == GachaState.Revealing) {
             if (locationManager.hasLocationPermission()) {
                 locationManager.getCurrentLocation { location ->
                     location?.let {
                         val distanceMeters = LocationManager.calculateDistance(
                             it.latitude,
                             it.longitude,
-                            mission.latitude,
-                            mission.longitude
+                            selectedMission!!.latitude,
+                            selectedMission!!.longitude
                         )
                         missionDistance = LocationManager.formatDistance(distanceMeters)
                         estimatedTime = LocationManager.estimateTime(distanceMeters)
@@ -103,12 +107,30 @@ fun GachaScreen(
         }
     }
 
-    // Handle error
+    LaunchedEffect(isAnimatingSearch, isLoading, selectedMission, error) {
+        if (gachaState == GachaState.Searching && !isAnimatingSearch && !isLoading) {
+            if (selectedMission != null) {
+                gachaState = GachaState.Revealing
+            } else {
+                gachaState = GachaState.Idle
+            }
+        }
+    }
+
+    // PERUBAHAN: LaunchedEffect ini sekarang MENGIRIM ID MISI
+    LaunchedEffect(gachaState) {
+        if (gachaState == GachaState.Finished) {
+            // Pastikan selectedMission tidak null sebelum mengirim ID
+            selectedMission?.id?.let {
+                onMissionFound(it) // Mengirim ID misi ke NavGraph
+            }
+        }
+    }
+
     LaunchedEffect(error) {
         error?.let {
-            // Show error dan reset state
             gachaState = GachaState.Idle
-            // TODO: Show snackbar or error dialog
+            isAnimatingSearch = false
         }
     }
 
@@ -141,6 +163,7 @@ fun GachaScreen(
                     GachaState.Idle -> Triple("Tarik Kartu Petualanganmu", "", "Ketuk kartu untuk memulai")
                     GachaState.ReadyToPull -> Triple("Siap Untuk Petualangan?", "", "Tarik kartu ke bawah!")
                     GachaState.Searching -> Triple("Mencari Misi Sempurna...", "Menganalisis preferensimu...", "")
+                    GachaState.Revealing -> Triple("Misi Ditemukan!", "", "")
                     GachaState.ShowingInfo, GachaState.Finished -> Triple(
                         "🎉 Misi Ditemukan!",
                         selectedMission?.name ?: "",
@@ -151,7 +174,7 @@ fun GachaScreen(
                 AnimatedText(
                     text = title,
                     style = MaterialTheme.typography.headlineSmall,
-                    color = if (gachaState == GachaState.Finished || gachaState == GachaState.ShowingInfo)
+                    color = if (gachaState == GachaState.Finished || gachaState == GachaState.ShowingInfo || gachaState == GachaState.Revealing)
                         AccentColor else Color.White
                 )
 
@@ -192,8 +215,8 @@ fun GachaScreen(
                                     dragOffset = offset
                                     if (dragOffset > 150f) {
                                         gachaState = GachaState.Searching
+                                        isAnimatingSearch = true
                                         dragOffset = 0f
-                                        // Fetch random mission from API
                                         missionViewModel.getRandomMission(category, budget, distance)
                                     }
                                 },
@@ -207,15 +230,18 @@ fun GachaScreen(
                             )
                         }
                         GachaState.Searching -> {
-                            if (isLoading) {
+                            if (isAnimatingSearch) {
                                 EpicShufflingCards(
                                     onAnimationComplete = {
-                                        // Animation selesai, tunggu response dari API
+                                        isAnimatingSearch = false
                                     }
                                 )
                             }
+                            if (!isAnimatingSearch && isLoading) {
+                                CircularProgressIndicator(color = Color.White)
+                            }
                         }
-                        GachaState.ShowingInfo, GachaState.Finished -> {
+                        GachaState.Revealing, GachaState.ShowingInfo, GachaState.Finished -> {
                             selectedMission?.let { mission ->
                                 EpicRevealCard(missionName = mission.name)
                             }
@@ -226,25 +252,28 @@ fun GachaScreen(
                 Spacer(modifier = Modifier.height(60.dp))
             }
 
-            // Mission Info Dialog
             if (gachaState == GachaState.ShowingInfo && selectedMission != null && missionDistance != null) {
                 MissionInfoDialog(
                     missionName = selectedMission!!.name,
                     distance = missionDistance!!,
                     estimatedTime = estimatedTime,
-                    onDismiss = {
+                    onDismissRequest = { // Saat klik di luar dialog
+                        // PERUBAHAN: Sekarang aman untuk membersihkan misi
                         gachaState = GachaState.Idle
                         missionViewModel.clearSelectedMission()
                         missionDistance = null
                     },
-                    onAccept = {
+                    onDismissButton = { // Saat klik tombol "Cari Misi Lain"
+                        gachaState = GachaState.Idle
+                        missionViewModel.clearSelectedMission()
+                        missionDistance = null
+                    },
+                    onAccept = { // Saat klik tombol "Mulai Petualangan"
                         gachaState = GachaState.Finished
-                        onMissionFound()
                     }
                 )
             }
 
-            // Error message
             error?.let { errorMsg ->
                 Snackbar(
                     modifier = Modifier
@@ -262,6 +291,7 @@ fun GachaScreen(
         }
     }
 }
+
 @Composable
 private fun AnimatedText(
     text: String,

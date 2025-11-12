@@ -141,25 +141,38 @@ fun AppNavGraph(navController: NavHostController) {
                 category = category,
                 budget = budget,
                 distance = distance,
-                onMissionFound = {
-                    navController.navigate(Screen.Guidance.route) {
+                // PERUBAHAN: Mengirim missionId saat navigasi
+                onMissionFound = { missionId ->
+                    navController.navigate("${Screen.Guidance.route}/$missionId") {
                         popUpTo(Screen.Gacha.route) { inclusive = true }
                     }
                 }
             )
         }
 
-        composable(Screen.Guidance.route) {
-            GuidanceScreen(
-                onGiveUpClick = {
-                    navController.navigate(Screen.Main.route) {
-                        popUpTo(Screen.Main.route) { inclusive = true }
+        // PERUBAHAN: Menerima missionId sebagai argumen
+        composable(
+            route = "${Screen.Guidance.route}/{missionId}",
+            arguments = listOf(navArgument("missionId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val missionId = backStackEntry.arguments?.getString("missionId")
+
+            if (missionId == null) {
+                // Handle error jika ID null (seharusnya tidak terjadi)
+                navController.popBackStack()
+            } else {
+                GuidanceScreen(
+                    missionId = missionId, // Mengirim missionId ke screen
+                    onGiveUpClick = {
+                        navController.navigate(Screen.Main.route) {
+                            popUpTo(Screen.Main.route) { inclusive = true }
+                        }
+                    },
+                    onArrivedClick = {
+                        navController.navigate(Screen.JournalEntry.route)
                     }
-                },
-                onArrivedClick = {
-                    navController.navigate(Screen.JournalEntry.route)
-                }
-            )
+                )
+            }
         }
 
         // ======== JOURNAL FLOW ========
@@ -246,5 +259,9 @@ fun AppNavGraph(navController: NavHostController) {
             DetailedStatsScreen(onNavigateBack = { navController.popBackStack() })
         }
 
+        // 🔧 Tambahkan composable untuk AdventureSuggestionScreen jika ada
+        composable(Screen.AdventureSuggestion.route) {
+            AdventureSuggestionScreen(onNavigateBack = { navController.popBackStack() })
+        }
     }
 }

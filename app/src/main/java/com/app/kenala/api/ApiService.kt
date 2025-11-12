@@ -1,6 +1,7 @@
 package com.app.kenala.api
 
 import com.app.kenala.data.remote.dto.*
+import okhttp3.MultipartBody
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -43,8 +44,8 @@ interface ApiService {
     @GET("missions/{id}")
     suspend fun getMission(@Path("id") id: String): Response<MissionDto>
 
-    @POST("missions/{id}/complete")
-    suspend fun completeMission(@Path("id") id: String): Response<Unit>
+    @POST("missions/complete")
+    suspend fun completeMission(@Body request: CompleteMissionRequest): Response<Unit>
 
     // Profile endpoints
     @GET("profile")
@@ -61,6 +62,37 @@ interface ApiService {
 
     @GET("profile/weekly-challenge")
     suspend fun getWeeklyChallenge(): Response<WeeklyChallengeDto>
+
+    // --- ENDPOINT BARU UNTUK TRACKING MISI ---
+
+    @GET("tracking/mission/{missionId}")
+    suspend fun getMissionWithClues(
+        @Path("missionId") missionId: String
+    ): Response<MissionWithCluesResponse>
+
+    @POST("tracking/check-location")
+    suspend fun checkLocation(
+        @Body request: CheckLocationRequest
+    ): Response<CheckLocationResponse>
+
+    @POST("tracking/skip-clue")
+    suspend fun skipClue(
+        @Body request: SkipClueRequest
+    ): Response<CheckLocationResponse>
+
+    // --- TAMBAHAN BARU: Endpoint untuk Reset Progress ---
+    @POST("tracking/reset-progress")
+    suspend fun resetMissionProgress(
+        @Body request: ResetProgressRequest
+    ): Response<Unit>
+
+    // --- TAMBAHAN BARU: Endpoint untuk Upload Gambar ---
+    @Multipart
+    @POST("upload")
+    suspend fun uploadImage(
+        @Part image: MultipartBody.Part
+    ): Response<UploadResponse>
+    // ------------------------------------------------
 
 }
 
@@ -100,3 +132,25 @@ data class UpdateProfileRequest(
     val bio: String?,
     val profile_image_url: String?
 )
+
+data class CompleteMissionRequest(
+    val mission_id: String
+)
+
+data class SkipClueRequest(
+    val mission_id: String,
+    val clue_id: String
+)
+
+// --- TAMBAHAN BARU: Request DTO untuk Reset Progress ---
+data class ResetProgressRequest(
+    val mission_id: String
+)
+// ---------------------------------------------------
+
+// --- TAMBAHAN BARU: Response DTO untuk Upload ---
+data class UploadResponse(
+    val message: String,
+    val imageUrl: String
+)
+// ------------------------------------------------

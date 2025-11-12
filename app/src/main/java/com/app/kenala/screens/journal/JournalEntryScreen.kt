@@ -1,5 +1,8 @@
 package com.app.kenala.screens.journal
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -47,9 +50,16 @@ import com.app.kenala.ui.theme.WhiteColor
 import com.app.kenala.viewmodel.JournalViewModel
 import com.app.kenala.viewmodel.MissionViewModel
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.app.kenala.ui.theme.*
 import androidx.compose.ui.text.input.ImeAction
 
@@ -67,7 +77,16 @@ fun JournalEntryScreen(
     val selectedMission by missionViewModel.selectedMission.collectAsState()
     var journalTitle by remember { mutableStateOf("") }
     var journalStory by remember { mutableStateOf("") }
-    var isSaving by remember { mutableStateOf(false) }
+    val isSaving by journalViewModel.isLoading.collectAsState() // Gunakan state dari ViewModel
+
+    // --- TAMBAHAN BARU: State untuk Image Picker ---
+    var imageUri by remember { mutableStateOf<Uri?>(null) }
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        imageUri = uri
+    }
+    // ---------------------------------------------
 
     // Auto-fill title dengan nama misi
     LaunchedEffect(selectedMission) {
@@ -79,32 +98,31 @@ fun JournalEntryScreen(
     }
 
     fun handleSave() {
-        if (journalTitle.isBlank() || journalStory.isBlank()) {
+        if (journalTitle.isBlank() || journalStory.isBlank() || isSaving) {
             return
         }
 
-        isSaving = true
-
         selectedMission?.let { mission ->
+            // Selesaikan misi
             missionViewModel.completeMission(mission.id) {
+                // Buat jurnal dengan imageUri
                 journalViewModel.createJournal(
                     title = journalTitle,
                     story = journalStory,
-                    imageUrl = null,
+                    imageUri = imageUri, // Kirim Uri
                     locationName = mission.location_name,
                     latitude = mission.latitude,
                     longitude = mission.longitude
                 )
-                isSaving = false
                 onSaveClick()
             }
         } ?: run {
+            // Buat jurnal tanpa misi
             journalViewModel.createJournal(
                 title = journalTitle,
                 story = journalStory,
-                imageUrl = null
+                imageUri = imageUri // Kirim Uri
             )
-            isSaving = false
             onSaveClick()
         }
     }
@@ -136,6 +154,7 @@ fun JournalEntryScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(horizontal = 25.dp, vertical = 20.dp)
+                .verticalScroll(rememberScrollState()) // Tambahkan scroll
         ) {
             // Mission info card (if available)
             selectedMission?.let { mission ->
@@ -203,8 +222,7 @@ fun JournalEntryScreen(
                 placeholder = { Text("Bagikan pengalaman petualanganmu...") },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f),
-                minLines = 8,
+                    .heightIn(min = 150.dp), // Beri tinggi minimal
                 enabled = !isSaving,
                 keyboardOptions = KeyboardOptions(
                     capitalization = KeyboardCapitalization.Sentences
@@ -212,9 +230,9 @@ fun JournalEntryScreen(
             )
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Tombol Tambah Foto (placeholder)
+            // --- PERUBAHAN: Tombol Tambah Foto & Preview ---
             OutlinedButton(
-                onClick = { /* TODO: Implement image picker */ },
+                onClick = { imagePickerLauncher.launch("image/*") }, // Panggil image picker
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -222,8 +240,27 @@ fun JournalEntryScreen(
             ) {
                 Icon(Icons.Default.PhotoCamera, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Tambah Foto")
+                Text(if (imageUri == null) "Tambah Foto" else "Ganti Foto")
             }
+
+            // Preview gambar jika sudah dipilih
+            imageUri?.let {
+                Spacer(modifier = Modifier.height(16.dp))
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(it)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = "Preview Gambar Jurnal",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .clip(MaterialTheme.shapes.large)
+                )
+            }
+            // -------------------------------------------
+
             Spacer(modifier = Modifier.height(20.dp))
 
             // Tombol Simpan
@@ -231,7 +268,8 @@ fun JournalEntryScreen(
                 onClick = { handleSave() },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
+                    .height(56.dp)
+                    .padding(bottom = 16.dp), // Tambahkan padding bawah
                 shape = MaterialTheme.shapes.large,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = PrimaryBlue,

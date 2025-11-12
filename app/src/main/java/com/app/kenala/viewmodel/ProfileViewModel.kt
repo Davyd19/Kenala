@@ -1,6 +1,8 @@
 package com.app.kenala.viewmodel
 
 import android.app.Application
+import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.kenala.api.RetrofitClient
@@ -15,12 +17,18 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody // <-- 1. IMPORT DIPERBAIKI
+import java.io.File
+import java.io.FileOutputStream
 
 class ProfileViewModel(application: Application) : AndroidViewModel(application) {
 
     private val database = AppDatabase.getDatabase(application)
+    private val apiService = RetrofitClient.apiService
     private val userRepository = UserRepository(
-        RetrofitClient.apiService,
+        apiService,
         database.userDao()
     )
 
@@ -89,6 +97,106 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
 
             _isLoading.value = false
             _isRefreshing.value = false
+        }
+    }
+
+    // --- FUNGSI DIPERBARUI: Menerima imageUri ---
+    fun updateProfile(
+        name: String,
+        phone: String?,
+        bio: String?,
+        imageUri: Uri?,
+        existingImageUrl: String?,
+        onSuccess: () -> Unit
+    ) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+
+            try {
+                // 1. Upload gambar HANYA jika URI baru dipilih
+                val imageUrl = if (imageUri != null) {
+                    // --- 2. PERBAIKAN: Menggunakan if/else, bukan when ---
+                    val uploadResult = uploadImage(imageUri)
+                    if (uploadResult.isSuccess) {
+                        uploadResult.getOrNull() // Ini adalah URL
+                    } else {
+                        _error.value = "Gagal upload gambar: ${uploadResult.exceptionOrNull()?.message}"
+                        _isLoading.value = false
+                        return@launch
+                    }
+                    // --------------------------------------------------
+                } else {
+                    existingImageUrl // Gunakan URL yang lama
+                }
+
+                // 2. Update profil
+                userRepository.updateProfile(name, phone, bio, imageUrl)
+                    .onSuccess {
+                        _isLoading.value = false
+                        onSuccess()
+                    }
+                    .onFailure {
+                        _error.value = "Gagal update profil: ${it.message}"
+                        _isLoading.value = false
+                    }
+
+            } catch (e: Exception) {
+                _error.value = "Terjadi kesalahan: ${e.message}"
+                _isLoading.value = false
+            }
+        }
+    }
+
+    // --- FUNGSI BARU: Untuk upload gambar ---
+    private suspend fun uploadImage(uri: Uri): Result<String?> {
+        return try {
+            val context = getApplication<Application>().applicationContext
+            val contentResolver = context.contentResolver
+
+            // 1. Dapatkan nama file asli
+            var fileName: String? = null
+            contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (nameIndex != -1) {
+                        fileName = cursor.getString(nameIndex)
+                    }
+                }
+            }
+            fileName = fileName ?: "image_${System.currentTimeMillis()}"
+
+            // 2. Salin file dari content URI ke file cache lokal
+            val inputStream = contentResolver.openInputStream(uri)
+            val file = File(context.cacheDir, fileName!!)
+            val outputStream = FileOutputStream(file)
+            inputStream?.copyTo(outputStream)
+            inputStream?.close()
+            outputStream.close()
+
+            // 3. Buat RequestBody dari file cache
+            // --- 3. PERBAIKAN: Menggunakan asRequestBody ---
+            val requestFile = file.asRequestBody(
+                contentResolver.getType(uri)?.toMediaTypeOrNull()
+            )
+            // ------------------------------------------
+
+            // 4. Buat MultipartBody.Part
+            val body = MultipartBody.Part.createFormData("image", file.name, requestFile)
+
+            // 5. Panggil API
+            val response = apiService.uploadImage(body)
+
+            // 6. Hapus file cache
+            file.delete()
+
+            if (response.isSuccessful) {
+                Result.success(response.body()?.imageUrl)
+            } else {
+                Result.failure(Exception("Upload gagal: ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 

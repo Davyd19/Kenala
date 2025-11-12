@@ -25,7 +25,8 @@ fun MissionInfoDialog(
     missionName: String,
     distance: String,
     estimatedTime: Int,
-    onDismiss: () -> Unit,
+    onDismissRequest: () -> Unit, // PERUBAHAN: Menggantikan onDismiss
+    onDismissButton: () -> Unit,  // PERUBAHAN: Tombol "Cari Lain"
     onAccept: () -> Unit
 ) {
     var visible by remember { mutableStateOf(false) }
@@ -44,7 +45,7 @@ fun MissionInfoDialog(
     )
 
     Dialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = onDismissRequest, // PERUBAHAN: Dihubungkan ke onDismissRequest
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Card(
@@ -155,7 +156,7 @@ fun MissionInfoDialog(
                         }
 
                         OutlinedButton(
-                            onClick = onDismiss,
+                            onClick = onDismissButton, // PERUBAHAN: Dihubungkan ke onDismissButton
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(56.dp),

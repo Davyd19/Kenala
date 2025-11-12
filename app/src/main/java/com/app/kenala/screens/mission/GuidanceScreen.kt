@@ -7,6 +7,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
+// 1. TAMBAHKAN IMPORT EKSPLISIT
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -29,45 +31,38 @@ import com.app.kenala.utils.LocationManager
 import com.app.kenala.utils.NotificationHelper
 import com.app.kenala.viewmodel.MissionViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.delay
-
-private data class MissionStep(
-    val step: Int,
-    val totalSteps: Int,
-    val clue: String,
-    val locationQuery: String,
-    val latitude: Double,
-    val longitude: Double
-)
-
-private val missionSteps = listOf(
-    MissionStep(1, 3, "Temukan mural besar yang menceritakan sejarah kota.", "Mural Sejarah Kota Padang", -0.9471, 100.4172),
-    MissionStep(2, 3, "Dari sana, cari kedai es durian legendaris yang selalu ramai.", "Es Durian Ganti Nan Lamo Padang", -0.9489, 100.4183),
-    MissionStep(3, 3, "Tujuan akhirmu adalah sebuah tugu ikonik di pusat kota.", "Tugu Perdamaian Padang", -0.9500, 100.4194)
-)
+import com.app.kenala.data.remote.dto.CheckLocationResponse
+import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GuidanceScreen(
+    missionId: String,
     onGiveUpClick: () -> Unit,
     onArrivedClick: () -> Unit,
     missionViewModel: MissionViewModel = viewModel()
 ) {
-    val selectedMission by missionViewModel.selectedMission.collectAsState()
-    var currentDistance by remember { mutableStateOf<Double?>(null) }
-    var hasArrived by remember { mutableStateOf(false) }
-    var lastNotificationDistance by remember { mutableStateOf<Double?>(null) }
+    val missionWithClues by missionViewModel.missionWithClues.collectAsState()
+    val locationResponse by missionViewModel.checkLocationResponse.collectAsState()
 
     val context = LocalContext.current
     val locationManager = remember { LocationManager(context) }
     val notificationHelper = remember { NotificationHelper(context) }
 
-    // Permission launcher
+    val isLoading by missionViewModel.isLoading.collectAsState()
+    val error by missionViewModel.error.collectAsState()
+
+    // --- PERBAIKAN: Gunakan `locationResponse` untuk semua state ---
+    val hasArrivedAtDestination = locationResponse?.destination?.isArrived == true
+    val currentClue = locationResponse?.currentClue
+    val destination = locationResponse?.destination
+    // -------------------------------------------------------------
+
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { }
 
-    // Request permissions on start
+    // 1. Request permissions on start
     LaunchedEffect(Unit) {
         permissionLauncher.launch(
             arrayOf(
@@ -78,40 +73,59 @@ fun GuidanceScreen(
         )
     }
 
-    // Location tracking - GUNAKAN DATA DARI selectedMission
-    LaunchedEffect(selectedMission) {
-        selectedMission?.let { mission ->
-            if (locationManager.hasLocationPermission()) {
-                locationManager.getLocationUpdates().collect { location ->
-                    val distance = LocationManager.calculateDistance(
-                        location.latitude,
-                        location.longitude,
-                        mission.latitude,
-                        mission.longitude
-                    )
-
-                    currentDistance = distance
-
-                    // Check if arrived (within 50 meters)
-                    if (distance < 50 && !hasArrived) {
-                        hasArrived = true
-                        notificationHelper.showArrivalNotification(mission.name)
-                    }
-
-                    // Send notification at milestones
-                    val shouldNotify = when {
-                        distance < 100 && (lastNotificationDistance == null || lastNotificationDistance!! >= 100) -> true
-                        distance < 500 && (lastNotificationDistance == null || lastNotificationDistance!! >= 500) -> true
-                        distance < 1000 && (lastNotificationDistance == null || lastNotificationDistance!! >= 1000) -> true
-                        else -> false
-                    }
-
-                    if (shouldNotify) {
-                        notificationHelper.showDistanceNotification(mission.name, distance)
-                        lastNotificationDistance = distance
-                    }
-                }
+    // 2. Ambil data misi & clues saat missionId tersedia
+    // --- PERUBAHAN: Reset progress SEBELUM mengambil clues ---
+    LaunchedEffect(missionId) {
+        if (missionId != null) {
+            // PANGGIL FUNGSI RESET BARU
+            missionViewModel.resetMissionProgress(missionId) {
+                // Setelah reset selesai, baru fetch clues
+                missionViewModel.fetchMissionWithClues(missionId)
             }
+        }
+    }
+    // -------------------------------------------------------
+
+    // 3. Mulai location tracking
+    // --- PERBAIKAN: Tambahkan `hasArrivedAtDestination` sebagai key ---
+    LaunchedEffect(locationManager, missionWithClues, hasArrivedAtDestination) {
+        if (missionWithClues == null) {
+            // Jangan mulai tracking jika data misi (clues) belum siap
+            return@LaunchedEffect
+        }
+
+        // --- PERBAIKAN: Jika sudah sampai (baik via skip/lokasi), hentikan location tracking ---
+        if (hasArrivedAtDestination) {
+            return@LaunchedEffect
+        }
+        // -------------------------------------------------------------------
+
+        if (locationManager.hasLocationPermission()) {
+            locationManager.getLocationUpdates().collectLatest { location ->
+                // Panggil ViewModel untuk mengecek lokasi ke backend
+                missionViewModel.checkLocation(
+                    latitude = location.latitude,
+                    longitude = location.longitude
+                )
+            }
+        }
+    }
+
+    // 4. Kirim notifikasi jika perlu
+    LaunchedEffect(locationResponse) {
+        val response = locationResponse ?: return@LaunchedEffect
+        val missionName = missionWithClues?.mission?.name ?: "Misi"
+
+        if (response.status == "clue_reached") {
+            notificationHelper.showDistanceNotification(
+                response.currentClue?.name ?: "Petunjuk", 0.0
+            )
+        }
+
+        if (response.destination?.isArrived == true) {
+            notificationHelper.showArrivalNotification(
+                response.destination.name
+            )
         }
     }
 
@@ -136,165 +150,216 @@ fun GuidanceScreen(
             )
         }
     ) { innerPadding ->
-        if (selectedMission == null) {
-            // Show error state
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Icon(
-                        Icons.Default.ErrorOutline,
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = MaterialTheme.colorScheme.error
-                    )
-                    Text(
-                        text = "Tidak ada misi aktif",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Button(onClick = onGiveUpClick) {
-                        Text("Kembali")
-                    }
-                }
+
+        // Handle Loading (saat pertama kali memuat)
+        if (isLoading && missionWithClues == null) {
+            Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
             }
             return@Scaffold
         }
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 25.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Content
-            Column(
-                modifier = Modifier.weight(1f),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = selectedMission!!.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = LightTextColor,
-                    fontWeight = FontWeight.SemiBold,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(25.dp))
-
-                // Status Icon with Animation
-                if (hasArrived) {
-                    CheckmarkAnimation()
-                } else {
-                    LocationIcon()
-                }
-
-                Spacer(modifier = Modifier.height(25.dp))
-
-                // Distance Display
-                currentDistance?.let { distance ->
-                    DistanceCard(
-                        distance = distance,
-                        hasArrived = hasArrived
-                    )
-                    Spacer(modifier = Modifier.height(20.dp))
-                }
-
-                // Description or Arrival Message
-                Text(
-                    text = if (hasArrived) {
-                        "🎉 Anda Telah Sampai!"
-                    } else {
-                        selectedMission!!.description ?: "Ikuti petunjuk menuju lokasi"
-                    },
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    textAlign = TextAlign.Center,
-                    lineHeight = 32.sp,
-                    color = if (hasArrived) ForestGreen else MaterialTheme.colorScheme.onBackground
-                )
-
-                if (hasArrived) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = "Siap menulis jurnal petualanganmu?",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = LightTextColor,
-                        textAlign = TextAlign.Center
-                    )
-                }
+        // Handle Error
+        if (error != null) {
+            Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
+                Text(text = error!!, color = MaterialTheme.colorScheme.error)
             }
+            return@Scaffold
+        }
 
-            // Action Buttons
+        // Handle Misi tidak valid
+        if (missionWithClues == null) {
+            Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
+                Text(text = "Misi tidak valid.")
+            }
+            return@Scaffold
+        }
+
+        // UI Utama
+        Box(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 30.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(horizontal = 25.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Main progression button
-                Button(
-                    onClick = {
-                        if (hasArrived) {
-                            onArrivedClick()
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    shape = MaterialTheme.shapes.large,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (hasArrived) ForestGreen else PrimaryBlue
-                    ),
-                    enabled = hasArrived
+                // Content
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    Icon(
-                        if (hasArrived) Icons.Default.Check else Icons.Default.LocationSearching,
-                        contentDescription = null
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (hasArrived) "TULIS JURNAL" else "MENUJU LOKASI...",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = WhiteColor
+                        text = missionWithClues?.mission?.name ?: "Memuat Misi...",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = LightTextColor,
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = TextAlign.Center
                     )
+                    Spacer(modifier = Modifier.height(25.dp))
+
+                    if (hasArrivedAtDestination) {
+                        CheckmarkAnimation()
+                    } else {
+                        LocationIcon()
+                    }
+
+                    Spacer(modifier = Modifier.height(25.dp))
+
+                    locationResponse?.let {
+                        DistanceCard(
+                            distanceMessage = if (hasArrivedAtDestination) {
+                                "Anda Telah Tiba"
+                            } else {
+                                it.distance.formatted
+                            },
+                            hasArrived = hasArrivedAtDestination
+                        )
+                        Spacer(modifier = Modifier.height(20.dp))
+                    }
+
+                    Text(
+                        text = when {
+                            hasArrivedAtDestination -> "🎉 Anda Telah Sampai!"
+                            currentClue != null -> currentClue.description
+                            destination != null -> "Semua petunjuk selesai! Menuju tujuan akhir: ${destination.name}"
+                            else -> "Memuat petunjuk pertama..."
+                        },
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 32.sp,
+                        color = if (hasArrivedAtDestination) ForestGreen else MaterialTheme.colorScheme.onBackground
+                    )
+
+                    if (hasArrivedAtDestination) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "Siap menulis jurnal petualanganmu?",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = LightTextColor,
+                            textAlign = TextAlign.Center
+                        )
+                    } else if (currentClue != null && locationResponse?.clueReached == false) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "Pesan: ${locationResponse?.distance?.message}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = AccentColor,
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
 
-                // Open map button
-                if (!hasArrived && selectedMission != null) {
-                    OutlinedButton(
+                // Action Buttons
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 30.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Button(
                         onClick = {
-                            val gmmIntentUri = Uri.parse(
-                                "google.navigation:q=${selectedMission!!.latitude},${selectedMission!!.longitude}"
-                            )
-                            val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
-                            mapIntent.setPackage("com.google.android.apps.maps")
-                            if (mapIntent.resolveActivity(context.packageManager) != null) {
-                                context.startActivity(mapIntent)
+                            if (hasArrivedAtDestination) {
+                                onArrivedClick()
                             }
                         },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),
-                        shape = MaterialTheme.shapes.large
+                        shape = MaterialTheme.shapes.large,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (hasArrivedAtDestination) ForestGreen else PrimaryBlue
+                        ),
+                        enabled = hasArrivedAtDestination
                     ) {
-                        Icon(Icons.Default.Map, contentDescription = null)
-                        Spacer(modifier = Modifier.padding(horizontal = 4.dp))
+                        Icon(
+                            if (hasArrivedAtDestination) Icons.Default.Check else Icons.Default.LocationSearching,
+                            contentDescription = null
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Buka Peta",
+                            text = if (hasArrivedAtDestination) "TULIS JURNAL" else "MENUJU LOKASI...",
                             style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.Bold,
+                            color = WhiteColor
                         )
                     }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (!hasArrivedAtDestination) {
+                            OutlinedButton(
+                                onClick = {
+                                    val targetLat = locationResponse?.currentClue?.latitude ?: locationResponse?.destination?.latitude
+                                    val targetLon = locationResponse?.currentClue?.longitude ?: locationResponse?.destination?.longitude
+
+                                    if (targetLat != null && targetLon != null) {
+                                        val gmmIntentUri = Uri.parse("google.navigation:q=$targetLat,$targetLon")
+                                        val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
+                                        mapIntent.setPackage("com.google.android.apps.maps")
+                                        if (mapIntent.resolveActivity(context.packageManager) != null) {
+                                            context.startActivity(mapIntent)
+                                        }
+                                    }
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(56.dp),
+                                shape = MaterialTheme.shapes.large,
+                                enabled = locationResponse != null && !isLoading
+                            ) {
+                                Icon(Icons.Default.Map, contentDescription = null)
+                                Spacer(modifier = Modifier.padding(horizontal = 4.dp))
+                                Text(
+                                    text = "Buka Peta",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+
+                            // --- Tombol Skip Clue ---
+                            TextButton(
+                                onClick = { missionViewModel.skipCurrentClue() },
+                                modifier = Modifier.height(56.dp),
+                                enabled = !isLoading && currentClue != null // Aktif jika ada clue
+                            ) {
+                                Text(
+                                    "Lewati",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (!isLoading && currentClue != null) AccentColor else LightTextColor
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Icon(
+                                    Icons.Default.SkipNext,
+                                    contentDescription = "Lewati Petunjuk",
+                                    tint = if (!isLoading && currentClue != null) AccentColor else LightTextColor
+                                )
+                            }
+                            // -------------------------
+                        }
+                    }
+                }
+            }
+
+            // --- Loading Overlay ---
+            // Tampil HANYA jika sedang loading TAPI data misi SUDAH ada
+            if (isLoading && missionWithClues != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.3f))
+                        .padding(innerPadding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = Color.White)
                 }
             }
         }
@@ -303,20 +368,21 @@ fun GuidanceScreen(
 
 @Composable
 fun CheckmarkAnimation() {
-    // Animasi rotasi dan skala untuk efek "berhasil"
-    val rotation = remember { Animatable(0f) }
     val scale = remember { Animatable(0f) }
-
     LaunchedEffect(Unit) {
-        rotation.animateTo(360f, animationSpec = tween(800, easing = FastOutSlowInEasing))
-        scale.animateTo(1f, animationSpec = tween(800, easing = OvershootInterpolatorEasing))
+        scale.animateTo(
+            targetValue = 1f,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessLow
+            )
+        )
     }
 
     Box(
         modifier = Modifier
             .size(100.dp)
             .scale(scale.value)
-            .rotate(rotation.value)
             .background(ForestGreen.copy(alpha = 0.1f), CircleShape),
         contentAlignment = Alignment.Center
     ) {
@@ -331,21 +397,21 @@ fun CheckmarkAnimation() {
 
 @Composable
 fun LocationIcon() {
-    // Animasi berdenyut untuk ikon lokasi
-    val infiniteTransition = rememberInfiniteTransition()
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val scale by infiniteTransition.animateFloat(
         initialValue = 1f,
         targetValue = 1.2f,
         animationSpec = infiniteRepeatable(
             tween(1000, easing = LinearEasing),
-            RepeatMode.Reverse
-        )
+            // --- PERBAIKAN DI SINI ---
+            repeatMode = RepeatMode.Reverse // Mengganti 'RepeatMode =' menjadi 'repeatMode ='
+            // -------------------------
+        ), label = "pulse"
     )
 
     Box(
         modifier = Modifier
             .size(100.dp)
-            .scale(scale)
             .background(PrimaryBlue.copy(alpha = 0.1f), CircleShape),
         contentAlignment = Alignment.Center
     ) {
@@ -353,18 +419,13 @@ fun LocationIcon() {
             Icons.Default.Place,
             contentDescription = "Lokasi",
             tint = PrimaryBlue,
-            modifier = Modifier.size(64.dp)
+            modifier = Modifier.size(64.dp).scale(scale)
         )
     }
 }
 
 @Composable
-fun DistanceCard(distance: Double, hasArrived: Boolean) {
-    val displayedDistance = when {
-        distance >= 1000 -> String.format("%.2f km", distance / 1000)
-        else -> String.format("%.0f m", distance)
-    }
-
+fun DistanceCard(distanceMessage: String, hasArrived: Boolean) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -383,22 +444,16 @@ fun DistanceCard(distance: Double, hasArrived: Boolean) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Jarak ke Tujuan",
+                text = if(hasArrived) "Status" else "Jarak ke Petunjuk",
                 style = MaterialTheme.typography.bodyMedium,
                 color = LightTextColor
             )
             Text(
-                text = displayedDistance,
+                text = distanceMessage,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = if (hasArrived) ForestGreen else PrimaryBlue
             )
         }
     }
-}
-
-// Easing khusus untuk efek "overshoot"
-val OvershootInterpolatorEasing = Easing { fraction ->
-    val tension = 2.5f
-    (fraction - 1).let { it * it * ((tension + 1) * it + tension) + 1 }
 }

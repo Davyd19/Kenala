@@ -10,6 +10,12 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.Museum
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Park
+import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
@@ -228,7 +234,7 @@ private fun MainMissionCard(navController: NavHostController) {
 }
 
 @Composable
-private fun StatsHighlightCard(stats: StatsDto?) { // Terima stats
+private fun StatsHighlightCard(stats: StatsDto?) {
     Column(modifier = Modifier.padding(horizontal = 25.dp)) {
         Text(
             text = "Pencapaianmu",
@@ -243,16 +249,68 @@ private fun StatsHighlightCard(stats: StatsDto?) { // Terima stats
         ) {
             StatItem(
                 label = "Misi Selesai",
-                value = stats?.total_missions?.toString() ?: "0", // Data dinamis
+                value = stats?.total_missions?.toString() ?: "0",
                 color = ForestGreen,
                 modifier = Modifier.weight(1f)
             )
             StatItem(
                 label = "Jarak Tempuh",
-                value = "${stats?.total_distance?.toInt() ?: 0} km", // Data dinamis
+                value = "${stats?.total_distance?.toInt() ?: 0} km",
                 color = SkyBlue,
                 modifier = Modifier.weight(1f)
             )
+        }
+
+        // Tambahkan category breakdown jika ada
+        if (stats?.category_breakdown?.isNotEmpty() == true) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "Kategori Favorit",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            stats.category_breakdown.entries.take(3).forEach { (category, count) ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        val icon = when (category.lowercase()) {
+                            "kuliner" -> Icons.Default.Restaurant
+                            "seni & budaya" -> Icons.Default.Palette
+                            "alam" -> Icons.Default.Park
+                            "sejarah" -> Icons.Default.Museum
+                            "rekreasi" -> Icons.Default.FitnessCenter
+                            else -> Icons.Default.Explore
+                        }
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = category,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                    Text(
+                        text = "$count misi",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
         }
     }
 }
@@ -296,7 +354,14 @@ private fun StatItem(
 }
 
 @Composable
-private fun WeeklyChallengeCard() {
+private fun WeeklyChallengeCard(profileViewModel: ProfileViewModel = viewModel()) {
+    val weeklyChallenge by profileViewModel.weeklyChallenge.collectAsState()
+
+    LaunchedEffect(Unit) {
+        // Fetch weekly challenge data
+        // profileViewModel.fetchWeeklyChallenge()
+    }
+
     Column(modifier = Modifier.padding(horizontal = 25.dp)) {
         Text(
             text = "Tantangan Mingguan",
@@ -334,23 +399,41 @@ private fun WeeklyChallengeCard() {
                 }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Jelajah Kuliner",
+                        text = weeklyChallenge?.title ?: "Jelajah Kuliner",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Selesaikan 2 misi kuliner minggu ini",
+                        text = weeklyChallenge?.description ?: "Selesaikan 2 misi kuliner minggu ini",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(8.dp))
+
+                    val progress = if (weeklyChallenge != null) {
+                        (weeklyChallenge!!.current.toFloat() / weeklyChallenge!!.target)
+                    } else {
+                        0.5f
+                    }
+
                     LinearProgressIndicator(
-                        progress = { 0.5f },
+                        progress = { progress },
                         modifier = Modifier.fillMaxWidth(),
                         color = AccentColor,
                         trackColor = AccentColor.copy(alpha = 0.2f),
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = if (weeklyChallenge != null) {
+                            "${weeklyChallenge!!.current}/${weeklyChallenge!!.target} selesai"
+                        } else {
+                            "1/2 selesai"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }

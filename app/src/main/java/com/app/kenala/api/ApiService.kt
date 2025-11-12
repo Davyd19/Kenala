@@ -58,6 +58,10 @@ interface ApiService {
 
     @GET("profile/badges")
     suspend fun getBadges(): Response<List<BadgeDto>>
+
+    @GET("profile/weekly-challenge")
+    suspend fun getWeeklyChallenge(): Response<WeeklyChallengeDto>
+
 }
 
 // Request/Response DTOs

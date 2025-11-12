@@ -6,6 +6,7 @@ import com.app.kenala.api.UpdateJournalRequest
 import com.app.kenala.data.local.dao.JournalDao
 import com.app.kenala.data.local.entities.JournalEntity
 import com.app.kenala.data.remote.dto.JournalDto
+import com.app.kenala.data.remote.dto.LocationDto
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 
@@ -41,10 +42,17 @@ class JournalRepository(
     suspend fun createJournal(
         title: String,
         story: String,
-        imageUrl: String?
+        imageUrl: String?,
+        locationName: String? = null,
+        latitude: Double? = null,
+        longitude: Double? = null
     ): Result<JournalEntity> {
         return try {
-            val request = CreateJournalRequest(title, story, imageUrl, null)
+            val location = if (locationName != null && latitude != null && longitude != null) {
+                LocationDto(locationName, latitude, longitude)
+            } else null
+
+            val request = CreateJournalRequest(title, story, imageUrl, location)
             val response = apiService.createJournal(request)
 
             if (response.isSuccessful) {
@@ -61,9 +69,9 @@ class JournalRepository(
                     story = story,
                     date = System.currentTimeMillis().toString(),
                     imageUrl = imageUrl,
-                    locationName = null,
-                    latitude = null,
-                    longitude = null,
+                    locationName = locationName,
+                    latitude = latitude,
+                    longitude = longitude,
                     isSynced = false
                 )
                 journalDao.insertJournal(localEntity)
@@ -77,9 +85,9 @@ class JournalRepository(
                 story = story,
                 date = System.currentTimeMillis().toString(),
                 imageUrl = imageUrl,
-                locationName = null,
-                latitude = null,
-                longitude = null,
+                locationName = locationName,
+                latitude = latitude,
+                longitude = longitude,
                 isSynced = false
             )
             journalDao.insertJournal(localEntity)

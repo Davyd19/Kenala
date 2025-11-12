@@ -19,7 +19,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.app.kenala.data.remote.dto.BadgeDto
 import com.app.kenala.ui.theme.*
+import com.app.kenala.viewmodel.BadgeViewModel
 
 private data class Badge(
     val id: Int,
@@ -46,10 +49,22 @@ private val badgesList = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BadgeCollectionScreen(onNavigateBack: () -> Unit) {
-    val unlockedCount = badgesList.count { it.isUnlocked }
-    val totalCount = badgesList.size
-    var selectedBadge by remember { mutableStateOf<Badge?>(null) }
+fun BadgeCollectionScreen(
+    onNavigateBack: () -> Unit,
+    badgeViewModel: BadgeViewModel = viewModel()
+) {
+    val badges by badgeViewModel.badges.collectAsState()
+    val isLoading by badgeViewModel.isLoading.collectAsState()
+    val error by badgeViewModel.error.collectAsState()
+    var selectedBadge by remember { mutableStateOf<BadgeDto?>(null) }
+
+    // Fetch badges on first load
+    LaunchedEffect(Unit) {
+        badgeViewModel.fetchBadges()
+    }
+
+    val unlockedCount = badges.count { it.is_unlocked }
+    val totalCount = badges.size
 
     Scaffold(
         topBar = {
@@ -67,54 +82,88 @@ fun BadgeCollectionScreen(onNavigateBack: () -> Unit) {
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            // Progress Section
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 25.dp, vertical = 20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "$unlockedCount dari $totalCount Badge",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (isLoading && badges.isEmpty()) {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center)
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                LinearProgressIndicator(
-                    progress = { unlockedCount.toFloat() / totalCount },
+            } else if (error != null && badges.isEmpty()) {
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth(0.7f)
-                        .height(8.dp),
-                    color = AccentColor,
-                    trackColor = AccentColor.copy(alpha = 0.2f),
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "${(unlockedCount.toFloat() / totalCount * 100).toInt()}% Terkumpul",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            // Badge Grid
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(horizontal = 25.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                itemsIndexed(badgesList) { index, badge ->
-                    BadgeCard(
-                        badge = badge,
-                        onClick = { selectedBadge = badge },
-                        animationDelay = index * 50L
+                        .align(Alignment.Center)
+                        .padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        Icons.Default.ErrorOutline,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = MaterialTheme.colorScheme.error
                     )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = error!!,
+                        style = MaterialTheme.typography.bodyLarge,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(onClick = { badgeViewModel.fetchBadges() }) {
+                        Text("Coba Lagi")
+                    }
+                }
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                ) {
+                    // Progress Section
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 25.dp, vertical = 20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "$unlockedCount dari $totalCount Badge",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        if (totalCount > 0) {
+                            LinearProgressIndicator(
+                                progress = { unlockedCount.toFloat() / totalCount },
+                                modifier = Modifier
+                                    .fillMaxWidth(0.7f)
+                                    .height(8.dp),
+                                color = AccentColor,
+                                trackColor = AccentColor.copy(alpha = 0.2f),
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "${(unlockedCount.toFloat() / totalCount * 100).toInt()}% Terkumpul",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    // Badge Grid
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(horizontal = 25.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        itemsIndexed(badges) { index, badge ->
+                            BadgeCardFromApi(
+                                badge = badge,
+                                onClick = { selectedBadge = badge },
+                                animationDelay = index * 50L
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -122,7 +171,7 @@ fun BadgeCollectionScreen(onNavigateBack: () -> Unit) {
 
     // Badge Detail Dialog
     selectedBadge?.let { badge ->
-        BadgeDetailDialog(
+        BadgeDetailDialogFromApi(
             badge = badge,
             onDismiss = { selectedBadge = null }
         )
@@ -131,8 +180,8 @@ fun BadgeCollectionScreen(onNavigateBack: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun BadgeCard(
-    badge: Badge,
+private fun BadgeCardFromApi(
+    badge: BadgeDto,
     onClick: () -> Unit,
     animationDelay: Long
 ) {
@@ -152,7 +201,8 @@ private fun BadgeCard(
         label = "scale"
     )
 
-    val alpha = if (badge.isUnlocked) 1f else 0.4f
+    val alpha = if (badge.is_unlocked) 1f else 0.4f
+    val badgeColor = Color(android.graphics.Color.parseColor(badge.color))
 
     Card(
         onClick = onClick,
@@ -162,14 +212,14 @@ private fun BadgeCard(
             .alpha(alpha),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
-            containerColor = if (badge.isUnlocked) {
-                badge.color.copy(alpha = 0.1f)
+            containerColor = if (badge.is_unlocked) {
+                badgeColor.copy(alpha = 0.1f)
             } else {
                 MaterialTheme.colorScheme.surfaceVariant
             }
         ),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = if (badge.isUnlocked) 4.dp else 1.dp
+            defaultElevation = if (badge.is_unlocked) 4.dp else 1.dp
         )
     ) {
         Box(
@@ -181,21 +231,36 @@ private fun BadgeCard(
                 verticalArrangement = Arrangement.Center,
                 modifier = Modifier.padding(16.dp)
             ) {
+                // Icon berdasarkan icon_name dari API
+                val icon = when (badge.icon_name) {
+                    "hiking" -> Icons.Default.Hiking
+                    "location_city" -> Icons.Default.LocationCity
+                    "restaurant" -> Icons.Default.Restaurant
+                    "palette" -> Icons.Default.Palette
+                    "local_fire_department" -> Icons.Default.LocalFireDepartment
+                    "group" -> Icons.Default.Group
+                    "camera_alt" -> Icons.Default.CameraAlt
+                    "directions_run" -> Icons.Default.DirectionsRun
+                    "nights_stay" -> Icons.Default.NightsStay
+                    "emoji_events" -> Icons.Default.EmojiEvents
+                    else -> Icons.Default.EmojiEvents
+                }
+
                 Box(
                     modifier = Modifier
                         .size(72.dp)
                         .background(
-                            if (badge.isUnlocked) badge.color.copy(alpha = 0.15f)
+                            if (badge.is_unlocked) badgeColor.copy(alpha = 0.15f)
                             else MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
                             MaterialTheme.shapes.large
                         ),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = badge.icon,
+                        imageVector = icon,
                         contentDescription = badge.name,
                         modifier = Modifier.size(40.dp),
-                        tint = if (badge.isUnlocked) badge.color
+                        tint = if (badge.is_unlocked) badgeColor
                         else MaterialTheme.colorScheme.outline
                     )
                 }
@@ -203,12 +268,12 @@ private fun BadgeCard(
                 Text(
                     text = badge.name,
                     style = MaterialTheme.typography.titleSmall,
-                    fontWeight = if (badge.isUnlocked) FontWeight.Bold else FontWeight.Normal,
+                    fontWeight = if (badge.is_unlocked) FontWeight.Bold else FontWeight.Normal,
                     textAlign = TextAlign.Center,
-                    color = if (badge.isUnlocked) MaterialTheme.colorScheme.onSurface
+                    color = if (badge.is_unlocked) MaterialTheme.colorScheme.onSurface
                     else MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                if (!badge.isUnlocked) {
+                if (!badge.is_unlocked) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Icon(
                         Icons.Default.Lock,
@@ -223,10 +288,26 @@ private fun BadgeCard(
 }
 
 @Composable
-private fun BadgeDetailDialog(
-    badge: Badge,
+private fun BadgeDetailDialogFromApi(
+    badge: BadgeDto,
     onDismiss: () -> Unit
 ) {
+    val badgeColor = Color(android.graphics.Color.parseColor(badge.color))
+
+    val icon = when (badge.icon_name) {
+        "hiking" -> Icons.Default.Hiking
+        "location_city" -> Icons.Default.LocationCity
+        "restaurant" -> Icons.Default.Restaurant
+        "palette" -> Icons.Default.Palette
+        "local_fire_department" -> Icons.Default.LocalFireDepartment
+        "group" -> Icons.Default.Group
+        "camera_alt" -> Icons.Default.CameraAlt
+        "directions_run" -> Icons.Default.DirectionsRun
+        "nights_stay" -> Icons.Default.NightsStay
+        "emoji_events" -> Icons.Default.EmojiEvents
+        else -> Icons.Default.EmojiEvents
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = {
@@ -234,17 +315,17 @@ private fun BadgeDetailDialog(
                 modifier = Modifier
                     .size(80.dp)
                     .background(
-                        if (badge.isUnlocked) badge.color.copy(alpha = 0.15f)
+                        if (badge.is_unlocked) badgeColor.copy(alpha = 0.15f)
                         else MaterialTheme.colorScheme.surfaceVariant,
                         MaterialTheme.shapes.large
                     ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = badge.icon,
+                    imageVector = icon,
                     contentDescription = null,
                     modifier = Modifier.size(48.dp),
-                    tint = if (badge.isUnlocked) badge.color else MaterialTheme.colorScheme.outline
+                    tint = if (badge.is_unlocked) badgeColor else MaterialTheme.colorScheme.outline
                 )
             }
         },
@@ -265,10 +346,10 @@ private fun BadgeDetailDialog(
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                if (badge.isUnlocked && badge.unlockedDate != null) {
+                if (badge.is_unlocked && badge.unlocked_at != null) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Surface(
-                        color = badge.color.copy(alpha = 0.1f),
+                        color = badgeColor.copy(alpha = 0.1f),
                         shape = MaterialTheme.shapes.small
                     ) {
                         Row(
@@ -280,12 +361,12 @@ private fun BadgeDetailDialog(
                                 Icons.Default.CheckCircle,
                                 contentDescription = null,
                                 modifier = Modifier.size(16.dp),
-                                tint = badge.color
+                                tint = badgeColor
                             )
                             Text(
-                                text = "Terbuka ${badge.unlockedDate}",
+                                text = "Terbuka ${badge.unlocked_at}",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = badge.color,
+                                color = badgeColor,
                                 fontWeight = FontWeight.SemiBold
                             )
                         }

@@ -54,13 +54,10 @@ fun GuidanceScreen(
     missionViewModel: MissionViewModel = viewModel()
 ) {
     val selectedMission by missionViewModel.selectedMission.collectAsState()
-    var currentStepIndex by remember { mutableStateOf(0) }
     var currentDistance by remember { mutableStateOf<Double?>(null) }
     var hasArrived by remember { mutableStateOf(false) }
     var lastNotificationDistance by remember { mutableStateOf<Double?>(null) }
 
-    val currentStep = missionSteps[currentStepIndex]
-    val isLastStep = currentStepIndex == missionSteps.size - 1
     val context = LocalContext.current
     val locationManager = remember { LocationManager(context) }
     val notificationHelper = remember { NotificationHelper(context) }
@@ -68,13 +65,7 @@ fun GuidanceScreen(
     // Permission launcher
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        // Handle permission result
-    }
-
-    selectedMission?.let { mission ->
-        // Display mission location, navigate to it, etc
-    }
+    ) { }
 
     // Request permissions on start
     LaunchedEffect(Unit) {
@@ -87,36 +78,38 @@ fun GuidanceScreen(
         )
     }
 
-    // Location tracking
-    LaunchedEffect(currentStep) {
-        if (locationManager.hasLocationPermission()) {
-            locationManager.getLocationUpdates().collect { location ->
-                val distance = LocationManager.calculateDistance(
-                    location.latitude,
-                    location.longitude,
-                    currentStep.latitude,
-                    currentStep.longitude
-                )
+    // Location tracking - GUNAKAN DATA DARI selectedMission
+    LaunchedEffect(selectedMission) {
+        selectedMission?.let { mission ->
+            if (locationManager.hasLocationPermission()) {
+                locationManager.getLocationUpdates().collect { location ->
+                    val distance = LocationManager.calculateDistance(
+                        location.latitude,
+                        location.longitude,
+                        mission.latitude,
+                        mission.longitude
+                    )
 
-                currentDistance = distance
+                    currentDistance = distance
 
-                // Check if arrived (within 50 meters)
-                if (distance < 50 && !hasArrived) {
-                    hasArrived = true
-                    notificationHelper.showArrivalNotification(currentStep.locationQuery)
-                }
+                    // Check if arrived (within 50 meters)
+                    if (distance < 50 && !hasArrived) {
+                        hasArrived = true
+                        notificationHelper.showArrivalNotification(mission.name)
+                    }
 
-                // Send notification at milestones
-                val shouldNotify = when {
-                    distance < 100 && (lastNotificationDistance == null || lastNotificationDistance!! >= 100) -> true
-                    distance < 500 && (lastNotificationDistance == null || lastNotificationDistance!! >= 500) -> true
-                    distance < 1000 && (lastNotificationDistance == null || lastNotificationDistance!! >= 1000) -> true
-                    else -> false
-                }
+                    // Send notification at milestones
+                    val shouldNotify = when {
+                        distance < 100 && (lastNotificationDistance == null || lastNotificationDistance!! >= 100) -> true
+                        distance < 500 && (lastNotificationDistance == null || lastNotificationDistance!! >= 500) -> true
+                        distance < 1000 && (lastNotificationDistance == null || lastNotificationDistance!! >= 1000) -> true
+                        else -> false
+                    }
 
-                if (shouldNotify) {
-                    notificationHelper.showDistanceNotification(currentStep.locationQuery, distance)
-                    lastNotificationDistance = distance
+                    if (shouldNotify) {
+                        notificationHelper.showDistanceNotification(mission.name, distance)
+                        lastNotificationDistance = distance
+                    }
                 }
             }
         }
@@ -143,6 +136,37 @@ fun GuidanceScreen(
             )
         }
     ) { innerPadding ->
+        if (selectedMission == null) {
+            // Show error state
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Icon(
+                        Icons.Default.ErrorOutline,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                    Text(
+                        text = "Tidak ada misi aktif",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Button(onClick = onGiveUpClick) {
+                        Text("Kembali")
+                    }
+                }
+            }
+            return@Scaffold
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -150,17 +174,18 @@ fun GuidanceScreen(
                 .padding(horizontal = 25.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Konten di tengah
+            // Content
             Column(
                 modifier = Modifier.weight(1f),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = "Langkah ${currentStep.step} dari ${currentStep.totalSteps}",
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = selectedMission!!.name,
+                    style = MaterialTheme.typography.titleMedium,
                     color = LightTextColor,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(25.dp))
 
@@ -182,12 +207,12 @@ fun GuidanceScreen(
                     Spacer(modifier = Modifier.height(20.dp))
                 }
 
-                // Clue or Arrival Message
+                // Description or Arrival Message
                 Text(
                     text = if (hasArrived) {
                         "🎉 Anda Telah Sampai!"
                     } else {
-                        currentStep.clue
+                        selectedMission!!.description ?: "Ikuti petunjuk menuju lokasi"
                     },
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.SemiBold,
@@ -196,10 +221,10 @@ fun GuidanceScreen(
                     color = if (hasArrived) ForestGreen else MaterialTheme.colorScheme.onBackground
                 )
 
-                if (hasArrived && !isLastStep) {
+                if (hasArrived) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "Siap melanjutkan ke langkah berikutnya?",
+                        text = "Siap menulis jurnal petualanganmu?",
                         style = MaterialTheme.typography.bodyMedium,
                         color = LightTextColor,
                         textAlign = TextAlign.Center
@@ -207,7 +232,7 @@ fun GuidanceScreen(
                 }
             }
 
-            // Tombol Aksi di bawah
+            // Action Buttons
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -215,16 +240,11 @@ fun GuidanceScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Tombol Progresi Utama
+                // Main progression button
                 Button(
                     onClick = {
-                        if (isLastStep && hasArrived) {
+                        if (hasArrived) {
                             onArrivedClick()
-                        } else if (hasArrived) {
-                            currentStepIndex++
-                            hasArrived = false
-                            currentDistance = null
-                            lastNotificationDistance = null
                         }
                     },
                     modifier = Modifier
@@ -242,22 +262,20 @@ fun GuidanceScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = when {
-                            isLastStep && hasArrived -> "TULIS JURNAL"
-                            hasArrived -> "LANGKAH BERIKUTNYA"
-                            else -> "MENUJU LOKASI..."
-                        },
+                        text = if (hasArrived) "TULIS JURNAL" else "MENUJU LOKASI...",
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Bold,
                         color = WhiteColor
                     )
                 }
 
-                // Tombol Buka Peta
-                if (!hasArrived) {
+                // Open map button
+                if (!hasArrived && selectedMission != null) {
                     OutlinedButton(
                         onClick = {
-                            val gmmIntentUri = Uri.parse("google.navigation:q=${currentStep.locationQuery}")
+                            val gmmIntentUri = Uri.parse(
+                                "google.navigation:q=${selectedMission!!.latitude},${selectedMission!!.longitude}"
+                            )
                             val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
                             mapIntent.setPackage("com.google.android.apps.maps")
                             if (mapIntent.resolveActivity(context.packageManager) != null) {
@@ -284,122 +302,103 @@ fun GuidanceScreen(
 }
 
 @Composable
-private fun LocationIcon() {
-    val infiniteTransition = rememberInfiniteTransition(label = "location")
-    val scale by infiniteTransition.animateFloat(
-        initialValue = 0.9f,
-        targetValue = 1.1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "scale"
-    )
-
-    Box(
-        modifier = Modifier
-            .size(80.dp)
-            .scale(scale)
-            .background(OceanBlue.copy(alpha = 0.1f), CircleShape),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = Icons.Default.LocationOn,
-            contentDescription = "Ikon Misi",
-            modifier = Modifier.size(48.dp),
-            tint = OceanBlue
-        )
-    }
-}
-
-@Composable
-private fun CheckmarkAnimation() {
-    var visible by remember { mutableStateOf(false) }
+fun CheckmarkAnimation() {
+    // Animasi rotasi dan skala untuk efek "berhasil"
+    val rotation = remember { Animatable(0f) }
+    val scale = remember { Animatable(0f) }
 
     LaunchedEffect(Unit) {
-        delay(100)
-        visible = true
+        rotation.animateTo(360f, animationSpec = tween(800, easing = FastOutSlowInEasing))
+        scale.animateTo(1f, animationSpec = tween(800, easing = OvershootInterpolatorEasing))
     }
-
-    val scale by animateFloatAsState(
-        targetValue = if (visible) 1f else 0f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium
-        ),
-        label = "checkScale"
-    )
-
-    val rotation by animateFloatAsState(
-        targetValue = if (visible) 0f else -180f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy
-        ),
-        label = "checkRotation"
-    )
 
     Box(
         modifier = Modifier
-            .size(80.dp)
-            .scale(scale)
-            .rotate(rotation)
+            .size(100.dp)
+            .scale(scale.value)
+            .rotate(rotation.value)
             .background(ForestGreen.copy(alpha = 0.1f), CircleShape),
         contentAlignment = Alignment.Center
     ) {
         Icon(
-            imageVector = Icons.Default.CheckCircle,
-            contentDescription = "Sampai",
-            modifier = Modifier.size(48.dp),
-            tint = ForestGreen
+            Icons.Default.CheckCircle,
+            contentDescription = "Berhasil",
+            tint = ForestGreen,
+            modifier = Modifier.size(64.dp)
         )
     }
 }
 
 @Composable
-private fun DistanceCard(distance: Double, hasArrived: Boolean) {
-    val distanceText = LocationManager.formatDistance(distance)
-    val backgroundColor = when {
-        hasArrived -> ForestGreen
-        distance < 100 -> AccentColor
-        distance < 500 -> OceanBlue
-        else -> PrimaryBlue
+fun LocationIcon() {
+    // Animasi berdenyut untuk ikon lokasi
+    val infiniteTransition = rememberInfiniteTransition()
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.2f,
+        animationSpec = infiniteRepeatable(
+            tween(1000, easing = LinearEasing),
+            RepeatMode.Reverse
+        )
+    )
+
+    Box(
+        modifier = Modifier
+            .size(100.dp)
+            .scale(scale)
+            .background(PrimaryBlue.copy(alpha = 0.1f), CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            Icons.Default.Place,
+            contentDescription = "Lokasi",
+            tint = PrimaryBlue,
+            modifier = Modifier.size(64.dp)
+        )
+    }
+}
+
+@Composable
+fun DistanceCard(distance: Double, hasArrived: Boolean) {
+    val displayedDistance = when {
+        distance >= 1000 -> String.format("%.2f km", distance / 1000)
+        else -> String.format("%.0f m", distance)
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = backgroundColor.copy(alpha = 0.1f)
+            containerColor = if (hasArrived) ForestGreen.copy(alpha = 0.1f)
+            else PrimaryBlue.copy(alpha = 0.1f)
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        shape = MaterialTheme.shapes.large
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(vertical = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = if (hasArrived) "Anda sudah sampai!" else "Jarak ke tujuan",
+                text = "Jarak ke Tujuan",
                 style = MaterialTheme.typography.bodyMedium,
-                color = backgroundColor,
-                fontWeight = FontWeight.Medium
+                color = LightTextColor
             )
             Text(
-                text = distanceText,
-                style = MaterialTheme.typography.displaySmall,
+                text = displayedDistance,
+                style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
-                color = backgroundColor
+                color = if (hasArrived) ForestGreen else PrimaryBlue
             )
-            if (!hasArrived && distance < 100) {
-                Text(
-                    text = "Hampir sampai!",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = backgroundColor,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
         }
     }
+}
+
+// Easing khusus untuk efek "overshoot"
+val OvershootInterpolatorEasing = Easing { fraction ->
+    val tension = 2.5f
+    (fraction - 1).let { it * it * ((tension + 1) * it + tension) + 1 }
 }

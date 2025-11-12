@@ -7,11 +7,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -30,13 +36,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.app.kenala.ui.theme.AccentColor
 import com.app.kenala.ui.theme.BrightBlue
+import com.app.kenala.ui.theme.ForestGreen
 import com.app.kenala.ui.theme.PrimaryBlue
 import com.app.kenala.ui.theme.WhiteColor
 import com.app.kenala.viewmodel.JournalViewModel
 import com.app.kenala.viewmodel.MissionViewModel
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import com.app.kenala.ui.theme.*
+import androidx.compose.ui.text.input.ImeAction
 
 /**
  * Layar untuk menulis entri jurnal baru setelah menyelesaikan misi.
@@ -52,20 +67,45 @@ fun JournalEntryScreen(
     val selectedMission by missionViewModel.selectedMission.collectAsState()
     var journalTitle by remember { mutableStateOf("") }
     var journalStory by remember { mutableStateOf("") }
+    var isSaving by remember { mutableStateOf(false) }
 
-    // When saving journal
+    // Auto-fill title dengan nama misi
+    LaunchedEffect(selectedMission) {
+        selectedMission?.let { mission ->
+            if (journalTitle.isEmpty()) {
+                journalTitle = "Petualangan di ${mission.name}"
+            }
+        }
+    }
+
     fun handleSave() {
-        // 1. Complete mission
+        if (journalTitle.isBlank() || journalStory.isBlank()) {
+            return
+        }
+
+        isSaving = true
+
         selectedMission?.let { mission ->
             missionViewModel.completeMission(mission.id) {
-                // 2. Create journal
                 journalViewModel.createJournal(
                     title = journalTitle,
                     story = journalStory,
-                    imageUrl = null
+                    imageUrl = null,
+                    locationName = mission.location_name,
+                    latitude = mission.latitude,
+                    longitude = mission.longitude
                 )
+                isSaving = false
                 onSaveClick()
             }
+        } ?: run {
+            journalViewModel.createJournal(
+                title = journalTitle,
+                story = journalStory,
+                imageUrl = null
+            )
+            isSaving = false
+            onSaveClick()
         }
     }
 
@@ -81,7 +121,7 @@ fun JournalEntryScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
+                    IconButton(onClick = onBackClick, enabled = !isSaving) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
                     }
                 },
@@ -97,25 +137,78 @@ fun JournalEntryScreen(
                 .padding(innerPadding)
                 .padding(horizontal = 25.dp, vertical = 20.dp)
         ) {
+            // Mission info card (if available)
+            selectedMission?.let { mission ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.large,
+                    colors = CardDefaults.cardColors(
+                        containerColor = AccentColor.copy(alpha = 0.1f)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Place,
+                            contentDescription = null,
+                            tint = AccentColor,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Misi: ${mission.name}",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = AccentColor
+                            )
+                            Text(
+                                text = mission.location_name,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Icon(
+                            Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = ForestGreen
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(20.dp))
+            }
+
             // Input Judul
             OutlinedTextField(
                 value = journalTitle,
                 onValueChange = { journalTitle = it },
                 label = { Text("Judul Cerita") },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                singleLine = true,
+                enabled = !isSaving,
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Sentences,
+                    imeAction = ImeAction.Next
+                )
             )
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Input Cerita (area teks yang lebih besar)
+            // Input Cerita
             OutlinedTextField(
                 value = journalStory,
                 onValueChange = { journalStory = it },
                 label = { Text("Ceritamu di sini...") },
+                placeholder = { Text("Bagikan pengalaman petualanganmu...") },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f), // Ambil sisa ruang
-                minLines = 8
+                    .weight(1f),
+                minLines = 8,
+                enabled = !isSaving,
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Sentences
+                )
             )
             Spacer(modifier = Modifier.height(20.dp))
 
@@ -124,16 +217,18 @@ fun JournalEntryScreen(
                 onClick = { /* TODO: Implement image picker */ },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp)
+                    .height(56.dp),
+                enabled = !isSaving
             ) {
                 Icon(Icons.Default.PhotoCamera, contentDescription = null)
-                Text("  Tambah Foto", modifier = Modifier.padding(start = 8.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Tambah Foto")
             }
             Spacer(modifier = Modifier.height(20.dp))
 
             // Tombol Simpan
             Button(
-                onClick = onSaveClick,
+                onClick = { handleSave() },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -141,13 +236,21 @@ fun JournalEntryScreen(
                 colors = ButtonDefaults.buttonColors(
                     containerColor = PrimaryBlue,
                     contentColor = WhiteColor
-                )
+                ),
+                enabled = !isSaving && journalTitle.isNotBlank() && journalStory.isNotBlank()
             ) {
-                Text(
-                    "Simpan Jurnal",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold
-                )
+                if (isSaving) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = WhiteColor
+                    )
+                } else {
+                    Text(
+                        "Simpan Jurnal",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }

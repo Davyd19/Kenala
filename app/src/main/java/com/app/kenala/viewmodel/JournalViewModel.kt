@@ -49,10 +49,17 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun createJournal(title: String, story: String, imageUrl: String?) {
+    fun createJournal(
+        title: String,
+        story: String,
+        imageUrl: String?,
+        locationName: String? = null,
+        latitude: Double? = null,
+        longitude: Double? = null
+    ) {
         viewModelScope.launch {
             _isLoading.value = true
-            repository.createJournal(title, story, imageUrl)
+            repository.createJournal(title, story, imageUrl, locationName, latitude, longitude)
                 .onFailure {
                     _error.value = it.message
                 }

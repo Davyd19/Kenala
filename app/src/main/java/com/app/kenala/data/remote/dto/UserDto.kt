@@ -35,3 +35,13 @@ data class BadgeDto(
     val is_unlocked: Boolean,
     val unlocked_at: String?
 )
+
+data class WeeklyChallengeDto(
+    val id: String,
+    val title: String,
+    val description: String,
+    val target: Int,
+    val current: Int,
+    val reward_points: Int,
+    val expires_at: String
+)

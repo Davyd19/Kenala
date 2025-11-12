@@ -237,7 +237,9 @@ fun AppNavGraph(navController: NavHostController) {
         }
 
         composable(Screen.BadgeCollection.route) {
-            BadgeCollectionScreen(onNavigateBack = { navController.popBackStack() })
+            BadgeCollectionScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
 
         composable(Screen.DetailedStats.route) {

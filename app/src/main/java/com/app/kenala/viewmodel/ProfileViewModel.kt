@@ -7,6 +7,7 @@ import com.app.kenala.api.RetrofitClient
 import com.app.kenala.data.local.AppDatabase
 import com.app.kenala.data.local.entities.UserEntity
 import com.app.kenala.data.remote.dto.StatsDto
+import com.app.kenala.data.remote.dto.WeeklyChallengeDto
 import com.app.kenala.data.repository.UserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -46,6 +47,9 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     // State untuk refresh
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
+    private val _weeklyChallenge = MutableStateFlow<WeeklyChallengeDto?>(null)
+    val weeklyChallenge: StateFlow<WeeklyChallengeDto?> = _weeklyChallenge.asStateFlow()
 
     init {
         // Langsung sinkronkan data user dan ambil stats saat ViewModel dibuat

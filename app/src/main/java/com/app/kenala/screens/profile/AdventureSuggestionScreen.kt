@@ -15,23 +15,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.app.kenala.data.remote.dto.SuggestionDto
 import com.app.kenala.ui.theme.*
+import com.app.kenala.viewmodel.SuggestionViewModel
+import java.time.format.DateTimeFormatter
+import java.time.ZonedDateTime
+import java.util.Locale
 
-data class AdventureSuggestion(
-    val id: Int,
-    val locationName: String,
-    val category: String,
-    val description: String,
-    val submittedBy: String,
-    val submittedDate: String,
-    val status: SuggestionStatus
-)
-
-enum class SuggestionStatus {
-    PENDING, APPROVED, REJECTED
-}
+// HAPUS data class AdventureSuggestion
+// HAPUS enum SuggestionStatus
 
 private enum class ScreenMode {
     LIST, ADD, EDIT, DETAIL
@@ -39,101 +35,93 @@ private enum class ScreenMode {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AdventureSuggestionScreen(onNavigateBack: () -> Unit) {
-    var suggestions by remember {
-        mutableStateOf(
-            listOf(
-                AdventureSuggestion(
-                    1,
-                    "Warung Kopi Pak Udin",
-                    "Kuliner",
-                    "Kedai kopi legendaris yang sudah ada sejak tahun 1970-an. Menyajikan kopi susu khas dengan resep turun temurun.",
-                    "Anda",
-                    "20 Okt 2025",
-                    SuggestionStatus.APPROVED
-                ),
-                AdventureSuggestion(
-                    2,
-                    "Taman Miniatur Kota",
-                    "Rekreasi",
-                    "Taman yang menampilkan miniatur bangunan bersejarah di kota ini. Cocok untuk foto dan belajar sejarah.",
-                    "Anda",
-                    "18 Okt 2025",
-                    SuggestionStatus.PENDING
-                ),
-                AdventureSuggestion(
-                    3,
-                    "Studio Batik Ibu Siti",
-                    "Seni & Budaya",
-                    "Workshop membatik tradisional yang membuka kelas untuk umum setiap akhir pekan.",
-                    "Anda",
-                    "15 Okt 2025",
-                    SuggestionStatus.APPROVED
-                )
-            )
-        )
-    }
+fun AdventureSuggestionScreen(
+    onNavigateBack: () -> Unit,
+    viewModel: SuggestionViewModel = viewModel() // Inject ViewModel
+) {
+    // Ambil state dari ViewModel
+    val suggestions by viewModel.suggestions.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val error by viewModel.error.collectAsState()
 
     var screenMode by remember { mutableStateOf(ScreenMode.LIST) }
-    var selectedSuggestion by remember { mutableStateOf<AdventureSuggestion?>(null) }
+    var selectedSuggestion by remember { mutableStateOf<SuggestionDto?>(null) }
 
-    when (screenMode) {
-        ScreenMode.LIST -> SuggestionListScreen(
-            suggestions = suggestions,
-            onNavigateBack = onNavigateBack,
-            onAddClick = { screenMode = ScreenMode.ADD },
-            onSuggestionClick = { suggestion ->
-                selectedSuggestion = suggestion
-                screenMode = ScreenMode.DETAIL
-            }
-        )
-        ScreenMode.ADD -> AddSuggestionScreen(
-            onNavigateBack = { screenMode = ScreenMode.LIST },
-            onSave = { name, category, description ->
-                val newSuggestion = AdventureSuggestion(
-                    id = (suggestions.maxOfOrNull { it.id } ?: 0) + 1,
-                    locationName = name,
-                    category = category,
-                    description = description,
-                    submittedBy = "Anda",
-                    submittedDate = "Hari ini",
-                    status = SuggestionStatus.PENDING
-                )
-                suggestions = suggestions + newSuggestion
-                screenMode = ScreenMode.LIST
-            }
-        )
-        ScreenMode.DETAIL -> selectedSuggestion?.let { suggestion ->
-            SuggestionDetailScreen(
-                suggestion = suggestion,
-                onNavigateBack = { screenMode = ScreenMode.LIST },
-                onEdit = {
-                    screenMode = ScreenMode.EDIT
-                },
-                onDelete = {
-                    suggestions = suggestions.filter { it.id != suggestion.id }
-                    screenMode = ScreenMode.LIST
-                }
-            )
+    // Tampilkan loading global jika sedang loading
+    if (isLoading && suggestions.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
         }
-        ScreenMode.EDIT -> selectedSuggestion?.let { suggestion ->
-            EditSuggestionScreen(
-                suggestion = suggestion,
-                onNavigateBack = { screenMode = ScreenMode.DETAIL },
-                onSave = { editedName, editedCategory, editedDescription ->
-                    suggestions = suggestions.map {
-                        if (it.id == suggestion.id) {
-                            it.copy(
-                                locationName = editedName,
-                                category = editedCategory,
-                                description = editedDescription
-                            )
-                        } else it
-                    }
-                    selectedSuggestion = suggestions.find { it.id == suggestion.id }
+    }
+    // Tampilkan error global jika ada
+    else if (error != null) {
+        Box(modifier = Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Gagal memuat data", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(error!!, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(onClick = { viewModel.fetchSuggestions() }) {
+                    Text("Coba Lagi")
+                }
+            }
+        }
+    }
+    // Tampilkan UI utama
+    else {
+        when (screenMode) {
+            ScreenMode.LIST -> SuggestionListScreen(
+                suggestions = suggestions,
+                isLoading = isLoading,
+                onRefresh = { viewModel.fetchSuggestions() },
+                onNavigateBack = onNavigateBack,
+                onAddClick = { screenMode = ScreenMode.ADD },
+                onSuggestionClick = { suggestion ->
+                    selectedSuggestion = suggestion
                     screenMode = ScreenMode.DETAIL
                 }
             )
+            ScreenMode.ADD -> AddSuggestionScreen(
+                isLoading = isLoading,
+                onNavigateBack = { screenMode = ScreenMode.LIST },
+                onSave = { name, category, description ->
+                    viewModel.addSuggestion(name, category, description) {
+                        screenMode = ScreenMode.LIST
+                    }
+                }
+            )
+            ScreenMode.DETAIL -> selectedSuggestion?.let { suggestion ->
+                SuggestionDetailScreen(
+                    suggestion = suggestion,
+                    isLoading = isLoading,
+                    onNavigateBack = { screenMode = ScreenMode.LIST },
+                    onEdit = {
+                        screenMode = ScreenMode.EDIT
+                    },
+                    onDelete = {
+                        viewModel.deleteSuggestion(suggestion.id) {
+                            screenMode = ScreenMode.LIST
+                        }
+                    }
+                )
+            }
+            ScreenMode.EDIT -> selectedSuggestion?.let { suggestion ->
+                EditSuggestionScreen(
+                    suggestion = suggestion,
+                    isLoading = isLoading,
+                    onNavigateBack = { screenMode = ScreenMode.DETAIL },
+                    onSave = { editedName, editedCategory, editedDescription ->
+                        viewModel.updateSuggestion(
+                            suggestion.id,
+                            editedName,
+                            editedCategory,
+                            editedDescription
+                        ) { updatedSuggestion ->
+                            selectedSuggestion = updatedSuggestion
+                            screenMode = ScreenMode.DETAIL
+                        }
+                    }
+                )
+            }
         }
     }
 }
@@ -141,10 +129,12 @@ fun AdventureSuggestionScreen(onNavigateBack: () -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SuggestionListScreen(
-    suggestions: List<AdventureSuggestion>,
+    suggestions: List<SuggestionDto>,
+    isLoading: Boolean,
+    onRefresh: () -> Unit,
     onNavigateBack: () -> Unit,
     onAddClick: () -> Unit,
-    onSuggestionClick: (AdventureSuggestion) -> Unit
+    onSuggestionClick: (SuggestionDto) -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -153,6 +143,11 @@ private fun SuggestionListScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onRefresh, enabled = !isLoading) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -236,7 +231,7 @@ private fun SuggestionListScreen(
                     }
                 }
 
-                items(suggestions) { suggestion ->
+                items(suggestions, key = { it.id }) { suggestion ->
                     SuggestionCard(
                         suggestion = suggestion,
                         onClick = { onSuggestionClick(suggestion) }
@@ -247,10 +242,21 @@ private fun SuggestionListScreen(
     }
 }
 
+// Helper untuk format tanggal
+private fun formatShortDate(dateString: String): String {
+    return try {
+        val zonedDateTime = ZonedDateTime.parse(dateString)
+        val formatter = DateTimeFormatter.ofPattern("dd MMM yyyy", Locale("id", "ID"))
+        zonedDateTime.format(formatter)
+    } catch (e: Exception) {
+        "Baru saja"
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SuggestionCard(
-    suggestion: AdventureSuggestion,
+    suggestion: SuggestionDto,
     onClick: () -> Unit
 ) {
     Card(
@@ -321,7 +327,7 @@ private fun SuggestionCard(
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = "Diusulkan ${suggestion.submittedDate}",
+                    text = "Diusulkan ${formatShortDate(suggestion.createdAt)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -333,6 +339,7 @@ private fun SuggestionCard(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AddSuggestionScreen(
+    isLoading: Boolean,
     onNavigateBack: () -> Unit,
     onSave: (String, String, String) -> Unit
 ) {
@@ -342,14 +349,14 @@ private fun AddSuggestionScreen(
     var showCategoryMenu by remember { mutableStateOf(false) }
 
     val categories = listOf("Kuliner", "Rekreasi", "Seni & Budaya", "Sejarah", "Belanja", "Alam")
-    val canSave = locationName.isNotBlank() && description.isNotBlank()
+    val canSave = locationName.isNotBlank() && description.isNotBlank() && !isLoading
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Usulkan Lokasi Baru", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = onNavigateBack, enabled = !isLoading) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
                     }
                 },
@@ -388,7 +395,8 @@ private fun AddSuggestionScreen(
                                 capitalization = KeyboardCapitalization.Words,
                                 imeAction = ImeAction.Next
                             ),
-                            shape = MaterialTheme.shapes.large
+                            shape = MaterialTheme.shapes.large,
+                            enabled = !isLoading
                         )
                     }
                 }
@@ -402,7 +410,7 @@ private fun AddSuggestionScreen(
                         )
                         ExposedDropdownMenuBox(
                             expanded = showCategoryMenu,
-                            onExpandedChange = { showCategoryMenu = !showCategoryMenu }
+                            onExpandedChange = { if(!isLoading) showCategoryMenu = !showCategoryMenu }
                         ) {
                             OutlinedTextField(
                                 value = selectedCategory,
@@ -414,7 +422,8 @@ private fun AddSuggestionScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .menuAnchor(),
-                                shape = MaterialTheme.shapes.large
+                                shape = MaterialTheme.shapes.large,
+                                enabled = !isLoading
                             )
                             ExposedDropdownMenu(
                                 expanded = showCategoryMenu,
@@ -456,7 +465,8 @@ private fun AddSuggestionScreen(
                             keyboardOptions = KeyboardOptions(
                                 capitalization = KeyboardCapitalization.Sentences
                             ),
-                            shape = MaterialTheme.shapes.large
+                            shape = MaterialTheme.shapes.large,
+                            enabled = !isLoading
                         )
                     }
                 }
@@ -502,11 +512,15 @@ private fun AddSuggestionScreen(
                     contentColor = DeepBlue
                 )
             ) {
-                Text(
-                    "Kirim Saran",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold
-                )
+                if(isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = DeepBlue)
+                } else {
+                    Text(
+                        "Kirim Saran",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }
@@ -515,28 +529,30 @@ private fun AddSuggestionScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SuggestionDetailScreen(
-    suggestion: AdventureSuggestion,
+    suggestion: SuggestionDto,
+    isLoading: Boolean,
     onNavigateBack: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
+    val canModify = suggestion.status == "pending" && !isLoading
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Detail Saran", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = onNavigateBack, enabled = !isLoading) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
                     }
                 },
                 actions = {
-                    if (suggestion.status == SuggestionStatus.PENDING) {
-                        IconButton(onClick = onEdit) {
+                    if (canModify) {
+                        IconButton(onClick = onEdit, enabled = !isLoading) {
                             Icon(Icons.Default.Edit, contentDescription = "Edit")
                         }
-                        IconButton(onClick = { showDeleteDialog = true }) {
+                        IconButton(onClick = { showDeleteDialog = true }, enabled = !isLoading) {
                             Icon(
                                 Icons.Default.Delete,
                                 contentDescription = "Hapus",
@@ -638,7 +654,7 @@ private fun SuggestionDetailScreen(
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = "Diusulkan oleh ${suggestion.submittedBy}",
+                                text = "Diusulkan oleh Anda",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -654,7 +670,7 @@ private fun SuggestionDetailScreen(
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = suggestion.submittedDate,
+                                text = formatShortDate(suggestion.createdAt),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -696,7 +712,8 @@ private fun SuggestionDetailScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun EditSuggestionScreen(
-    suggestion: AdventureSuggestion,
+    suggestion: SuggestionDto,
+    isLoading: Boolean,
     onNavigateBack: () -> Unit,
     onSave: (String, String, String) -> Unit
 ) {
@@ -706,14 +723,14 @@ private fun EditSuggestionScreen(
     var showCategoryMenu by remember { mutableStateOf(false) }
 
     val categories = listOf("Kuliner", "Rekreasi", "Seni & Budaya", "Sejarah", "Belanja", "Alam")
-    val canSave = locationName.isNotBlank() && description.isNotBlank()
+    val canSave = locationName.isNotBlank() && description.isNotBlank() && !isLoading
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Edit Saran", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = onNavigateBack, enabled = !isLoading) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
                     }
                 },
@@ -747,7 +764,8 @@ private fun EditSuggestionScreen(
                             onValueChange = { locationName = it },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
-                            shape = MaterialTheme.shapes.large
+                            shape = MaterialTheme.shapes.large,
+                            enabled = !isLoading
                         )
                     }
                 }
@@ -761,7 +779,7 @@ private fun EditSuggestionScreen(
                         )
                         ExposedDropdownMenuBox(
                             expanded = showCategoryMenu,
-                            onExpandedChange = { showCategoryMenu = !showCategoryMenu }
+                            onExpandedChange = { if(!isLoading) showCategoryMenu = !showCategoryMenu }
                         ) {
                             OutlinedTextField(
                                 value = selectedCategory,
@@ -773,7 +791,8 @@ private fun EditSuggestionScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .menuAnchor(),
-                                shape = MaterialTheme.shapes.large
+                                shape = MaterialTheme.shapes.large,
+                                enabled = !isLoading
                             )
                             ExposedDropdownMenu(
                                 expanded = showCategoryMenu,
@@ -806,7 +825,8 @@ private fun EditSuggestionScreen(
                             modifier = Modifier.fillMaxWidth(),
                             minLines = 5,
                             maxLines = 8,
-                            shape = MaterialTheme.shapes.large
+                            shape = MaterialTheme.shapes.large,
+                            enabled = !isLoading
                         )
                     }
                 }
@@ -825,22 +845,27 @@ private fun EditSuggestionScreen(
                     contentColor = DeepBlue
                 )
             ) {
-                Text(
-                    "Simpan Perubahan",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold
-                )
+                if(isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = DeepBlue)
+                } else {
+                    Text(
+                        "Simpan Perubahan",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun StatusBadge(status: SuggestionStatus) {
-    val (text, color) = when (status) {
-        SuggestionStatus.PENDING -> "Menunggu" to Color(0xFFF59E0B)
-        SuggestionStatus.APPROVED -> "Disetujui" to ForestGreen
-        SuggestionStatus.REJECTED -> "Ditolak" to ErrorColor
+private fun StatusBadge(status: String) {
+    val (text, color, icon) = when (status.lowercase()) {
+        "pending" -> Triple("Menunggu", Color(0xFFF59E0B), Icons.Default.Schedule)
+        "approved" -> Triple("Disetujui", ForestGreen, Icons.Default.CheckCircle)
+        "rejected" -> Triple("Ditolak", ErrorColor, Icons.Default.Cancel)
+        else -> Triple(status, LightTextColor, Icons.Default.Info)
     }
 
     Surface(
@@ -852,11 +877,6 @@ private fun StatusBadge(status: SuggestionStatus) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            val icon = when (status) {
-                SuggestionStatus.PENDING -> Icons.Default.Schedule
-                SuggestionStatus.APPROVED -> Icons.Default.CheckCircle
-                SuggestionStatus.REJECTED -> Icons.Default.Cancel
-            }
             Icon(
                 imageVector = icon,
                 contentDescription = null,

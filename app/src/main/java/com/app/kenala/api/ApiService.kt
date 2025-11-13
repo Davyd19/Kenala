@@ -94,6 +94,25 @@ interface ApiService {
     ): Response<UploadResponse>
     // ------------------------------------------------
 
+    // --- TAMBAHAN BARU: Endpoint untuk Suggestions ---
+    @GET("suggestions")
+    suspend fun getSuggestions(): Response<List<SuggestionDto>>
+
+    @GET("suggestions/{id}")
+    suspend fun getSuggestion(@Path("id") id: String): Response<SuggestionDto>
+
+    @POST("suggestions")
+    suspend fun createSuggestion(@Body request: CreateSuggestionRequest): Response<SuggestionDto>
+
+    @PUT("suggestions/{id}")
+    suspend fun updateSuggestion(
+        @Path("id") id: String,
+        @Body request: UpdateSuggestionRequest
+    ): Response<SuggestionDto>
+
+    @DELETE("suggestions/{id}")
+    suspend fun deleteSuggestion(@Path("id") id: String): Response<Unit>
+    // ------------------------------------------------
 }
 
 // Request/Response DTOs

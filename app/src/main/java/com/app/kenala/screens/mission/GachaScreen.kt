@@ -83,29 +83,39 @@ fun GachaScreen(
         )
     }
 
+    // --- !!! PERBAIKAN BUG DI SINI !!! ---
     LaunchedEffect(selectedMission, gachaState) {
         if (selectedMission != null && gachaState == GachaState.Revealing) {
             if (locationManager.hasLocationPermission()) {
                 locationManager.getCurrentLocation { location ->
-                    location?.let {
+                    // Mengganti .let{} dengan if/else untuk menangani 'location' null
+                    if (location != null) {
+                        // KASUS SUKSES: Lokasi didapat
                         val distanceMeters = LocationManager.calculateDistance(
-                            it.latitude,
-                            it.longitude,
+                            location.latitude,
+                            location.longitude,
                             selectedMission!!.latitude,
                             selectedMission!!.longitude
                         )
                         missionDistance = LocationManager.formatDistance(distanceMeters)
                         estimatedTime = LocationManager.estimateTime(distanceMeters)
                         gachaState = GachaState.ShowingInfo
+                    } else {
+                        // KASUS GAGAL: Lokasi null (GPS mati, dll)
+                        missionDistance = "Tidak diketahui"
+                        estimatedTime = 0
+                        gachaState = GachaState.ShowingInfo
                     }
                 }
             } else {
+                // KASUS GAGAL: Tidak ada izin lokasi
                 missionDistance = "Tidak diketahui"
                 estimatedTime = 0
                 gachaState = GachaState.ShowingInfo
             }
         }
     }
+    // --- AKHIR PERBAIKAN ---
 
     LaunchedEffect(isAnimatingSearch, isLoading, selectedMission, error) {
         if (gachaState == GachaState.Searching && !isAnimatingSearch && !isLoading) {

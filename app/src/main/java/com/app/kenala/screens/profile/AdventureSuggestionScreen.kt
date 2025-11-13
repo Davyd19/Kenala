@@ -26,9 +26,6 @@ import java.time.format.DateTimeFormatter
 import java.time.ZonedDateTime
 import java.util.Locale
 
-// HAPUS data class AdventureSuggestion
-// HAPUS enum SuggestionStatus
-
 private enum class ScreenMode {
     LIST, ADD, EDIT, DETAIL
 }
@@ -37,9 +34,8 @@ private enum class ScreenMode {
 @Composable
 fun AdventureSuggestionScreen(
     onNavigateBack: () -> Unit,
-    viewModel: SuggestionViewModel = viewModel() // Inject ViewModel
+    viewModel: SuggestionViewModel = viewModel()
 ) {
-    // Ambil state dari ViewModel
     val suggestions by viewModel.suggestions.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
@@ -47,13 +43,11 @@ fun AdventureSuggestionScreen(
     var screenMode by remember { mutableStateOf(ScreenMode.LIST) }
     var selectedSuggestion by remember { mutableStateOf<SuggestionDto?>(null) }
 
-    // Tampilkan loading global jika sedang loading
     if (isLoading && suggestions.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
     }
-    // Tampilkan error global jika ada
     else if (error != null) {
         Box(modifier = Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -66,7 +60,6 @@ fun AdventureSuggestionScreen(
             }
         }
     }
-    // Tampilkan UI utama
     else {
         when (screenMode) {
             ScreenMode.LIST -> SuggestionListScreen(
@@ -242,7 +235,6 @@ private fun SuggestionListScreen(
     }
 }
 
-// Helper untuk format tanggal
 private fun formatShortDate(dateString: String): String {
     return try {
         val zonedDateTime = ZonedDateTime.parse(dateString)
@@ -371,12 +363,11 @@ private fun AddSuggestionScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 25.dp)
         ) {
             LazyColumn(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(20.dp),
-                contentPadding = PaddingValues(vertical = 20.dp)
+                contentPadding = PaddingValues(horizontal = 25.dp, vertical = 20.dp)
             ) {
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -497,31 +488,35 @@ private fun AddSuggestionScreen(
                         }
                     }
                 }
-            }
 
-            Button(
-                onClick = { onSave(locationName, selectedCategory, description) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .padding(vertical = 16.dp),
-                enabled = canSave,
-                shape = MaterialTheme.shapes.large,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = AccentColor,
-                    contentColor = DeepBlue
-                )
-            ) {
-                if(isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = DeepBlue)
-                } else {
-                    Text(
-                        "Kirim Saran",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold
-                    )
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = { onSave(locationName, selectedCategory, description) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        enabled = canSave,
+                        shape = MaterialTheme.shapes.large,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = AccentColor,
+                            contentColor = DeepBlue
+                        )
+                    ) {
+                        if(isLoading) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp), color = DeepBlue)
+                        } else {
+                            Text(
+                                "Kirim Saran",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
+
         }
     }
 }
@@ -745,12 +740,11 @@ private fun EditSuggestionScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 25.dp)
         ) {
             LazyColumn(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(20.dp),
-                contentPadding = PaddingValues(vertical = 20.dp)
+                contentPadding = PaddingValues(horizontal = 25.dp, vertical = 20.dp)
             ) {
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -830,31 +824,38 @@ private fun EditSuggestionScreen(
                         )
                     }
                 }
-            }
 
-            Button(
-                onClick = { onSave(locationName, selectedCategory, description) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .padding(vertical = 16.dp),
-                enabled = canSave,
-                shape = MaterialTheme.shapes.large,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = AccentColor,
-                    contentColor = DeepBlue
-                )
-            ) {
-                if(isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = DeepBlue)
-                } else {
-                    Text(
-                        "Simpan Perubahan",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold
-                    )
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = { onSave(locationName, selectedCategory, description) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        enabled = canSave,
+                        shape = MaterialTheme.shapes.large,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = AccentColor,
+                            contentColor = DeepBlue
+                        )
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = DeepBlue
+                            )
+                        } else {
+                            Text(
+                                "Simpan Perubahan",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
+
         }
     }
 }

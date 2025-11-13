@@ -40,21 +40,24 @@ fun EditProfileScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
 
+    // State untuk form input
     var name by remember(user) { mutableStateOf(user?.name ?: "") }
     var email by remember(user) { mutableStateOf(user?.email ?: "") }
     var phone by remember(user) { mutableStateOf(user?.phone ?: "") }
     var bio by remember(user) { mutableStateOf(user?.bio ?: "") }
-
-    // --- TAMBAHAN BARU: State untuk Image Picker ---
     var imageUri by remember { mutableStateOf<Uri?>(null) }
+
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         imageUri = uri
     }
-    // ---------------------------------------------
 
-    // State untuk validasi
+    val isChanged = (name != (user?.name ?: "")) ||
+            (phone != (user?.phone ?: "")) ||
+            (bio != (user?.bio ?: "")) ||
+            (imageUri != null)
+
     var nameError by remember { mutableStateOf<String?>(null) }
 
     fun validate(): Boolean {
@@ -65,6 +68,8 @@ fun EditProfileScreen(
         nameError = null
         return true
     }
+
+    val canSave = !isLoading && isChanged && name.isNotBlank()
 
     Scaffold(
         topBar = {
@@ -108,14 +113,13 @@ fun EditProfileScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Box(contentAlignment = Alignment.BottomEnd) {
-                        // --- PERUBAHAN: Tampilkan gambar dari URI jika ada ---
                         val displayImage: Any? = imageUri ?: user?.profile_image_url
 
                         AsyncImage(
                             model = ImageRequest.Builder(LocalContext.current)
                                 .data(displayImage)
-                                .placeholder(R.drawable.logo_kenala1) // Ganti dengan placeholder Anda
-                                .error(R.drawable.logo_kenala1) // Ganti dengan placeholder error
+                                .placeholder(R.drawable.logo_kenala1)
+                                .error(R.drawable.logo_kenala1)
                                 .crossfade(true)
                                 .build(),
                             contentDescription = "Avatar Profil",
@@ -129,12 +133,12 @@ fun EditProfileScreen(
                                     )
                                 )
                                 .clickable(enabled = !isLoading) {
-                                    imagePickerLauncher.launch("image/*") // Panggil dari sini juga
+                                    imagePickerLauncher.launch("image/*")
                                 }
                         )
 
                         FilledIconButton(
-                            onClick = { imagePickerLauncher.launch("image/*") }, // Panggil picker
+                            onClick = { imagePickerLauncher.launch("image/*") },
                             modifier = Modifier.size(36.dp),
                             enabled = !isLoading,
                             colors = IconButtonDefaults.filledIconButtonColors(
@@ -160,7 +164,6 @@ fun EditProfileScreen(
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // Tampilkan jika ada error dari ViewModel
                 error?.let {
                     Text(
                         text = it,
@@ -168,7 +171,6 @@ fun EditProfileScreen(
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
-                    // Hapus error setelah ditampilkan
                     LaunchedEffect(error) {
                         kotlinx.coroutines.delay(3000)
                         viewModel.clearError()
@@ -218,25 +220,17 @@ fun EditProfileScreen(
                     enabled = !isLoading
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
-            }
+                Spacer(modifier = Modifier.height(32.dp))
 
-            // Fixed Button at Bottom
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.surface,
-                shadowElevation = 8.dp
-            ) {
                 Button(
-                    // --- PERUBAHAN: Hubungkan tombol Simpan ke ViewModel ---
                     onClick = {
                         if (validate()) {
                             viewModel.updateProfile(
                                 name = name,
                                 phone = phone.ifBlank { null },
                                 bio = bio.ifBlank { null },
-                                imageUri = imageUri, // Kirim Uri
-                                existingImageUrl = user?.profile_image_url, // Kirim URL lama
+                                imageUri = imageUri,
+                                existingImageUrl = user?.profile_image_url,
                                 onSuccess = {
                                     onNavigateBack()
                                 }
@@ -245,10 +239,9 @@ fun EditProfileScreen(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(56.dp)
-                        .padding(horizontal = 25.dp, vertical = 8.dp),
+                        .height(56.dp),
                     shape = MaterialTheme.shapes.large,
-                    enabled = !isLoading,
+                    enabled = canSave,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = AccentColor,
                         contentColor = DeepBlue
@@ -270,6 +263,9 @@ fun EditProfileScreen(
                         )
                     }
                 }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
             }
         }
     }

@@ -16,7 +16,6 @@ import com.app.kenala.screens.main.MainScreen
 import com.app.kenala.screens.mission.*
 import com.app.kenala.screens.notifications.NotificationsCenterScreen
 import com.app.kenala.screens.profile.*
-import com.app.kenala.screens.stats.StatisticsScreen
 import com.app.kenala.viewmodel.AuthState
 import com.app.kenala.viewmodel.AuthViewModel
 import kotlinx.coroutines.delay
@@ -221,11 +220,6 @@ fun AppNavGraph(navController: NavHostController) {
                     }
                 )
             }
-        }
-
-        // ======== STATISTICS ========
-        composable(Screen.Statistics.route) {
-            StatisticsScreen(onBackClick = { navController.popBackStack() })
         }
 
         // ======== NOTIFICATIONS ========

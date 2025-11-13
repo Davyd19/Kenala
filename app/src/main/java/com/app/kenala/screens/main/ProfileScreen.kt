@@ -29,7 +29,6 @@ import com.app.kenala.viewmodel.ProfileViewModel
 @Composable
 fun ProfileScreen(
     profileViewModel: ProfileViewModel = viewModel(), // Terima ViewModel
-    onNavigateToStats: () -> Unit,
     onNavigateToEditProfile: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToStreak: () -> Unit,

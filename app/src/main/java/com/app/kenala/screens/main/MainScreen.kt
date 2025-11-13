@@ -184,9 +184,6 @@ private fun MainNavGraph(
         composable(Screen.Profile.route) {
             ProfileScreen(
                 profileViewModel = profileViewModel, // Pass ViewModel ke ProfileScreen
-                onNavigateToStats = {
-                    appNavController.navigate(Screen.Statistics.route)
-                },
                 onNavigateToEditProfile = {
                     appNavController.navigate(Screen.EditProfile.route)
                 },

@@ -4,8 +4,8 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -13,77 +13,42 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.app.kenala.data.remote.dto.StatsDto
 import com.app.kenala.ui.theme.*
+import com.app.kenala.viewmodel.ProfileViewModel
 
-private data class StatCategory(
-    val name: String,
-    val items: List<StatItem>
+// Daftar lengkap semua kategori yang ada di aplikasi
+private val allCategories = listOf(
+    "Kuliner", "Alam", "Seni & Budaya", "Sejarah", "Rekreasi", "Belanja"
 )
 
-private data class StatItem(
-    val label: String,
-    val value: String,
-    val icon: ImageVector,
-    val color: Color
-)
-
-private data class Achievement(
-    val name: String,
-    val progress: Float,
-    val current: Int,
-    val target: Int,
-    val icon: ImageVector,
-    val color: Color
-)
+// Helper untuk ikon & warna kategori
+private fun getCategoryStyle(category: String): Pair<ImageVector, Color> {
+    return when (category.lowercase()) {
+        "kuliner" -> Icons.Default.Restaurant to AccentColor
+        "seni & budaya" -> Icons.Default.Palette to OceanBlue
+        "alam" -> Icons.Default.Park to ForestGreen
+        "sejarah" -> Icons.Default.Museum to SkyBlue
+        "rekreasi" -> Icons.Default.FitnessCenter to ErrorColor
+        "belanja" -> Icons.Default.ShoppingBag to DeepBlue
+        else -> Icons.Default.Explore to LightTextColor
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DetailedStatsScreen(onNavigateBack: () -> Unit) {
-    val stats = remember {
-        listOf(
-            StatCategory(
-                "Aktivitas",
-                listOf(
-                    StatItem("Total Misi", "12", Icons.Default.Flag, ForestGreen),
-                    StatItem("Misi Minggu Ini", "3", Icons.Default.CalendarToday, OceanBlue),
-                    StatItem("Jarak Tempuh", "42 km", Icons.Default.DirectionsRun, AccentColor),
-                    StatItem("Rata-rata/Misi", "3.5 km", Icons.Default.Timeline, SkyBlue)
-                )
-            ),
-            StatCategory(
-                "Kategori Favorit",
-                listOf(
-                    StatItem("Kuliner", "5 misi", Icons.Default.Restaurant, AccentColor),
-                    StatItem("Seni & Budaya", "4 misi", Icons.Default.Palette, OceanBlue),
-                    StatItem("Alam", "2 misi", Icons.Default.Park, ForestGreen),
-                    StatItem("Sejarah", "1 misi", Icons.Default.Museum, SkyBlue)
-                )
-            ),
-            StatCategory(
-                "Prestasi Waktu",
-                listOf(
-                    StatItem("Hari Aktif", "45 hari", Icons.Default.Event, ForestGreen),
-                    StatItem("Streak Terpanjang", "15 hari", Icons.Default.LocalFireDepartment, ErrorColor),
-                    StatItem("Waktu Favorit", "Sore Hari", Icons.Default.WbSunny, AccentColor),
-                    StatItem("Bergabung Sejak", "Sep 2025", Icons.Default.CalendarMonth, OceanBlue)
-                )
-            )
-        )
-    }
-
-    val achievements = remember {
-        listOf(
-            Achievement("Misi Selesai", 0.24f, 12, 50, Icons.Default.Flag, ForestGreen),
-            Achievement("Jarak Tempuh", 0.42f, 42, 100, Icons.Default.DirectionsRun, OceanBlue),
-            Achievement("Foto Upload", 0.65f, 13, 20, Icons.Default.CameraAlt, AccentColor),
-            Achievement("Teman Diajak", 0.0f, 0, 5, Icons.Default.Group, SkyBlue)
-        )
-    }
+fun DetailedStatsScreen(
+    onNavigateBack: () -> Unit,
+    viewModel: ProfileViewModel = viewModel()
+) {
+    val stats by viewModel.stats.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
 
     Scaffold(
         topBar = {
@@ -101,265 +66,255 @@ fun DetailedStatsScreen(onNavigateBack: () -> Unit) {
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
+
+        if (isLoading && stats == null) {
+            Box(modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding),
-            contentPadding = PaddingValues(horizontal = 25.dp, vertical = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
-        ) {
-            // Overall Summary Card
-            item {
-                OverallSummaryCard()
+                .padding(innerPadding), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
             }
-
-            // Progress Section
-            item {
-                Text(
-                    text = "Progres Pencapaian",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
+        } else if (stats == null) {
+            Box(modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding), contentAlignment = Alignment.Center) {
+                Text("Gagal memuat statistik.")
             }
-
-            items(achievements) { achievement ->
-                AchievementProgressCard(achievement)
-            }
-
-            // Stats Categories
-            stats.forEach { category ->
-                item {
-                    Text(
-                        text = category.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-                }
-
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = MaterialTheme.shapes.large,
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surface
-                        )
-                    ) {
-                        Column {
-                            category.items.forEachIndexed { index, item ->
-                                StatItemRow(item)
-                                if (index < category.items.size - 1) {
-                                    HorizontalDivider(
-                                        modifier = Modifier.padding(horizontal = 16.dp),
-                                        color = BorderColor
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun OverallSummaryCard() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
-        colors = CardDefaults.cardColors(
-            containerColor = Color.Transparent
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    androidx.compose.ui.graphics.Brush.linearGradient(
-                        colors = listOf(GradientStart, GradientEnd)
-                    )
-                )
-                .padding(24.dp)
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    SummaryItem("12", "Misi Selesai", Icons.Default.Flag)
-                    Box(
-                        modifier = Modifier
-                            .width(1.dp)
-                            .height(40.dp)
-                            .background(Color.White.copy(alpha = 0.3f))
-                    )
-                    SummaryItem("42 km", "Jarak Tempuh", Icons.Default.DirectionsRun)
-                    Box(
-                        modifier = Modifier
-                            .width(1.dp)
-                            .height(40.dp)
-                            .background(Color.White.copy(alpha = 0.3f))
-                    )
-                    SummaryItem("Level 5", "Petualang", Icons.Default.Star)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SummaryItem(value: String, label: String, icon: ImageVector) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = AccentColor,
-            modifier = Modifier.size(24.dp)
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color = Color.White
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.8f)
-        )
-    }
-}
-
-@Composable
-private fun AchievementProgressCard(achievement: Achievement) {
-    var animatedProgress by remember { mutableFloatStateOf(0f) }
-
-    LaunchedEffect(Unit) {
-        animatedProgress = achievement.progress
-    }
-
-    val progress by animateFloatAsState(
-        targetValue = animatedProgress,
-        animationSpec = tween(durationMillis = 1000, easing = FastOutSlowInEasing),
-        label = "progress"
-    )
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(
-            containerColor = achievement.color.copy(alpha = 0.08f)
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .background(
-                                achievement.color.copy(alpha = 0.15f),
-                                CircleShape
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = achievement.icon,
-                            contentDescription = null,
-                            tint = achievement.color,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                    Column {
-                        Text(
-                            text = achievement.name,
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            text = "${achievement.current} / ${achievement.target}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-                Text(
-                    text = "${(achievement.progress * 100).toInt()}%",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = achievement.color
-                )
-            }
-            LinearProgressIndicator(
-                progress = { progress },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(MaterialTheme.shapes.small),
-                color = achievement.color,
-                trackColor = achievement.color.copy(alpha = 0.2f)
+        } else {
+            // Tampilkan dashboard jika data ada
+            DashboardContent(
+                stats = stats!!,
+                modifier = Modifier.padding(innerPadding)
             )
         }
     }
 }
 
 @Composable
-private fun StatItemRow(item: StatItem) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+private fun DashboardContent(stats: StatsDto, modifier: Modifier = Modifier) {
+    LazyColumn(
+        modifier = modifier
+            .fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 25.dp, vertical = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+
+        // --- 1. KPI GRID 2x2 ---
+        item {
+            Text(
+                text = "Ringkasan Total",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    StatCard(
+                        label = "Misi Selesai",
+                        value = stats.total_missions.toString(),
+                        icon = Icons.Default.Flag,
+                        color = ForestGreen,
+                        modifier = Modifier.weight(1f)
+                    )
+                    StatCard(
+                        label = "Jarak Tempuh",
+                        value = "${stats.total_distance.toInt()} km",
+                        icon = Icons.Default.DirectionsRun,
+                        color = OceanBlue,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    StatCard(
+                        label = "Hari Aktif",
+                        value = stats.total_active_days.toString(),
+                        icon = Icons.Default.CalendarToday,
+                        color = SkyBlue,
+                        modifier = Modifier.weight(1f)
+                    )
+                    StatCard(
+                        label = "Jurnal Ditulis",
+                        value = stats.journal_count.toString(),
+                        icon = Icons.Default.Book,
+                        color = AccentColor,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+
+        // --- 2. DIAGRAM PIE (DISTRIBUSI KATEGORI) DIHAPUS ---
+
+        // --- 3. DIAGRAM BATANG ---
+        item {
+            Text(
+                text = "Progres Kategori",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
+        item {
+            CategoryBarChart(breakdown = stats.category_breakdown)
+        }
+    }
+}
+
+// Composable untuk 4 kartu KPI di atas
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun StatCard(
+    label: String,
+    value: String,
+    icon: ImageVector,
+    color: Color,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null
+) {
+    Card(
+        onClick = { onClick?.invoke() },
+        enabled = (onClick != null),
+        modifier = modifier.height(120.dp),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = color.copy(alpha = 0.1f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
             Box(
                 modifier = Modifier
                     .size(40.dp)
-                    .clip(CircleShape)
-                    .background(item.color.copy(alpha = 0.12f)),
+                    .background(color.copy(alpha = 0.2f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = item.icon,
-                    contentDescription = null,
-                    tint = item.color,
+                    imageVector = icon,
+                    contentDescription = label,
+                    tint = color,
                     modifier = Modifier.size(20.dp)
                 )
             }
+            Spacer(modifier = Modifier.height(8.dp))
+            Column {
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = color
+                )
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+// Composable untuk Diagram Batang
+@Composable
+private fun CategoryBarChart(breakdown: Map<String, Int>) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        // Gunakan daftar lengkap, ambil data dari 'breakdown'
+        val categoryData = allCategories.map { categoryName ->
+            val (icon, color) = getCategoryStyle(categoryName)
+            val count = breakdown[categoryName] ?: 0 // <-- Default ke 0
+            Triple(categoryName, count, icon to color)
+        }
+
+        val maxTarget = (categoryData.maxOfOrNull { it.second } ?: 0).coerceAtLeast(5).toFloat()
+
+        Column(
+            modifier = Modifier.padding(vertical = 12.dp, horizontal = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            categoryData.forEach { (name, count, style) ->
+                BarChartItem(
+                    label = name,
+                    value = count,
+                    target = maxTarget,
+                    icon = style.first,
+                    color = style.second
+                )
+            }
+        }
+    }
+}
+
+// Composable untuk satu item di Diagram Batang
+@Composable
+private fun BarChartItem(
+    label: String,
+    value: Int,
+    target: Float,
+    icon: ImageVector,
+    color: Color
+) {
+    var animationPlayed by remember { mutableStateOf(false) }
+    val progress = (value / target).coerceIn(0f, 1f)
+
+    val animatedProgress by animateFloatAsState(
+        targetValue = if (animationPlayed) progress else 0f,
+        animationSpec = tween(durationMillis = 1000, easing = FastOutSlowInEasing),
+        label = "barProgress"
+    )
+
+    LaunchedEffect(Unit) {
+        animationPlayed = true
+    }
+
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = label,
+                    tint = color,
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
             Text(
-                text = item.label,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium
+                text = "$value misi",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = color
             )
         }
-        Text(
-            text = item.value,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = item.color
+        LinearProgressIndicator(
+            progress = { animatedProgress },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(8.dp)
+                .clip(MaterialTheme.shapes.small),
+            color = color,
+            trackColor = color.copy(alpha = 0.2f),
+            strokeCap = StrokeCap.Round
         )
     }
 }

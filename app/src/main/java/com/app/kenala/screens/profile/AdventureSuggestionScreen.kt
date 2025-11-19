@@ -76,8 +76,9 @@ fun AdventureSuggestionScreen(
             ScreenMode.ADD -> AddSuggestionScreen(
                 isLoading = isLoading,
                 onNavigateBack = { screenMode = ScreenMode.LIST },
-                onSave = { name, category, description ->
-                    viewModel.addSuggestion(name, category, description) {
+                // Menerima 4 parameter: name, address, category, description
+                onSave = { name, address, category, description ->
+                    viewModel.addSuggestion(name, address, category, description) {
                         screenMode = ScreenMode.LIST
                     }
                 }
@@ -102,10 +103,12 @@ fun AdventureSuggestionScreen(
                     suggestion = suggestion,
                     isLoading = isLoading,
                     onNavigateBack = { screenMode = ScreenMode.DETAIL },
-                    onSave = { editedName, editedCategory, editedDescription ->
+                    // Menerima 4 parameter untuk update
+                    onSave = { editedName, editedAddress, editedCategory, editedDescription ->
                         viewModel.updateSuggestion(
                             suggestion.id,
                             editedName,
+                            editedAddress,
                             editedCategory,
                             editedDescription
                         ) { updatedSuggestion ->
@@ -275,6 +278,30 @@ private fun SuggestionCard(
                         overflow = TextOverflow.Ellipsis
                     )
                     Spacer(modifier = Modifier.height(4.dp))
+
+                    // Tampilkan alamat di card jika ada
+                    if (!suggestion.address.isNullOrBlank()) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.padding(bottom = 4.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Place,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = suggestion.address,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -333,9 +360,11 @@ private fun SuggestionCard(
 private fun AddSuggestionScreen(
     isLoading: Boolean,
     onNavigateBack: () -> Unit,
-    onSave: (String, String, String) -> Unit
+    // Tambahkan parameter address di sini
+    onSave: (String, String, String, String) -> Unit
 ) {
     var locationName by remember { mutableStateOf("") }
+    var address by remember { mutableStateOf("") } // State untuk alamat
     var selectedCategory by remember { mutableStateOf("Kuliner") }
     var description by remember { mutableStateOf("") }
     var showCategoryMenu by remember { mutableStateOf(false) }
@@ -388,6 +417,27 @@ private fun AddSuggestionScreen(
                             ),
                             shape = MaterialTheme.shapes.large,
                             enabled = !isLoading
+                        )
+                    }
+                }
+
+                // Item Baru: Input Alamat
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "Alamat",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        OutlinedTextField(
+                            value = address,
+                            onValueChange = { address = it },
+                            placeholder = { Text("Contoh: Jl. Sudirman No. 10") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            shape = MaterialTheme.shapes.large,
+                            enabled = !isLoading,
+                            leadingIcon = { Icon(Icons.Default.Place, contentDescription = null) }
                         )
                     }
                 }
@@ -492,7 +542,8 @@ private fun AddSuggestionScreen(
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(
-                        onClick = { onSave(locationName, selectedCategory, description) },
+                        // Pass address ke fungsi onSave
+                        onClick = { onSave(locationName, address, selectedCategory, description) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),
@@ -581,6 +632,27 @@ private fun SuggestionDetailScreen(
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
+
+                    // Tampilkan Alamat di Detail
+                    if (!suggestion.address.isNullOrBlank()) {
+                        Row(
+                            verticalAlignment = Alignment.Top,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Place,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp).padding(top=2.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = suggestion.address,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -710,9 +782,12 @@ private fun EditSuggestionScreen(
     suggestion: SuggestionDto,
     isLoading: Boolean,
     onNavigateBack: () -> Unit,
-    onSave: (String, String, String) -> Unit
+    // Tambahkan parameter address di sini
+    onSave: (String, String, String, String) -> Unit
 ) {
     var locationName by remember { mutableStateOf(suggestion.locationName) }
+    // Inisialisasi address dari suggestion
+    var address by remember { mutableStateOf(suggestion.address ?: "") }
     var selectedCategory by remember { mutableStateOf(suggestion.category) }
     var description by remember { mutableStateOf(suggestion.description) }
     var showCategoryMenu by remember { mutableStateOf(false) }
@@ -760,6 +835,26 @@ private fun EditSuggestionScreen(
                             singleLine = true,
                             shape = MaterialTheme.shapes.large,
                             enabled = !isLoading
+                        )
+                    }
+                }
+
+                // Item Baru: Input Alamat untuk Edit
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "Alamat",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        OutlinedTextField(
+                            value = address,
+                            onValueChange = { address = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            shape = MaterialTheme.shapes.large,
+                            enabled = !isLoading,
+                            leadingIcon = { Icon(Icons.Default.Place, contentDescription = null) }
                         )
                     }
                 }
@@ -828,7 +923,8 @@ private fun EditSuggestionScreen(
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(
-                        onClick = { onSave(locationName, selectedCategory, description) },
+                        // Pass address ke fungsi onSave
+                        onClick = { onSave(locationName, address, selectedCategory, description) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),

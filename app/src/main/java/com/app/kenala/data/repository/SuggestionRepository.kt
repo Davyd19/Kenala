@@ -22,11 +22,12 @@ class SuggestionRepository(private val apiService: ApiService) {
 
     suspend fun createSuggestion(
         locationName: String,
+        address: String,
         category: String,
         description: String
     ): Result<SuggestionDto> {
         return try {
-            val request = CreateSuggestionRequest(locationName, category, description)
+            val request = CreateSuggestionRequest(locationName, address, category, description)
             val response = apiService.createSuggestion(request)
             if (response.isSuccessful && response.body() != null) {
                 Result.success(response.body()!!)
@@ -41,11 +42,12 @@ class SuggestionRepository(private val apiService: ApiService) {
     suspend fun updateSuggestion(
         id: String,
         locationName: String,
+        address: String,
         category: String,
         description: String
     ): Result<SuggestionDto> {
         return try {
-            val request = UpdateSuggestionRequest(locationName, category, description)
+            val request = UpdateSuggestionRequest(locationName, address, category, description)
             val response = apiService.updateSuggestion(id, request)
             if (response.isSuccessful && response.body() != null) {
                 Result.success(response.body()!!)

@@ -7,6 +7,7 @@ data class SuggestionDto(
     val id: String,
     @SerializedName("user_id") val userId: String,
     @SerializedName("location_name") val locationName: String,
+    val address: String?,
     val category: String,
     val description: String,
     val status: String, // "pending", "approved", "rejected"
@@ -16,6 +17,7 @@ data class SuggestionDto(
 // Data yang dikirim untuk membuat suggestion baru
 data class CreateSuggestionRequest(
     @SerializedName("location_name") val locationName: String,
+    val address: String?,
     val category: String,
     val description: String
 )
@@ -23,6 +25,7 @@ data class CreateSuggestionRequest(
 // Data yang dikirim untuk update suggestion
 data class UpdateSuggestionRequest(
     @SerializedName("location_name") val locationName: String,
+    val address: String?,
     val category: String,
     val description: String
 )

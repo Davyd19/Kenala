@@ -46,6 +46,7 @@ class SuggestionViewModel(application: Application) : AndroidViewModel(applicati
 
     fun addSuggestion(
         locationName: String,
+        address: String,
         category: String,
         description: String,
         onComplete: () -> Unit
@@ -53,7 +54,7 @@ class SuggestionViewModel(application: Application) : AndroidViewModel(applicati
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
-            repository.createSuggestion(locationName, category, description)
+            repository.createSuggestion(locationName, address, category, description)
                 .onSuccess { newSuggestion ->
                     _suggestions.value = listOf(newSuggestion) + _suggestions.value
                     onComplete()
@@ -68,6 +69,7 @@ class SuggestionViewModel(application: Application) : AndroidViewModel(applicati
     fun updateSuggestion(
         id: String,
         locationName: String,
+        address: String,
         category: String,
         description: String,
         onComplete: (SuggestionDto) -> Unit
@@ -75,7 +77,7 @@ class SuggestionViewModel(application: Application) : AndroidViewModel(applicati
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
-            repository.updateSuggestion(id, locationName, category, description)
+            repository.updateSuggestion(id, locationName, address, category, description)
                 .onSuccess { updatedSuggestion ->
                     // Ganti item lama di list dengan item baru
                     _suggestions.value = _suggestions.value.map {

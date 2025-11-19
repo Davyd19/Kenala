@@ -19,9 +19,10 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
-import okhttp3.RequestBody.Companion.asRequestBody // <-- 1. IMPORT DIPERBAIKI
+import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
 import java.io.FileOutputStream
+import com.app.kenala.data.remote.dto.StreakDto
 
 class ProfileViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -31,6 +32,8 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         apiService,
         database.userDao()
     )
+    private val _streakData = MutableStateFlow<StreakDto?>(null)
+    val streakData: StateFlow<StreakDto?> = _streakData.asStateFlow()
 
     // State untuk data user dari database lokal
     val user: StateFlow<UserEntity?> = userRepository.getUser()
@@ -65,12 +68,25 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         fetchStats()
     }
 
+    fun fetchStreak() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            userRepository.getStreak()
+                .onSuccess { data ->
+                    _streakData.value = data
+                    _error.value = null
+                }
+                .onFailure {
+                    _error.value = "Gagal mengambil streak: ${it.message}"
+                }
+            _isLoading.value = false
+        }
+    }
     fun syncUserProfile() {
         viewModelScope.launch {
             _isLoading.value = true
             userRepository.syncUserProfile()
                 .onSuccess {
-                    // Setelah sync profile, fetch stats juga
                     fetchStats()
                 }
                 .onFailure {

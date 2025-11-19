@@ -7,6 +7,7 @@ import com.app.kenala.data.local.entities.UserEntity
 import com.app.kenala.data.remote.dto.StatsDto
 import com.app.kenala.data.remote.dto.UserDto
 import kotlinx.coroutines.flow.Flow
+import com.app.kenala.data.remote.dto.StreakDto
 
 // File ini diisi untuk mengelola data user dari API dan DB Lokal
 class UserRepository(
@@ -70,6 +71,18 @@ class UserRepository(
                 Result.success(Unit)
             } else {
                 Result.failure(Exception("Gagal update profil: ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    suspend fun getStreak(): Result<StreakDto> {
+        return try {
+            val response = apiService.getStreak()
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                Result.failure(Exception("Gagal mengambil data streak: ${response.message()}"))
             }
         } catch (e: Exception) {
             Result.failure(e)

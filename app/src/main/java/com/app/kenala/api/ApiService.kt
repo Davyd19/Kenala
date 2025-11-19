@@ -51,6 +51,9 @@ interface ApiService {
     @GET("profile")
     suspend fun getProfile(): Response<UserDto>
 
+    @GET("profile/streak")
+    suspend fun getStreak(): Response<StreakDto>
+
     @PUT("profile")
     suspend fun updateProfile(@Body profile: UpdateProfileRequest): Response<UserDto>
 

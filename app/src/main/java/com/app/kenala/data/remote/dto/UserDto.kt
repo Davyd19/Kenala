@@ -1,5 +1,6 @@
 package com.app.kenala.data.remote.dto
 
+import com.google.gson.annotations.SerializedName
 data class UserDto(
     val id: String,
     val name: String,
@@ -44,4 +45,12 @@ data class WeeklyChallengeDto(
     val current: Int,
     val reward_points: Int,
     val expires_at: String
+)
+
+data class StreakDto(
+    @SerializedName("current_streak") val currentStreak: Int,
+    @SerializedName("longest_streak") val longestStreak: Int,
+    @SerializedName("total_active_days") val totalActiveDays: Int,
+    @SerializedName("last_active_date") val lastActiveDate: String?,
+    @SerializedName("recent_activity") val recentActivity: Map<String, Boolean>
 )

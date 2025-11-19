@@ -5,7 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -49,6 +48,13 @@ fun DetailedStatsScreen(
 ) {
     val stats by viewModel.stats.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+
+    // --- PERBAIKAN UTAMA DI SINI ---
+    // Setiap kali layar ini dibuka, panggil fetchStats() untuk refresh data terbaru
+    LaunchedEffect(Unit) {
+        viewModel.fetchStats()
+    }
+    // -------------------------------
 
     Scaffold(
         topBar = {
@@ -143,9 +149,7 @@ private fun DashboardContent(stats: StatsDto, modifier: Modifier = Modifier) {
             }
         }
 
-        // --- 2. DIAGRAM PIE (DISTRIBUSI KATEGORI) DIHAPUS ---
-
-        // --- 3. DIAGRAM BATANG ---
+        // --- 2. DIAGRAM BATANG ---
         item {
             Text(
                 text = "Progres Kategori",
@@ -263,7 +267,7 @@ private fun BarChartItem(
     color: Color
 ) {
     var animationPlayed by remember { mutableStateOf(false) }
-    val progress = (value / target).coerceIn(0f, 1f)
+    val progress = if (target > 0) (value / target).coerceIn(0f, 1f) else 0f
 
     val animatedProgress by animateFloatAsState(
         targetValue = if (animationPlayed) progress else 0f,

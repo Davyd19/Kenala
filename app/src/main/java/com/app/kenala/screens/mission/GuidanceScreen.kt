@@ -5,10 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
-// 1. TAMBAHKAN IMPORT EKSPLISIT
-import androidx.compose.animation.core.RepeatMode
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -18,7 +15,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -26,12 +22,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.app.kenala.ui.theme.*
 import com.app.kenala.utils.LocationManager
 import com.app.kenala.utils.NotificationHelper
 import com.app.kenala.viewmodel.MissionViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.app.kenala.data.remote.dto.CheckLocationResponse
+import com.app.kenala.viewmodel.SettingsViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -40,11 +36,18 @@ fun GuidanceScreen(
     missionId: String,
     onGiveUpClick: () -> Unit,
     onArrivedClick: () -> Unit,
-    missionViewModel: MissionViewModel = viewModel()
+    missionViewModel: MissionViewModel = viewModel(),
+    settingsViewModel: SettingsViewModel = viewModel()
 ) {
+    // 1. Ambil Data Misi & Lokasi dari ViewModel
     val missionWithClues by missionViewModel.missionWithClues.collectAsState()
     val locationResponse by missionViewModel.checkLocationResponse.collectAsState()
 
+    // 2. Ambil Status Pengaturan (Real-time dari DataStore)
+    val isLocationEnabledInSettings by settingsViewModel.locationEnabled.collectAsState()
+    val isNotificationsEnabledInSettings by settingsViewModel.notificationsEnabled.collectAsState()
+
+    // 3. Tools & Helper
     val context = LocalContext.current
     val locationManager = remember { LocationManager(context) }
     val notificationHelper = remember { NotificationHelper(context) }
@@ -52,17 +55,16 @@ fun GuidanceScreen(
     val isLoading by missionViewModel.isLoading.collectAsState()
     val error by missionViewModel.error.collectAsState()
 
-    // --- PERBAIKAN: Gunakan `locationResponse` untuk semua state ---
+    // 4. State Logika UI
     val hasArrivedAtDestination = locationResponse?.destination?.isArrived == true
     val currentClue = locationResponse?.currentClue
     val destination = locationResponse?.destination
-    // -------------------------------------------------------------
 
+    // 5. Minta Izin Lokasi Android (Sistem)
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { }
 
-    // 1. Request permissions on start
     LaunchedEffect(Unit) {
         permissionLauncher.launch(
             arrayOf(
@@ -73,36 +75,23 @@ fun GuidanceScreen(
         )
     }
 
-    // 2. Ambil data misi & clues saat missionId tersedia
-    // --- PERUBAHAN: Reset progress SEBELUM mengambil clues ---
+    // 6. Muat Data Misi (Reset progress dulu baru fetch)
     LaunchedEffect(missionId) {
         if (missionId != null) {
-            // PANGGIL FUNGSI RESET BARU
             missionViewModel.resetMissionProgress(missionId) {
-                // Setelah reset selesai, baru fetch clues
                 missionViewModel.fetchMissionWithClues(missionId)
             }
         }
     }
-    // -------------------------------------------------------
 
-    // 3. Mulai location tracking
-    // --- PERBAIKAN: Tambahkan `hasArrivedAtDestination` sebagai key ---
-    LaunchedEffect(locationManager, missionWithClues, hasArrivedAtDestination) {
-        if (missionWithClues == null) {
-            // Jangan mulai tracking jika data misi (clues) belum siap
-            return@LaunchedEffect
-        }
+    // 7. Logika Tracking Lokasi (Hanya jika diizinkan di Pengaturan)
+    LaunchedEffect(locationManager, missionWithClues, hasArrivedAtDestination, isLocationEnabledInSettings) {
+        // Jangan tracking jika data belum siap atau sudah sampai
+        if (missionWithClues == null || hasArrivedAtDestination) return@LaunchedEffect
 
-        // --- PERBAIKAN: Jika sudah sampai (baik via skip/lokasi), hentikan location tracking ---
-        if (hasArrivedAtDestination) {
-            return@LaunchedEffect
-        }
-        // -------------------------------------------------------------------
-
-        if (locationManager.hasLocationPermission()) {
+        // Cek Izin HP DAN Pengaturan Aplikasi
+        if (locationManager.hasLocationPermission() && isLocationEnabledInSettings) {
             locationManager.getLocationUpdates().collectLatest { location ->
-                // Panggil ViewModel untuk mengecek lokasi ke backend
                 missionViewModel.checkLocation(
                     latitude = location.latitude,
                     longitude = location.longitude
@@ -111,21 +100,22 @@ fun GuidanceScreen(
         }
     }
 
-    // 4. Kirim notifikasi jika perlu
+    // 8. Logika Notifikasi (Hanya jika diizinkan di Pengaturan)
     LaunchedEffect(locationResponse) {
         val response = locationResponse ?: return@LaunchedEffect
-        val missionName = missionWithClues?.mission?.name ?: "Misi"
 
-        if (response.status == "clue_reached") {
-            notificationHelper.showDistanceNotification(
-                response.currentClue?.name ?: "Petunjuk", 0.0
-            )
-        }
+        if (isNotificationsEnabledInSettings) {
+            if (response.status == "clue_reached") {
+                notificationHelper.showDistanceNotification(
+                    response.currentClue?.name ?: "Petunjuk", 0.0
+                )
+            }
 
-        if (response.destination?.isArrived == true) {
-            notificationHelper.showArrivalNotification(
-                response.destination.name
-            )
+            if (response.destination?.isArrived == true) {
+                notificationHelper.showArrivalNotification(
+                    response.destination.name
+                )
+            }
         }
     }
 
@@ -136,7 +126,7 @@ fun GuidanceScreen(
                 title = { Text("Panduan Misi") },
                 navigationIcon = {
                     IconButton(onClick = onGiveUpClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Kembali & Batalkan Misi")
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
                     }
                 },
                 actions = {
@@ -151,31 +141,75 @@ fun GuidanceScreen(
         }
     ) { innerPadding ->
 
-        // Handle Loading (saat pertama kali memuat)
+        // --- KONDISI 1: Jika Lokasi Dimatikan di Pengaturan ---
+        if (!isLocationEnabledInSettings) {
+            Box(modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        Icons.Default.LocationOff,
+                        contentDescription = null,
+                        tint = ErrorColor,
+                        modifier = Modifier.size(64.dp)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        "Akses Lokasi Dimatikan",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "Aktifkan lokasi di menu Pengaturan\nuntuk melanjutkan petualangan ini.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = LightTextColor,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+            return@Scaffold
+        }
+
+        // --- KONDISI 2: Loading Data Awal ---
         if (isLoading && missionWithClues == null) {
-            Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+                contentAlignment = Alignment.Center
+            ) {
                 CircularProgressIndicator()
             }
             return@Scaffold
         }
 
-        // Handle Error
+        // --- KONDISI 3: Error ---
         if (error != null) {
-            Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+                contentAlignment = Alignment.Center
+            ) {
                 Text(text = error!!, color = MaterialTheme.colorScheme.error)
             }
             return@Scaffold
         }
 
-        // Handle Misi tidak valid
+        // --- KONDISI 4: Data Kosong ---
         if (missionWithClues == null) {
-            Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
-                Text(text = "Misi tidak valid.")
+            Box(modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = "Misi tidak valid atau gagal dimuat.")
             }
             return@Scaffold
         }
 
-        // UI Utama
+        // --- UI UTAMA (GUIDANCE) ---
         Box(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
@@ -184,7 +218,6 @@ fun GuidanceScreen(
                     .padding(horizontal = 25.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Content
                 Column(
                     modifier = Modifier.weight(1f),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -199,6 +232,7 @@ fun GuidanceScreen(
                     )
                     Spacer(modifier = Modifier.height(25.dp))
 
+                    // Animasi Icon Tengah
                     if (hasArrivedAtDestination) {
                         CheckmarkAnimation()
                     } else {
@@ -207,24 +241,25 @@ fun GuidanceScreen(
 
                     Spacer(modifier = Modifier.height(25.dp))
 
+                    // Kartu Jarak
                     locationResponse?.let {
                         DistanceCard(
-                            distanceMessage = if (hasArrivedAtDestination) {
+                            distanceMessage = if (hasArrivedAtDestination)
                                 "Anda Telah Tiba"
-                            } else {
-                                it.distance.formatted
-                            },
+                            else
+                                it.distance.formatted,
                             hasArrived = hasArrivedAtDestination
                         )
                         Spacer(modifier = Modifier.height(20.dp))
                     }
 
+                    // Teks Petunjuk Utama
                     Text(
                         text = when {
                             hasArrivedAtDestination -> "🎉 Anda Telah Sampai!"
                             currentClue != null -> currentClue.description
-                            destination != null -> "Semua petunjuk selesai! Menuju tujuan akhir: ${destination.name}"
-                            else -> "Memuat petunjuk pertama..."
+                            destination != null -> "Menuju tujuan akhir: ${destination.name}"
+                            else -> "Memuat petunjuk..."
                         },
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.SemiBold,
@@ -233,6 +268,7 @@ fun GuidanceScreen(
                         color = if (hasArrivedAtDestination) ForestGreen else MaterialTheme.colorScheme.onBackground
                     )
 
+                    // Info Tambahan (Hint / Notifikasi Mati)
                     if (hasArrivedAtDestination) {
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
@@ -242,18 +278,35 @@ fun GuidanceScreen(
                             textAlign = TextAlign.Center
                         )
                     } else if (currentClue != null && locationResponse?.clueReached == false) {
+                        // Tampilkan pesan jarak jika belum sampai
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = "Pesan: ${locationResponse?.distance?.message}",
+                            text = locationResponse?.distance?.message ?: "",
                             style = MaterialTheme.typography.bodyMedium,
                             color = AccentColor,
                             fontWeight = FontWeight.SemiBold,
                             textAlign = TextAlign.Center
                         )
                     }
+
+                    // Indikator kecil jika notifikasi dimatikan user
+                    if (!isNotificationsEnabledInSettings && !hasArrivedAtDestination) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = MaterialTheme.shapes.extraSmall
+                        ) {
+                            Text(
+                                text = "Notifikasi suara dimatikan",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = LightTextColor,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
                 }
 
-                // Action Buttons
+                // --- TOMBOL AKSI BAWAH ---
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -261,10 +314,11 @@ fun GuidanceScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    // Tombol Utama (Berubah fungsi)
                     Button(
                         onClick = {
                             if (hasArrivedAtDestination) {
-                                onArrivedClick()
+                                onArrivedClick() // Ke Jurnal
                             }
                         },
                         modifier = Modifier
@@ -274,6 +328,7 @@ fun GuidanceScreen(
                         colors = ButtonDefaults.buttonColors(
                             containerColor = if (hasArrivedAtDestination) ForestGreen else PrimaryBlue
                         ),
+                        // Tombol disable saat tracking, aktif saat sampai
                         enabled = hasArrivedAtDestination
                     ) {
                         Icon(
@@ -289,12 +344,14 @@ fun GuidanceScreen(
                         )
                     }
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (!hasArrivedAtDestination) {
+                    // Tombol Sekunder (Peta & Skip) - Hanya muncul jika belum sampai
+                    if (!hasArrivedAtDestination) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Tombol Buka Peta
                             OutlinedButton(
                                 onClick = {
                                     val targetLat = locationResponse?.currentClue?.latitude ?: locationResponse?.destination?.latitude
@@ -324,11 +381,11 @@ fun GuidanceScreen(
                                 )
                             }
 
-                            // --- Tombol Skip Clue ---
+                            // Tombol Skip Clue
                             TextButton(
                                 onClick = { missionViewModel.skipCurrentClue() },
                                 modifier = Modifier.height(56.dp),
-                                enabled = !isLoading && currentClue != null // Aktif jika ada clue
+                                enabled = !isLoading && currentClue != null
                             ) {
                                 Text(
                                     "Lewati",
@@ -343,14 +400,12 @@ fun GuidanceScreen(
                                     tint = if (!isLoading && currentClue != null) AccentColor else LightTextColor
                                 )
                             }
-                            // -------------------------
                         }
                     }
                 }
             }
 
-            // --- Loading Overlay ---
-            // Tampil HANYA jika sedang loading TAPI data misi SUDAH ada
+            // Loading Overlay (saat Skip Clue misalnya)
             if (isLoading && missionWithClues != null) {
                 Box(
                     modifier = Modifier
@@ -365,6 +420,8 @@ fun GuidanceScreen(
         }
     }
 }
+
+// --- HELPER COMPOSABLES ---
 
 @Composable
 fun CheckmarkAnimation() {
@@ -403,9 +460,7 @@ fun LocationIcon() {
         targetValue = 1.2f,
         animationSpec = infiniteRepeatable(
             tween(1000, easing = LinearEasing),
-            // --- PERBAIKAN DI SINI ---
-            repeatMode = RepeatMode.Reverse // Mengganti 'RepeatMode =' menjadi 'repeatMode ='
-            // -------------------------
+            repeatMode = RepeatMode.Reverse
         ), label = "pulse"
     )
 

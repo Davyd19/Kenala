@@ -1,6 +1,8 @@
 package com.app.kenala.screens.profile
 
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -19,6 +21,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.app.kenala.ui.theme.*
@@ -33,10 +36,12 @@ fun SettingsScreen(
     authViewModel: AuthViewModel = viewModel(),
     settingsViewModel: SettingsViewModel = viewModel()
 ) {
+    // 1. State dari SettingsViewModel (DataStore)
     val notificationsEnabled by settingsViewModel.notificationsEnabled.collectAsState()
     val locationEnabled by settingsViewModel.locationEnabled.collectAsState()
     val darkModeEnabled by settingsViewModel.darkModeEnabled.collectAsState()
 
+    // 2. State Lokal untuk Dialog
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showPasswordDialog by remember { mutableStateOf(false) }
 
@@ -44,14 +49,24 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
+    // Fungsi helper: Buka URL
     fun openUrl(url: String) {
         try {
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
             context.startActivity(intent)
         } catch (e: Exception) {
-            scope.launch {
-                snackbarHostState.showSnackbar("Tidak dapat membuka browser")
-            }
+            scope.launch { snackbarHostState.showSnackbar("Tidak dapat membuka browser") }
+        }
+    }
+
+    // Fungsi helper: Ambil versi aplikasi
+    fun getAppVersion(context: Context): String {
+        return try {
+            val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+            // PERBAIKAN: Gunakan elvis operator (?:) karena versionName bisa null
+            pInfo.versionName ?: "1.0.0"
+        } catch (e: PackageManager.NameNotFoundException) {
+            "1.0.0"
         }
     }
 
@@ -60,10 +75,7 @@ fun SettingsScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        "Pengaturan",
-                        fontWeight = FontWeight.Bold
-                    )
+                    Text("Pengaturan", fontWeight = FontWeight.Bold)
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
@@ -77,126 +89,133 @@ fun SettingsScreen(
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
-        // Konten utama bisa discroll
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .verticalScroll(rememberScrollState()) // Scroll diaktifkan di sini
-                .padding(horizontal = 25.dp, vertical = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // --- SECTION 1: PREFERENSI ---
-            SettingsSection(title = "Preferensi") {
-                SettingsSwitchItem(
-                    title = "Notifikasi",
-                    description = "Terima notifikasi misi baru",
-                    checked = notificationsEnabled,
-                    onCheckedChange = { settingsViewModel.toggleNotifications(it) },
-                    icon = Icons.Default.Notifications
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BorderColor)
-
-                SettingsSwitchItem(
-                    title = "Lokasi",
-                    description = "Izinkan akses lokasi untuk misi",
-                    checked = locationEnabled,
-                    onCheckedChange = { settingsViewModel.toggleLocation(it) },
-                    icon = Icons.Default.LocationOn
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BorderColor)
-
-                SettingsSwitchItem(
-                    title = "Mode Gelap",
-                    description = "Tampilan dengan tema gelap",
-                    checked = darkModeEnabled,
-                    onCheckedChange = { settingsViewModel.toggleDarkMode(it) },
-                    icon = Icons.Default.DarkMode
-                )
-            }
-
-            // --- SECTION 2: AKUN ---
-            SettingsSection(title = "Akun") {
-                SettingsActionItem(
-                    title = "Ganti Password",
-                    description = "Perbarui kata sandi Anda",
-                    icon = Icons.Default.Lock,
-                    onClick = { showPasswordDialog = true }
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BorderColor)
-
-                SettingsActionItem(
-                    title = "Bahasa",
-                    description = "Indonesia",
-                    icon = Icons.Default.Language,
-                    onClick = {
-                        scope.launch {
-                            snackbarHostState.showSnackbar("Saat ini hanya Bahasa Indonesia yang tersedia")
-                        }
-                    }
-                )
-            }
-
-            // --- SECTION 3: TENTANG ---
-            SettingsSection(title = "Tentang") {
-                SettingsActionItem(
-                    title = "Versi Aplikasi",
-                    description = "1.0.0 (Beta)",
-                    icon = Icons.Default.Info,
-                    onClick = { }
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BorderColor)
-
-                SettingsActionItem(
-                    title = "Kebijakan Privasi",
-                    description = "Baca kebijakan privasi kami",
-                    icon = Icons.Default.PrivacyTip,
-                    onClick = { openUrl("https://www.google.com") }
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BorderColor)
-
-                SettingsActionItem(
-                    title = "Syarat & Ketentuan",
-                    description = "Baca syarat dan ketentuan",
-                    icon = Icons.Default.Description,
-                    onClick = { openUrl("https://www.google.com") }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // --- TOMBOL LOGOUT (Sekarang di dalam Scroll, bukan Floating) ---
-            Button(
-                onClick = { showLogoutDialog = true },
+            // Area Konten yang Bisa Discroll
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = MaterialTheme.shapes.large,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = ErrorColor,
-                    contentColor = Color.White // Memaksa teks jadi Putih (Light & Dark Mode)
-                )
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 25.dp, vertical = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Icon(
-                    Icons.Default.Logout,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    "Keluar",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+                // --- SEKSI 1: PREFERENSI ---
+                SettingsSection(title = "Preferensi") {
+                    SettingsSwitchItem(
+                        title = "Notifikasi",
+                        description = "Terima notifikasi dari aplikasi",
+                        checked = notificationsEnabled,
+                        onCheckedChange = { settingsViewModel.toggleNotifications(it) },
+                        icon = Icons.Default.Notifications
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BorderColor)
 
-            // Spacer tambahan di bawah agar tombol tidak mepet layar bawah saat discroll mentok
-            Spacer(modifier = Modifier.height(24.dp))
+                    SettingsSwitchItem(
+                        title = "Lokasi",
+                        description = "Izinkan akses lokasi untuk aplikasi",
+                        checked = locationEnabled,
+                        onCheckedChange = { settingsViewModel.toggleLocation(it) },
+                        icon = Icons.Default.LocationOn
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BorderColor)
+
+                    SettingsSwitchItem(
+                        title = "Mode Gelap",
+                        description = "Tampilan dengan tema gelap",
+                        checked = darkModeEnabled,
+                        onCheckedChange = { settingsViewModel.toggleDarkMode(it) },
+                        icon = Icons.Default.DarkMode
+                    )
+                }
+
+                // --- SEKSI 2: AKUN ---
+                SettingsSection(title = "Akun") {
+                    SettingsActionItem(
+                        title = "Ganti Password",
+                        description = "Perbarui kata sandi Anda",
+                        icon = Icons.Default.Lock,
+                        onClick = { showPasswordDialog = true }
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BorderColor)
+
+                    SettingsActionItem(
+                        title = "Bahasa",
+                        description = "Indonesia",
+                        icon = Icons.Default.Language,
+                        onClick = {
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Saat ini hanya Bahasa Indonesia yang tersedia")
+                            }
+                        }
+                    )
+                }
+
+                // --- SEKSI 3: TENTANG ---
+                SettingsSection(title = "Tentang") {
+                    SettingsActionItem(
+                        title = "Versi Aplikasi",
+                        description = getAppVersion(context),
+                        icon = Icons.Default.Info,
+                        onClick = { }
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BorderColor)
+
+                    SettingsActionItem(
+                        title = "Kebijakan Privasi",
+                        description = "Baca kebijakan privasi kami",
+                        icon = Icons.Default.PrivacyTip,
+                        onClick = { openUrl("https://google.com") }
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BorderColor)
+
+                    SettingsActionItem(
+                        title = "Syarat & Ketentuan",
+                        description = "Baca syarat dan ketentuan",
+                        icon = Icons.Default.Description,
+                        onClick = { openUrl("https://google.com") }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // --- TOMBOL KELUAR (Non-Floating) ---
+                Button(
+                    onClick = { showLogoutDialog = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = MaterialTheme.shapes.large,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ErrorColor,
+                        contentColor = Color.White // Paksa teks putih di semua mode
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Logout,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Keluar",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                // Spacer tambahan agar tidak mepet bawah saat discroll
+                Spacer(modifier = Modifier.height(24.dp))
+            }
         }
     }
 
-    // --- DIALOGS (Tetap Sama) ---
+    // --- DIALOGS ---
 
+    // 1. Dialog Ganti Password
     if (showPasswordDialog) {
         ChangePasswordDialog(
             onDismiss = { showPasswordDialog = false },
@@ -211,6 +230,7 @@ fun SettingsScreen(
                         }
                     },
                     onError = { msg ->
+                        // Callback error ke dialog untuk ditampilkan di bawah input
                         onErrorCallback(msg)
                     }
                 )
@@ -218,6 +238,7 @@ fun SettingsScreen(
         )
     }
 
+    // 2. Dialog Konfirmasi Logout
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
@@ -247,7 +268,7 @@ fun SettingsScreen(
     }
 }
 
-// --- HELPER COMPONENTS (Tetap Sama) ---
+// --- HELPER COMPONENTS ---
 
 @Composable
 fun ChangePasswordDialog(
@@ -256,8 +277,10 @@ fun ChangePasswordDialog(
 ) {
     var oldPass by remember { mutableStateOf("") }
     var newPass by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
 
+    // State Error
     var oldPassError by remember { mutableStateOf<String?>(null) }
     var newPassError by remember { mutableStateOf<String?>(null) }
     var generalError by remember { mutableStateOf<String?>(null) }
@@ -287,6 +310,7 @@ fun ChangePasswordDialog(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                // INPUT PASSWORD LAMA
                 OutlinedTextField(
                     value = oldPass,
                     onValueChange = {
@@ -295,12 +319,19 @@ fun ChangePasswordDialog(
                         generalError = null
                     },
                     label = { Text("Password Lama") },
-                    visualTransformation = PasswordVisualTransformation(),
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     singleLine = true,
                     isError = oldPassError != null,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.medium
+                    shape = MaterialTheme.shapes.medium,
+                    trailingIcon = {
+                        val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(imageVector = image, contentDescription = null)
+                        }
+                    }
                 )
+                // Error Password Lama (di bawah box)
                 if (oldPassError != null) {
                     Text(
                         text = oldPassError!!,
@@ -312,6 +343,7 @@ fun ChangePasswordDialog(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
+                // INPUT PASSWORD BARU
                 OutlinedTextField(
                     value = newPass,
                     onValueChange = {
@@ -319,13 +351,14 @@ fun ChangePasswordDialog(
                         newPassError = null
                     },
                     label = { Text("Password Baru") },
-                    visualTransformation = PasswordVisualTransformation(),
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     singleLine = true,
                     isError = newPassError != null,
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.medium
                 )
 
+                // ATURAN PASSWORD & ERROR
                 Column(modifier = Modifier.padding(start = 8.dp, top = 4.dp)) {
                     if (newPassError != null) {
                         Text(
@@ -335,6 +368,7 @@ fun ChangePasswordDialog(
                             fontWeight = FontWeight.Bold
                         )
                     } else {
+                        // Tampilkan aturan jika tidak ada error
                         Text(
                             text = "• Minimal 6 karakter",
                             style = MaterialTheme.typography.labelSmall,
@@ -348,6 +382,7 @@ fun ChangePasswordDialog(
                     }
                 }
 
+                // Error Umum (Koneksi, Server)
                 if (generalError != null) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Card(
@@ -368,6 +403,7 @@ fun ChangePasswordDialog(
         confirmButton = {
             Button(
                 onClick = {
+                    // VALIDASI LOKAL YANG KETAT
                     val hasLetter = newPass.any { it.isLetter() }
                     val hasDigit = newPass.any { it.isDigit() }
 
@@ -384,8 +420,10 @@ fun ChangePasswordDialog(
                     isLoading = true
                     onSubmit(oldPass, newPass) { errorMsgFromApi ->
                         isLoading = false
+                        // Deteksi jenis error dari API
                         if (errorMsgFromApi.contains("salah", ignoreCase = true) ||
-                            errorMsgFromApi.contains("invalid", ignoreCase = true)) {
+                            errorMsgFromApi.contains("invalid", ignoreCase = true) ||
+                            errorMsgFromApi.contains("incorrect", ignoreCase = true)) {
                             oldPassError = "Password lama tidak sesuai"
                         } else {
                             generalError = errorMsgFromApi

@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 
 sealed class AuthState {
     object Idle : AuthState()
@@ -193,18 +194,22 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 if (response.isSuccessful) {
                     onSuccess()
                 } else {
-                    // Parsing error message dari JSON body jika ada
+                    // PERBAIKAN: Parsing pesan error JSON yang benar
                     val errorBody = response.errorBody()?.string()
-                    val message = if (errorBody != null && errorBody.contains("error")) {
-                        // Cara sederhana ambil pesan error (atau gunakan Gson untuk parsing proper)
-                        "Gagal mengubah password"
-                    } else {
-                        "Password lama salah atau terjadi kesalahan"
+                    val message = try {
+                        if (errorBody != null) {
+                            val jsonObject = JSONObject(errorBody)
+                            jsonObject.getString("error") // Ambil teks "Password saat ini salah"
+                        } else {
+                            "Gagal mengubah password"
+                        }
+                    } catch (e: Exception) {
+                        "Terjadi kesalahan pada server"
                     }
                     onError(message)
                 }
             } catch (e: Exception) {
-                onError("Terjadi kesalahan koneksi: ${e.message}")
+                onError("Tidak dapat terhubung ke server")
             }
         }
     }

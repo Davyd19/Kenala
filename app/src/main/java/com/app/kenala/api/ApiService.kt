@@ -66,6 +66,9 @@ interface ApiService {
     @GET("profile/weekly-challenge")
     suspend fun getWeeklyChallenge(): Response<WeeklyChallengeDto>
 
+    @POST("auth/change-password")
+    suspend fun changePassword(@Body request: ChangePasswordRequest): Response<GeneralResponse>
+
     // --- ENDPOINT BARU UNTUK TRACKING MISI ---
 
     @GET("tracking/mission/{missionId}")
@@ -115,10 +118,8 @@ interface ApiService {
 
     @DELETE("suggestions/{id}")
     suspend fun deleteSuggestion(@Path("id") id: String): Response<Unit>
-    // ------------------------------------------------
 }
 
-// Request/Response DTOs
 data class RegisterRequest(
     val name: String,
     val email: String,
@@ -164,15 +165,20 @@ data class SkipClueRequest(
     val clue_id: String
 )
 
-// --- TAMBAHAN BARU: Request DTO untuk Reset Progress ---
 data class ResetProgressRequest(
     val mission_id: String
 )
-// ---------------------------------------------------
 
-// --- TAMBAHAN BARU: Response DTO untuk Upload ---
 data class UploadResponse(
     val message: String,
     val imageUrl: String
 )
-// ------------------------------------------------
+
+data class ChangePasswordRequest(
+    val currentPassword: String,
+    val newPassword: String
+)
+
+data class GeneralResponse(
+    val message: String
+)

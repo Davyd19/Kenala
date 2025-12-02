@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -14,10 +15,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.app.kenala.ui.theme.*
 import com.app.kenala.viewmodel.AuthViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -25,12 +28,21 @@ fun SettingsScreen(
     onNavigateBack: () -> Unit,
     authViewModel: AuthViewModel = viewModel()
 ) {
+    // State untuk UI Toggle
     var notificationsEnabled by remember { mutableStateOf(true) }
     var locationEnabled by remember { mutableStateOf(true) }
     var darkModeEnabled by remember { mutableStateOf(false) }
+
+    // State untuk Dialog
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var showPasswordDialog by remember { mutableStateOf(false) }
+
+    // State untuk Snackbar (Notifikasi pesan)
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -41,7 +53,8 @@ fun SettingsScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
+                        // Menggunakan AutoMirrored agar ikon panah menyesuaikan arah bahasa (LTR/RTL)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -103,7 +116,7 @@ fun SettingsScreen(
                         title = "Ganti Password",
                         description = "Perbarui kata sandi Anda",
                         icon = Icons.Default.Lock,
-                        onClick = { /* TODO */ }
+                        onClick = { showPasswordDialog = true } // Buka dialog ganti password
                     )
                     HorizontalDivider(
                         modifier = Modifier.padding(horizontal = 16.dp),
@@ -113,7 +126,7 @@ fun SettingsScreen(
                         title = "Bahasa",
                         description = "Indonesia",
                         icon = Icons.Default.Language,
-                        onClick = { /* TODO */ }
+                        onClick = { /* TODO: Implement language picker later */ }
                     )
                 }
 
@@ -181,7 +194,34 @@ fun SettingsScreen(
         }
     }
 
-    // Logout Confirmation Dialog
+    // --- Dialogs ---
+
+    // 1. Change Password Dialog
+    if (showPasswordDialog) {
+        ChangePasswordDialog(
+            onDismiss = { showPasswordDialog = false },
+            onSubmit = { oldPass, newPass ->
+                // Panggil fungsi di ViewModel
+                authViewModel.changePassword(
+                    currentPass = oldPass,
+                    newPass = newPass,
+                    onSuccess = {
+                        showPasswordDialog = false
+                        scope.launch {
+                            snackbarHostState.showSnackbar("Password berhasil diubah")
+                        }
+                    },
+                    onError = { msg ->
+                        scope.launch {
+                            snackbarHostState.showSnackbar(msg)
+                        }
+                    }
+                )
+            }
+        )
+    }
+
+    // 2. Logout Confirmation Dialog
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
@@ -208,6 +248,72 @@ fun SettingsScreen(
             }
         )
     }
+}
+
+// --- Helper Composables ---
+
+@Composable
+fun ChangePasswordDialog(
+    onDismiss: () -> Unit,
+    onSubmit: (String, String) -> Unit
+) {
+    var oldPass by remember { mutableStateOf("") }
+    var newPass by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Ganti Password") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                OutlinedTextField(
+                    value = oldPass,
+                    onValueChange = { oldPass = it },
+                    label = { Text("Password Lama") },
+                    visualTransformation = PasswordVisualTransformation(),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = newPass,
+                    onValueChange = { newPass = it },
+                    label = { Text("Password Baru") },
+                    visualTransformation = PasswordVisualTransformation(),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (oldPass.isNotEmpty() && newPass.length >= 6) {
+                        isLoading = true
+                        onSubmit(oldPass, newPass)
+                    }
+                },
+                enabled = !isLoading && oldPass.isNotEmpty() && newPass.length >= 6
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text("Simpan")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                enabled = !isLoading
+            ) {
+                Text("Batal")
+            }
+        }
+    )
 }
 
 @Composable

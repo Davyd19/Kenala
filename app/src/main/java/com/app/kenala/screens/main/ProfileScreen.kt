@@ -112,13 +112,9 @@ fun ProfileScreen(
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
-                    TextButton(onClick = onNavigateToBadges) {
-                        Text("Lihat Semua", fontWeight = FontWeight.SemiBold)
-                    }
                 }
             }
             item {
-                // <-- 2. PANGGILAN INI SEKARANG MENGGUNAKAN IMPORT DI ATAS
                 AchievementPreviewCard(onClick = onNavigateToBadges)
             }
 

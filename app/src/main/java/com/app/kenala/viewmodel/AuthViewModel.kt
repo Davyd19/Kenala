@@ -3,6 +3,7 @@ package com.app.kenala.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.app.kenala.api.ChangePasswordRequest
 import com.app.kenala.api.LoginRequest
 import com.app.kenala.api.RegisterRequest
 import com.app.kenala.api.RetrofitClient
@@ -179,6 +180,32 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
             _isLoggedIn.value = false
             _authState.value = AuthState.Idle
+        }
+    }
+
+    fun changePassword(currentPass: String, newPass: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.apiService.changePassword(
+                    ChangePasswordRequest(currentPass, newPass)
+                )
+
+                if (response.isSuccessful) {
+                    onSuccess()
+                } else {
+                    // Parsing error message dari JSON body jika ada
+                    val errorBody = response.errorBody()?.string()
+                    val message = if (errorBody != null && errorBody.contains("error")) {
+                        // Cara sederhana ambil pesan error (atau gunakan Gson untuk parsing proper)
+                        "Gagal mengubah password"
+                    } else {
+                        "Password lama salah atau terjadi kesalahan"
+                    }
+                    onError(message)
+                }
+            } catch (e: Exception) {
+                onError("Terjadi kesalahan koneksi: ${e.message}")
+            }
         }
     }
 

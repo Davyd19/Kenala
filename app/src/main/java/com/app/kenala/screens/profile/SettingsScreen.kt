@@ -1,5 +1,7 @@
 package com.app.kenala.screens.profile
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -14,32 +16,48 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.app.kenala.ui.theme.*
 import com.app.kenala.viewmodel.AuthViewModel
+import com.app.kenala.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
-    authViewModel: AuthViewModel = viewModel()
+    authViewModel: AuthViewModel = viewModel(),
+    settingsViewModel: SettingsViewModel = viewModel()
 ) {
-    // State untuk UI Toggle
-    var notificationsEnabled by remember { mutableStateOf(true) }
-    var locationEnabled by remember { mutableStateOf(true) }
-    var darkModeEnabled by remember { mutableStateOf(false) }
+    // 1. State dari SettingsViewModel (DataStore)
+    // Mengambil nilai pengaturan yang tersimpan
+    val notificationsEnabled by settingsViewModel.notificationsEnabled.collectAsState()
+    val locationEnabled by settingsViewModel.locationEnabled.collectAsState()
+    val darkModeEnabled by settingsViewModel.darkModeEnabled.collectAsState()
 
-    // State untuk Dialog
+    // 2. State Lokal untuk Dialog & UI
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showPasswordDialog by remember { mutableStateOf(false) }
 
-    // State untuk Snackbar (Notifikasi pesan)
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    // Fungsi helper untuk membuka URL di browser
+    fun openUrl(url: String) {
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            scope.launch {
+                snackbarHostState.showSnackbar("Tidak dapat membuka browser")
+            }
+        }
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -53,7 +71,6 @@ fun SettingsScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        // Menggunakan AutoMirrored agar ikon panah menyesuaikan arah bahasa (LTR/RTL)
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
                     }
                 },
@@ -69,7 +86,7 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // Scrollable Content
+            // Scrollable Content Area
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -77,86 +94,80 @@ fun SettingsScreen(
                     .padding(horizontal = 25.dp, vertical = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Preferences Section
+                // --- SECTION 1: PREFERENSI ---
                 SettingsSection(title = "Preferensi") {
                     SettingsSwitchItem(
                         title = "Notifikasi",
                         description = "Terima notifikasi misi baru",
                         checked = notificationsEnabled,
-                        onCheckedChange = { notificationsEnabled = it },
+                        onCheckedChange = { settingsViewModel.toggleNotifications(it) },
                         icon = Icons.Default.Notifications
                     )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        color = BorderColor
-                    )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BorderColor)
+
                     SettingsSwitchItem(
                         title = "Lokasi",
                         description = "Izinkan akses lokasi untuk misi",
                         checked = locationEnabled,
-                        onCheckedChange = { locationEnabled = it },
+                        onCheckedChange = { settingsViewModel.toggleLocation(it) },
                         icon = Icons.Default.LocationOn
                     )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        color = BorderColor
-                    )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BorderColor)
+
                     SettingsSwitchItem(
                         title = "Mode Gelap",
                         description = "Tampilan dengan tema gelap",
                         checked = darkModeEnabled,
-                        onCheckedChange = { darkModeEnabled = it },
+                        onCheckedChange = { settingsViewModel.toggleDarkMode(it) },
                         icon = Icons.Default.DarkMode
                     )
                 }
 
-                // Account Section
+                // --- SECTION 2: AKUN ---
                 SettingsSection(title = "Akun") {
                     SettingsActionItem(
                         title = "Ganti Password",
                         description = "Perbarui kata sandi Anda",
                         icon = Icons.Default.Lock,
-                        onClick = { showPasswordDialog = true } // Buka dialog ganti password
+                        onClick = { showPasswordDialog = true }
                     )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        color = BorderColor
-                    )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BorderColor)
+
                     SettingsActionItem(
                         title = "Bahasa",
                         description = "Indonesia",
                         icon = Icons.Default.Language,
-                        onClick = { /* TODO: Implement language picker later */ }
+                        onClick = {
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Saat ini hanya Bahasa Indonesia yang tersedia")
+                            }
+                        }
                     )
                 }
 
-                // About Section
+                // --- SECTION 3: TENTANG ---
                 SettingsSection(title = "Tentang") {
                     SettingsActionItem(
                         title = "Versi Aplikasi",
-                        description = "1.0.0",
+                        description = "1.0.0 (Beta)",
                         icon = Icons.Default.Info,
-                        onClick = { }
+                        onClick = { } // Tidak ada aksi, hanya info
                     )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        color = BorderColor
-                    )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BorderColor)
+
                     SettingsActionItem(
                         title = "Kebijakan Privasi",
                         description = "Baca kebijakan privasi kami",
                         icon = Icons.Default.PrivacyTip,
-                        onClick = { /* TODO */ }
+                        onClick = { openUrl("https://www.google.com") } // Ganti URL sesuai kebutuhan
                     )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        color = BorderColor
-                    )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BorderColor)
+
                     SettingsActionItem(
                         title = "Syarat & Ketentuan",
                         description = "Baca syarat dan ketentuan",
                         icon = Icons.Default.Description,
-                        onClick = { /* TODO */ }
+                        onClick = { openUrl("https://www.google.com") } // Ganti URL sesuai kebutuhan
                     )
                 }
             }
@@ -171,8 +182,8 @@ fun SettingsScreen(
                     onClick = { showLogoutDialog = true },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(56.dp)
-                        .padding(horizontal = 25.dp, vertical = 8.dp),
+                        .height(72.dp) // Sedikit lebih tinggi untuk area sentuh yang nyaman
+                        .padding(horizontal = 25.dp, vertical = 12.dp),
                     shape = MaterialTheme.shapes.large,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = ErrorColor
@@ -194,21 +205,20 @@ fun SettingsScreen(
         }
     }
 
-    // --- Dialogs ---
+    // --- DIALOGS ---
 
-    // 1. Change Password Dialog
+    // 1. Dialog Ganti Password
     if (showPasswordDialog) {
         ChangePasswordDialog(
             onDismiss = { showPasswordDialog = false },
             onSubmit = { oldPass, newPass ->
-                // Panggil fungsi di ViewModel
                 authViewModel.changePassword(
                     currentPass = oldPass,
                     newPass = newPass,
                     onSuccess = {
                         showPasswordDialog = false
                         scope.launch {
-                            snackbarHostState.showSnackbar("Password berhasil diubah")
+                            snackbarHostState.showSnackbar("Password berhasil diubah!")
                         }
                     },
                     onError = { msg ->
@@ -221,11 +231,11 @@ fun SettingsScreen(
         )
     }
 
-    // 2. Logout Confirmation Dialog
+    // 2. Dialog Konfirmasi Logout
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
-            icon = { Icon(Icons.Default.Logout, contentDescription = null) },
+            icon = { Icon(Icons.Default.Logout, contentDescription = null, tint = ErrorColor) },
             title = { Text("Keluar dari Akun?") },
             text = { Text("Apakah Anda yakin ingin keluar? Anda perlu login kembali untuk mengakses aplikasi.") },
             confirmButton = {
@@ -238,7 +248,7 @@ fun SettingsScreen(
                         containerColor = ErrorColor
                     )
                 ) {
-                    Text("Keluar")
+                    Text("Ya, Keluar")
                 }
             },
             dismissButton = {
@@ -250,7 +260,7 @@ fun SettingsScreen(
     }
 }
 
-// --- Helper Composables ---
+// --- HELPER COMPONENTS ---
 
 @Composable
 fun ChangePasswordDialog(
@@ -280,7 +290,12 @@ fun ChangePasswordDialog(
                     label = { Text("Password Baru") },
                     visualTransformation = PasswordVisualTransformation(),
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    supportingText = {
+                        if (newPass.isNotEmpty() && newPass.length < 6) {
+                            Text("Minimal 6 karakter")
+                        }
+                    }
                 )
             }
         },
@@ -327,7 +342,7 @@ private fun SettingsSection(
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(bottom = 8.dp)
+            modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
         )
         Card(
             modifier = Modifier.fillMaxWidth(),

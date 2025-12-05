@@ -33,7 +33,7 @@ import com.app.kenala.viewmodel.MissionViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JournalEntryScreen(
-    realDistance: Double = 0.0, // Parameter baru
+    realDistance: Double = 0.0,
     onBackClick: () -> Unit,
     onSaveClick: () -> Unit,
     missionViewModel: MissionViewModel = viewModel(),
@@ -44,15 +44,26 @@ fun JournalEntryScreen(
     var journalStory by remember { mutableStateOf("") }
     val isSaving by journalViewModel.isLoading.collectAsState()
 
-    // State untuk Image Picker
-    var imageUri by remember { mutableStateOf<Uri?>(null) }
+    // State baru untuk tracking apakah misi SUDAH selesai di backend
+    // Ini penting agar jika user tekan "Selesai Tanpa Jurnal", kita tidak panggil completeMission lagi
+    var isMissionCompletedOnServer by remember { mutableStateOf(false) }
+
     val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        // Handle image selection
+    }
+
+    // Variable state untuk menyimpan Uri gambar
+    var imageUri by remember { mutableStateOf<Uri?>(null) }
+
+    // Perbaikan launcher agar mengupdate state imageUri
+    val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         imageUri = uri
     }
 
-    // Auto-fill title dengan nama misi
     LaunchedEffect(selectedMission) {
         selectedMission?.let { mission ->
             if (journalTitle.isEmpty()) {
@@ -61,33 +72,44 @@ fun JournalEntryScreen(
         }
     }
 
+    // Fungsi helper untuk menyelesaikan misi (jika belum)
+    fun ensureMissionCompleted(onSuccess: () -> Unit) {
+        if (isMissionCompletedOnServer) {
+            onSuccess()
+            return
+        }
+
+        selectedMission?.let { mission ->
+            missionViewModel.completeMission(mission.id, realDistance) {
+                isMissionCompletedOnServer = true
+                onSuccess()
+            }
+        } ?: onSuccess() // Jika tidak ada misi (manual entry), langsung sukses
+    }
+
     fun handleSave() {
         if (journalTitle.isBlank() || journalStory.isBlank() || isSaving) {
             return
         }
 
-        selectedMission?.let { mission ->
-            // UPDATE: Selesaikan misi dengan mengirimkan jarak REAL
-            missionViewModel.completeMission(mission.id, realDistance) {
-                // Setelah misi selesai, baru buat jurnal
-                journalViewModel.createJournal(
-                    title = journalTitle,
-                    story = journalStory,
-                    imageUri = imageUri,
-                    locationName = mission.location_name,
-                    latitude = mission.latitude,
-                    longitude = mission.longitude
-                )
-                onSaveClick()
-            }
-        } ?: run {
-            // Fallback: Buat jurnal tanpa misi (Manual entry)
+        ensureMissionCompleted {
+            // Setelah misi dipastikan selesai, buat jurnal
             journalViewModel.createJournal(
                 title = journalTitle,
                 story = journalStory,
-                imageUri = imageUri
+                imageUri = imageUri,
+                locationName = selectedMission?.location_name,
+                latitude = selectedMission?.latitude,
+                longitude = selectedMission?.longitude
             )
-            onSaveClick()
+            onSaveClick() // Kembali ke Home
+        }
+    }
+
+    // Fungsi baru: Selesai Tanpa Jurnal
+    fun handleFinishWithoutJournal() {
+        ensureMissionCompleted {
+            onSaveClick() // Kembali ke Home tanpa membuat jurnal
         }
     }
 
@@ -97,13 +119,15 @@ fun JournalEntryScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "Tulis Jurnal Petualanganmu",
+                        "Selesaikan Misi", // Judul diganti sedikit agar lebih umum
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold
                     )
                 },
+                // Tombol Back dihilangkan atau diarahkan ke Home untuk mencegah user 'membatalkan' penyelesaian secara tidak sengaja
+                // Di sini kita arahkan ke handleFinishWithoutJournal agar aman
                 navigationIcon = {
-                    IconButton(onClick = onBackClick, enabled = !isSaving) {
+                    IconButton(onClick = { handleFinishWithoutJournal() }, enabled = !isSaving) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
                     }
                 },
@@ -120,7 +144,7 @@ fun JournalEntryScreen(
                 .padding(horizontal = 25.dp, vertical = 20.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Mission info card
+            // ... (Card Info Misi TETAP SAMA) ...
             selectedMission?.let { mission ->
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -160,7 +184,6 @@ fun JournalEntryScreen(
                             )
                         }
 
-                        // Menampilkan jarak tempuh real (Preview)
                         if (realDistance > 0) {
                             Spacer(modifier = Modifier.height(8.dp))
                             Divider(color = AccentColor.copy(alpha = 0.2f))
@@ -177,7 +200,13 @@ fun JournalEntryScreen(
                 Spacer(modifier = Modifier.height(20.dp))
             }
 
-            // Input Fields
+            Text(
+                text = "Abadikan Momen (Opsional)",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+
             OutlinedTextField(
                 value = journalTitle,
                 onValueChange = { journalTitle = it },
@@ -207,9 +236,8 @@ fun JournalEntryScreen(
             )
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Image Picker Button
             OutlinedButton(
-                onClick = { imagePickerLauncher.launch("image/*") },
+                onClick = { launcher.launch("image/*") },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -220,7 +248,6 @@ fun JournalEntryScreen(
                 Text(if (imageUri == null) "Tambah Foto" else "Ganti Foto")
             }
 
-            // Image Preview
             imageUri?.let {
                 Spacer(modifier = Modifier.height(16.dp))
                 AsyncImage(
@@ -237,15 +264,14 @@ fun JournalEntryScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(30.dp))
 
-            // Save Button
+            // TOMBOL 1: Simpan Jurnal & Selesai
             Button(
                 onClick = { handleSave() },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp)
-                    .padding(bottom = 16.dp),
+                    .height(56.dp),
                 shape = MaterialTheme.shapes.large,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = PrimaryBlue,
@@ -254,18 +280,28 @@ fun JournalEntryScreen(
                 enabled = !isSaving && journalTitle.isNotBlank() && journalStory.isNotBlank()
             ) {
                 if (isSaving) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = WhiteColor
-                    )
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = WhiteColor)
                 } else {
-                    Text(
-                        "Simpan Jurnal",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Text("Simpan Jurnal & Selesai", fontWeight = FontWeight.Bold)
                 }
             }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // TOMBOL 2: Lewati Jurnal (Langsung Selesai)
+            OutlinedButton(
+                onClick = { handleFinishWithoutJournal() },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = MaterialTheme.shapes.large,
+                // Disable jika sedang saving proses lain
+                enabled = !isSaving
+            ) {
+                Text("Selesai Tanpa Menulis Jurnal", fontWeight = FontWeight.SemiBold)
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
         }
     }
 }

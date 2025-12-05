@@ -4,11 +4,19 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.kenala.api.RetrofitClient
-import com.app.kenala.data.remote.dto.* // Import semua DTO dari sini
+import com.app.kenala.data.remote.dto.*
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+
+// Event khusus untuk notifikasi agar terpisah dari State UI
+sealed class MissionEvent {
+    data class ShowNotification(val title: String, val message: String) : MissionEvent()
+}
 
 class MissionViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -26,6 +34,10 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
     private val _checkLocationResponse = MutableStateFlow<CheckLocationResponse?>(null)
     val checkLocationResponse: StateFlow<CheckLocationResponse?> = _checkLocationResponse.asStateFlow()
 
+    // Flow untuk one-time events (seperti notifikasi)
+    private val _missionEvent = MutableSharedFlow<MissionEvent>()
+    val missionEvent: SharedFlow<MissionEvent> = _missionEvent.asSharedFlow()
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
@@ -34,6 +46,7 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
 
     private var isMissionFinished = false
 
+    // ... (Fungsi fetchMissions, getRandomMission, fetchMissionWithClues TETAP SAMA) ...
     fun fetchMissions(category: String? = null, budget: String? = null, distance: String? = null) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -102,6 +115,7 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    // --- LOGIKA CEK LOKASI (Otomatis by GPS) ---
     fun checkLocation(latitude: Double, longitude: Double) {
         if (isMissionFinished) return
 
@@ -114,10 +128,29 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
 
                 if (response.isSuccessful) {
                     val locationResponse = response.body()
+
+                    // Cek perubahan status untuk memicu notifikasi HANYA JIKA dari GPS
+                    val previousStatus = _checkLocationResponse.value?.status
+                    val currentStatus = locationResponse?.status
+                    val isArrived = locationResponse?.destination?.isArrived == true
+                    val clueReached = locationResponse?.clueReached == true
+
                     _checkLocationResponse.value = locationResponse
-                    if (locationResponse?.destination?.isArrived == true) {
+
+                    // Logic Notifikasi: Hanya muncul jika trigger dari GPS (checkLocation)
+                    if (clueReached && previousStatus != "clue_reached") {
+                        _missionEvent.emit(MissionEvent.ShowNotification(
+                            "Petunjuk Ditemukan!",
+                            "Anda telah mencapai lokasi petunjuk."
+                        ))
+                    } else if (isArrived && !isMissionFinished) {
+                        _missionEvent.emit(MissionEvent.ShowNotification(
+                            "Tiba di Tujuan!",
+                            "Selamat, Anda telah sampai di ${locationResponse?.destination?.name}."
+                        ))
                         isMissionFinished = true
                     }
+
                 } else {
                     println("Gagal cek lokasi: ${response.message()}")
                 }
@@ -127,12 +160,13 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    // --- LOGIKA SKIP CLUE (Manual by User) ---
     fun skipCurrentClue() {
         val missionId = _missionWithClues.value?.mission?.id
         val clueId = _checkLocationResponse.value?.currentClue?.id
 
         if (missionId == null || clueId == null) {
-            _error.value = "Tidak bisa melewati clue: data misi tidak lengkap."
+            _error.value = "Tidak bisa melewati clue: data tidak lengkap."
             return
         }
 
@@ -146,13 +180,17 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
                 if (response.isSuccessful) {
                     val skipResponse = response.body()
                     _checkLocationResponse.value = skipResponse
+
+                    // PENTING: Saat skip, kita TIDAK emit event notifikasi "Anda Telah Tiba".
+                    // Kita hanya update UI state saja.
+
                     if (skipResponse?.destination?.isArrived == true) {
                         isMissionFinished = true
                     }
                 } else {
                     val errorMsg = response.errorBody()?.string() ?: response.message()
                     if (errorMsg.contains("Clue terakhir")) {
-                        _error.value = "Clue terakhir tidak bisa dilewati!"
+                        _error.value = "Clue terakhir tidak bisa dilewati! Silakan menuju lokasi tujuan."
                     } else {
                         _error.value = "Gagal melewati clue: $errorMsg"
                     }
@@ -164,6 +202,7 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    // ... (Sisa fungsi resetMissionProgress, completeMission, clear... TETAP SAMA) ...
     fun resetMissionProgress(missionId: String, onComplete: () -> Unit) {
         viewModelScope.launch {
             _missionWithClues.value = null
@@ -183,14 +222,12 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
-
             try {
                 val request = CompleteMissionRequest(
                     missionId = missionId,
                     realDistanceMeters = realDistanceMeters
                 )
                 val response = apiService.completeMission(request)
-
                 if (response.isSuccessful) {
                     onSuccess()
                 } else {
@@ -199,7 +236,6 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
             } catch (e: Exception) {
                 _error.value = "Terjadi kesalahan: ${e.message}"
             }
-
             _isLoading.value = false
         }
     }

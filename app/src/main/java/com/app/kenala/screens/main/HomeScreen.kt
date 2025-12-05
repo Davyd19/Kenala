@@ -50,12 +50,19 @@ private val inspirations = listOf(
 @Composable
 fun HomeScreen(
     navController: NavHostController,
-    profileViewModel: ProfileViewModel = viewModel(), // Terima ViewModel
+    profileViewModel: ProfileViewModel = viewModel(),
     onNavigateToNotifications: () -> Unit
 ) {
     // Ambil data dari ViewModel
     val user by profileViewModel.user.collectAsState()
     val stats by profileViewModel.stats.collectAsState()
+
+    // --- FIX PENTING: Auto-refresh data setiap kali HomeScreen tampil ---
+    // Ini menjamin data statistik (Misi Selesai, Jarak) diperbarui setelah user kembali dari JournalEntryScreen
+    LaunchedEffect(Unit) {
+        profileViewModel.refresh()
+    }
+    // -------------------------------------------------------------------
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
@@ -77,9 +84,9 @@ fun HomeScreen(
             item { Spacer(modifier = Modifier.height(8.dp)) }
             item { MainMissionCard(navController = navController) }
             item { Spacer(modifier = Modifier.height(20.dp)) }
-            item { StatsHighlightCard(stats = stats) } // Pass stats
+            item { StatsHighlightCard(stats = stats) }
             item { Spacer(modifier = Modifier.height(20.dp)) }
-            item { WeeklyChallengeCard() } // Biarkan statis dulu
+            item { WeeklyChallengeCard() }
             item { Spacer(modifier = Modifier.height(20.dp)) }
             item { AdventureInspirationSection() }
         }

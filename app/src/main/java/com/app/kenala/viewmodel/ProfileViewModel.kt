@@ -9,6 +9,7 @@ import com.app.kenala.api.RetrofitClient
 import com.app.kenala.data.local.AppDatabase
 import com.app.kenala.data.local.entities.UserEntity
 import com.app.kenala.data.remote.dto.StatsDto
+import com.app.kenala.data.remote.dto.StreakDto
 import com.app.kenala.data.remote.dto.WeeklyChallengeDto
 import com.app.kenala.data.repository.UserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,13 +17,13 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
 import java.io.FileOutputStream
-import com.app.kenala.data.remote.dto.StreakDto
 
 class ProfileViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -32,10 +33,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         apiService,
         database.userDao()
     )
-    private val _streakData = MutableStateFlow<StreakDto?>(null)
-    val streakData: StateFlow<StreakDto?> = _streakData.asStateFlow()
 
-    // State untuk data user dari database lokal
     val user: StateFlow<UserEntity?> = userRepository.getUser()
         .stateIn(
             scope = viewModelScope,
@@ -43,19 +41,18 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
             initialValue = null
         )
 
-    // State untuk data statistik dari API
     private val _stats = MutableStateFlow<StatsDto?>(null)
     val stats: StateFlow<StatsDto?> = _stats.asStateFlow()
 
-    // State untuk loading
+    private val _streakData = MutableStateFlow<StreakDto?>(null)
+    val streakData: StateFlow<StreakDto?> = _streakData.asStateFlow()
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    // State untuk error
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
-    // State untuk refresh
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
@@ -63,60 +60,47 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     val weeklyChallenge: StateFlow<WeeklyChallengeDto?> = _weeklyChallenge.asStateFlow()
 
     init {
-        // Langsung sinkronkan data user dan ambil stats saat ViewModel dibuat
-        syncUserProfile()
-        fetchStats()
+        refresh()
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            // Panggil API secara paralel
+            val jobs = listOf(
+                launch { syncUserProfile() }, // Update data user (XP, Level, dll)
+                launch { fetchStats() },      // Update statistik (Total Misi, Jarak)
+                launch { fetchStreak() }      // Update streak
+            )
+            jobs.joinAll()
+            _isRefreshing.value = false
+        }
     }
 
     fun fetchStreak() {
         viewModelScope.launch {
-            _isLoading.value = true
             userRepository.getStreak()
-                .onSuccess { data ->
-                    _streakData.value = data
-                    _error.value = null
-                }
-                .onFailure {
-                    _error.value = "Gagal mengambil streak: ${it.message}"
-                }
-            _isLoading.value = false
+                .onSuccess { data -> _streakData.value = data }
+                .onFailure { if (!_isRefreshing.value) _error.value = it.message }
         }
     }
+
     fun syncUserProfile() {
         viewModelScope.launch {
-            _isLoading.value = true
             userRepository.syncUserProfile()
-                .onSuccess {
-                    fetchStats()
-                }
-                .onFailure {
-                    _error.value = "Gagal sinkronisasi user: ${it.message}"
-                }
-            _isLoading.value = false
+                .onFailure { if (!_isRefreshing.value) _error.value = it.message }
         }
     }
 
     fun fetchStats() {
         viewModelScope.launch {
-            if (!_isLoading.value) {
-                _isLoading.value = true
-            }
-
             userRepository.getStats()
-                .onSuccess { statsData ->
-                    _stats.value = statsData
-                    _error.value = null
-                }
-                .onFailure {
-                    _error.value = "Gagal mengambil stats: ${it.message}"
-                }
-
-            _isLoading.value = false
-            _isRefreshing.value = false
+                .onSuccess { statsData -> _stats.value = statsData }
+                .onFailure { if (!_isRefreshing.value) _error.value = it.message }
         }
     }
 
-    // --- FUNGSI DIPERBARUI: Menerima imageUri ---
+    // ... (Fungsi updateProfile, uploadImage, clearError tetap sama) ...
     fun updateProfile(
         name: String,
         phone: String?,
@@ -130,27 +114,24 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
             _error.value = null
 
             try {
-                // 1. Upload gambar HANYA jika URI baru dipilih
                 val imageUrl = if (imageUri != null) {
-                    // --- 2. PERBAIKAN: Menggunakan if/else, bukan when ---
                     val uploadResult = uploadImage(imageUri)
                     if (uploadResult.isSuccess) {
-                        uploadResult.getOrNull() // Ini adalah URL
+                        uploadResult.getOrNull()
                     } else {
                         _error.value = "Gagal upload gambar: ${uploadResult.exceptionOrNull()?.message}"
                         _isLoading.value = false
                         return@launch
                     }
-                    // --------------------------------------------------
                 } else {
-                    existingImageUrl // Gunakan URL yang lama
+                    existingImageUrl
                 }
 
-                // 2. Update profil
                 userRepository.updateProfile(name, phone, bio, imageUrl)
                     .onSuccess {
                         _isLoading.value = false
                         onSuccess()
+                        refresh()
                     }
                     .onFailure {
                         _error.value = "Gagal update profil: ${it.message}"
@@ -164,13 +145,11 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // --- FUNGSI BARU: Untuk upload gambar ---
     private suspend fun uploadImage(uri: Uri): Result<String?> {
         return try {
             val context = getApplication<Application>().applicationContext
             val contentResolver = context.contentResolver
 
-            // 1. Dapatkan nama file asli
             var fileName: String? = null
             contentResolver.query(uri, null, null, null, null)?.use { cursor ->
                 if (cursor.moveToFirst()) {
@@ -182,7 +161,6 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
             }
             fileName = fileName ?: "image_${System.currentTimeMillis()}"
 
-            // 2. Salin file dari content URI ke file cache lokal
             val inputStream = contentResolver.openInputStream(uri)
             val file = File(context.cacheDir, fileName!!)
             val outputStream = FileOutputStream(file)
@@ -190,20 +168,13 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
             inputStream?.close()
             outputStream.close()
 
-            // 3. Buat RequestBody dari file cache
-            // --- 3. PERBAIKAN: Menggunakan asRequestBody ---
             val requestFile = file.asRequestBody(
                 contentResolver.getType(uri)?.toMediaTypeOrNull()
             )
-            // ------------------------------------------
 
-            // 4. Buat MultipartBody.Part
             val body = MultipartBody.Part.createFormData("image", file.name, requestFile)
-
-            // 5. Panggil API
             val response = apiService.uploadImage(body)
 
-            // 6. Hapus file cache
             file.delete()
 
             if (response.isSuccessful) {
@@ -213,14 +184,6 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
             }
         } catch (e: Exception) {
             Result.failure(e)
-        }
-    }
-
-    fun refresh() {
-        viewModelScope.launch {
-            _isRefreshing.value = true
-            syncUserProfile()
-            fetchStats()
         }
     }
 

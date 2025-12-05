@@ -14,18 +14,4 @@ data class SuggestionDto(
     @SerializedName("created_at") val createdAt: String
 )
 
-// Data yang dikirim untuk membuat suggestion baru
-data class CreateSuggestionRequest(
-    @SerializedName("location_name") val locationName: String,
-    val address: String?,
-    val category: String,
-    val description: String
-)
-
-// Data yang dikirim untuk update suggestion
-data class UpdateSuggestionRequest(
-    @SerializedName("location_name") val locationName: String,
-    val address: String?,
-    val category: String,
-    val description: String
-)
+// CreateSuggestionRequest dan UpdateSuggestionRequest sudah dipindah ke RequestDtos.kt

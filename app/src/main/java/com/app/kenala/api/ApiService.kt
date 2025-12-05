@@ -7,14 +7,17 @@ import retrofit2.http.*
 
 interface ApiService {
 
-    // Auth endpoints
+    // --- AUTH ---
     @POST("auth/register")
     suspend fun register(@Body request: RegisterRequest): Response<AuthResponse>
 
     @POST("auth/login")
     suspend fun login(@Body request: LoginRequest): Response<AuthResponse>
 
-    // Journal endpoints
+    @POST("auth/change-password")
+    suspend fun changePassword(@Body request: ChangePasswordRequest): Response<GeneralResponse>
+
+    // --- JOURNALS ---
     @GET("journals")
     suspend fun getJournals(): Response<List<JournalDto>>
 
@@ -33,7 +36,7 @@ interface ApiService {
     @DELETE("journals/{id}")
     suspend fun deleteJournal(@Path("id") id: String): Response<Unit>
 
-    // Mission endpoints
+    // --- MISSIONS ---
     @GET("missions")
     suspend fun getMissions(
         @Query("category") category: String? = null,
@@ -47,7 +50,7 @@ interface ApiService {
     @POST("missions/complete")
     suspend fun completeMission(@Body request: CompleteMissionRequest): Response<Unit>
 
-    // Profile endpoints
+    // --- PROFILE ---
     @GET("profile")
     suspend fun getProfile(): Response<UserDto>
 
@@ -66,11 +69,7 @@ interface ApiService {
     @GET("profile/weekly-challenge")
     suspend fun getWeeklyChallenge(): Response<WeeklyChallengeDto>
 
-    @POST("auth/change-password")
-    suspend fun changePassword(@Body request: ChangePasswordRequest): Response<GeneralResponse>
-
-    // --- ENDPOINT BARU UNTUK TRACKING MISI ---
-
+    // --- TRACKING ---
     @GET("tracking/mission/{missionId}")
     suspend fun getMissionWithClues(
         @Path("missionId") missionId: String
@@ -86,21 +85,18 @@ interface ApiService {
         @Body request: SkipClueRequest
     ): Response<CheckLocationResponse>
 
-    // --- TAMBAHAN BARU: Endpoint untuk Reset Progress ---
     @POST("tracking/reset-progress")
     suspend fun resetMissionProgress(
         @Body request: ResetProgressRequest
     ): Response<Unit>
 
-    // --- TAMBAHAN BARU: Endpoint untuk Upload Gambar ---
+    // --- UPLOAD & SUGGESTIONS ---
     @Multipart
     @POST("upload")
     suspend fun uploadImage(
         @Part image: MultipartBody.Part
     ): Response<UploadResponse>
-    // ------------------------------------------------
 
-    // --- TAMBAHAN BARU: Endpoint untuk Suggestions ---
     @GET("suggestions")
     suspend fun getSuggestions(): Response<List<SuggestionDto>>
 
@@ -120,63 +116,15 @@ interface ApiService {
     suspend fun deleteSuggestion(@Path("id") id: String): Response<Unit>
 }
 
-data class RegisterRequest(
-    val name: String,
-    val email: String,
-    val password: String
-)
-
-data class LoginRequest(
-    val email: String,
-    val password: String
-)
-
+// Data class Response tetap di sini (atau dipindah ke DTO juga boleh, tapi biar ringkas di sini saja yang kecil)
 data class AuthResponse(
     val token: String,
     val user: UserDto
 )
 
-data class CreateJournalRequest(
-    val title: String,
-    val story: String,
-    val imageUrl: String?,
-    val location: LocationDto?
-)
-
-data class UpdateJournalRequest(
-    val title: String,
-    val story: String,
-    val imageUrl: String?
-)
-
-data class UpdateProfileRequest(
-    val name: String?,
-    val phone: String?,
-    val bio: String?,
-    val profile_image_url: String?
-)
-
-data class CompleteMissionRequest(
-    val mission_id: String
-)
-
-data class SkipClueRequest(
-    val mission_id: String,
-    val clue_id: String
-)
-
-data class ResetProgressRequest(
-    val mission_id: String
-)
-
 data class UploadResponse(
     val message: String,
     val imageUrl: String
-)
-
-data class ChangePasswordRequest(
-    val currentPassword: String,
-    val newPassword: String
 )
 
 data class GeneralResponse(

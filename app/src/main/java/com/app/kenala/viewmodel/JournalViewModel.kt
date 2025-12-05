@@ -6,21 +6,22 @@ import android.provider.OpenableColumns
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.kenala.api.RetrofitClient
-import com.app.kenala.api.CreateJournalRequest
-import com.app.kenala.api.UpdateJournalRequest
+import com.app.kenala.data.remote.dto.CreateJournalRequest // IMPORT DTO
+import com.app.kenala.data.remote.dto.UpdateJournalRequest // IMPORT DTO
 import com.app.kenala.data.local.AppDatabase
 import com.app.kenala.data.local.entities.JournalEntity
-import com.app.kenala.data.remote.dto.LocationDto
 import com.app.kenala.data.repository.JournalRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
-import okhttp3.RequestBody.Companion.asRequestBody // <-- 1. IMPORT DIPERBAIKI
+import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
 import java.io.FileOutputStream
 
 class JournalViewModel(application: Application) : AndroidViewModel(application) {
+    // ... (Isi class tetap sama, hanya import di atas yang berubah)
+    // Saya tulis ulang bagian atas class untuk konteks
 
     private val database = AppDatabase.getDatabase(application)
     private val apiService = RetrofitClient.apiService
@@ -29,7 +30,6 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
         database.journalDao()
     )
 
-    // State untuk journals
     val journals: StateFlow<List<JournalEntity>> = repository.getJournals()
         .stateIn(
             scope = viewModelScope,
@@ -37,11 +37,9 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
             initialValue = emptyList()
         )
 
-    // State untuk loading
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    // State untuk error
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
@@ -60,7 +58,6 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // --- FUNGSI DIPERBARUI: Menerima imageUri ---
     fun createJournal(
         title: String,
         story: String,
@@ -74,9 +71,7 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
             _error.value = null
 
             try {
-                // 1. Upload gambar terlebih dahulu jika ada
                 val imageUrl = if (imageUri != null) {
-                    // --- 2. PERBAIKAN: Menggunakan if/else, bukan when ---
                     val uploadResult = uploadImage(imageUri)
                     if (uploadResult.isSuccess) {
                         uploadResult.getOrNull()
@@ -85,12 +80,10 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
                         _isLoading.value = false
                         return@launch
                     }
-                    // --------------------------------------------------
                 } else {
                     null
                 }
 
-                // 2. Buat jurnal dengan URL gambar yang didapat
                 repository.createJournal(title, story, imageUrl, locationName, latitude, longitude)
                     .onFailure {
                         _error.value = it.message
@@ -104,7 +97,6 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // --- FUNGSI DIPERBARUI: Menerima imageUri ---
     fun updateJournal(
         id: String,
         title: String,
@@ -117,9 +109,7 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
             _error.value = null
 
             try {
-                // 1. Upload gambar HANYA jika URI baru dipilih
                 val imageUrl = if (imageUri != null) {
-                    // --- 2. PERBAIKAN: Menggunakan if/else, bukan when ---
                     val uploadResult = uploadImage(imageUri)
                     if (uploadResult.isSuccess) {
                         uploadResult.getOrNull()
@@ -128,12 +118,10 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
                         _isLoading.value = false
                         return@launch
                     }
-                    // --------------------------------------------------
                 } else {
-                    existingImageUrl // Gunakan URL yang lama
+                    existingImageUrl
                 }
 
-                // 2. Update jurnal dengan URL gambar yang didapat
                 repository.updateJournal(id, title, story, imageUrl)
                     .onFailure {
                         _error.value = it.message
@@ -147,13 +135,11 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // --- FUNGSI BARU: Untuk upload gambar ---
     private suspend fun uploadImage(uri: Uri): Result<String?> {
         return try {
             val context = getApplication<Application>().applicationContext
             val contentResolver = context.contentResolver
 
-            // 1. Dapatkan nama file asli
             var fileName: String? = null
             contentResolver.query(uri, null, null, null, null)?.use { cursor ->
                 if (cursor.moveToFirst()) {
@@ -165,7 +151,6 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
             }
             fileName = fileName ?: "image_${System.currentTimeMillis()}"
 
-            // 2. Salin file dari content URI ke file cache lokal
             val inputStream = contentResolver.openInputStream(uri)
             val file = File(context.cacheDir, fileName!!)
             val outputStream = FileOutputStream(file)
@@ -173,20 +158,13 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
             inputStream?.close()
             outputStream.close()
 
-            // 3. Buat RequestBody dari file cache
-            // --- 3. PERBAIKAN: Menggunakan asRequestBody ---
             val requestFile = file.asRequestBody(
                 contentResolver.getType(uri)?.toMediaTypeOrNull()
             )
-            // ------------------------------------------
 
-            // 4. Buat MultipartBody.Part
             val body = MultipartBody.Part.createFormData("image", file.name, requestFile)
-
-            // 5. Panggil API
             val response = apiService.uploadImage(body)
 
-            // 6. Hapus file cache
             file.delete()
 
             if (response.isSuccessful) {

@@ -2,6 +2,9 @@ package com.app.kenala.data.remote.dto
 
 import com.google.gson.annotations.SerializedName
 
+// File ini HANYA berisi Data (DTO) dan Response.
+// Semua Request (CheckLocationRequest, dll) sudah dipindah ke RequestDtos.kt
+
 // DTO Asli
 data class MissionDto(
     val id: String,
@@ -14,7 +17,7 @@ data class MissionDto(
     val address: String?,
     val image_url: String?,
     val budget_category: String,
-    val estimated_distance: Float?,
+    val estimated_distance: Double?, // Ubah ke Double agar konsisten
     val difficulty_level: String,
     val points: Int,
     val is_active: Boolean
@@ -22,7 +25,6 @@ data class MissionDto(
 
 // --- DTO BARU UNTUK TRACKING MISI ---
 
-// DTO untuk satu Clue
 data class MissionClueDto(
     val id: String,
     @SerializedName("clue_order") val clueOrder: Int,
@@ -34,10 +36,9 @@ data class MissionClueDto(
     @SerializedName("radius_meters") val radius: Int,
     @SerializedName("image_url") val imageUrl: String?,
     @SerializedName("points_reward") val points: Int,
-    @SerializedName("is_completed") val isCompleted: Boolean // Ini dari controller, bukan model
+    @SerializedName("is_completed") val isCompleted: Boolean
 )
 
-// DTO untuk Progress Misi (Bagian dari response GetMissionWithClues)
 data class MissionProgressDto(
     @SerializedName("completed_clues") val completedClues: Int,
     @SerializedName("total_clues") val totalClues: Int,
@@ -47,15 +48,8 @@ data class MissionProgressDto(
 // DTO untuk Response GET /api/tracking/mission/:id
 data class MissionWithCluesResponse(
     val mission: MissionDto,
-    val clues: List<MissionClueDto>, // Backend mengirim clues di luar mission
+    val clues: List<MissionClueDto>,
     val progress: MissionProgressDto
-)
-
-// DTO untuk Request POST /api/tracking/check-location
-data class CheckLocationRequest(
-    @SerializedName("mission_id") val missionId: String,
-    val latitude: Double,
-    val longitude: Double
 )
 
 // DTO untuk Response POST /api/tracking/check-location
@@ -65,7 +59,7 @@ data class CheckLocationResponse(
     @SerializedName("current_clue") val currentClue: CurrentClueDto?,
     val distance: DistanceDto,
     val progress: ClueProgressDto,
-    val destination: DestinationDto? // Hanya ada jika status 'all_clues_completed'
+    val destination: DestinationDto?
 )
 
 data class CurrentClueDto(
@@ -75,8 +69,8 @@ data class CurrentClueDto(
     val description: String,
     val hint: String?,
     @SerializedName("image_url") val imageUrl: String?,
-    val latitude: String, // API mengirim ini sebagai String
-    val longitude: String, // API mengirim ini sebagai String
+    val latitude: String,
+    val longitude: String,
     val radius: Int,
     val points: Int
 )
@@ -95,8 +89,8 @@ data class ClueProgressDto(
 
 data class DestinationDto(
     val name: String,
-    val latitude: String, // API mengirim ini sebagai String
-    val longitude: String, // API mengirim ini sebagai String
+    val latitude: String,
+    val longitude: String,
     val distance: Double,
     @SerializedName("formatted_distance") val formattedDistance: String,
     val message: String,

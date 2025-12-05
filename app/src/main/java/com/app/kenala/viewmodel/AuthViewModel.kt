@@ -3,20 +3,21 @@ package com.app.kenala.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.app.kenala.api.ChangePasswordRequest
-import com.app.kenala.api.LoginRequest
-import com.app.kenala.api.RegisterRequest
 import com.app.kenala.api.RetrofitClient
+// IMPORT DTO YANG BARU
+import com.app.kenala.data.remote.dto.LoginRequest
+import com.app.kenala.data.remote.dto.RegisterRequest
+import com.app.kenala.data.remote.dto.ChangePasswordRequest
 import com.app.kenala.data.local.AppDatabase
 import com.app.kenala.data.local.entities.UserEntity
 import com.app.kenala.utils.DataStoreManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
+// ... (Sisa kode AuthViewModel sama persis seperti sebelumnya, yang penting import di atas sudah benar)
 sealed class AuthState {
     object Idle : AuthState()
     object Loading : AuthState()
@@ -42,11 +43,8 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun checkLoginStatus() {
         viewModelScope.launch {
-            // Cek dari DataStore
             val token = dataStoreManager.getToken()
             _isLoggedIn.value = !token.isNullOrEmpty()
-
-            // Set token ke RetrofitClient jika ada
             if (!token.isNullOrEmpty()) {
                 RetrofitClient.setToken(token)
             }
@@ -56,27 +54,19 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     fun login(email: String, password: String) {
         viewModelScope.launch {
             _authState.value = AuthState.Loading
-
             try {
                 val response = RetrofitClient.apiService.login(
                     LoginRequest(email, password)
                 )
-
                 if (response.isSuccessful && response.body() != null) {
                     val authResponse = response.body()!!
-
-                    // Save token ke DataStore
                     dataStoreManager.saveAuthData(
                         token = authResponse.token,
                         userId = authResponse.user.id,
                         userName = authResponse.user.name,
                         userEmail = authResponse.user.email
                     )
-
-                    // Save token ke RetrofitClient
                     RetrofitClient.setToken(authResponse.token)
-
-                    // Save user to local database
                     val userEntity = UserEntity(
                         id = authResponse.user.id,
                         name = authResponse.user.name,
@@ -92,7 +82,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                         total_active_days = authResponse.user.total_active_days
                     )
                     userDao.insertUser(userEntity)
-
                     _authState.value = AuthState.Success("Login berhasil!")
                     _isLoggedIn.value = true
                 } else {
@@ -114,27 +103,19 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     fun register(name: String, email: String, password: String) {
         viewModelScope.launch {
             _authState.value = AuthState.Loading
-
             try {
                 val response = RetrofitClient.apiService.register(
                     RegisterRequest(name, email, password)
                 )
-
                 if (response.isSuccessful && response.body() != null) {
                     val authResponse = response.body()!!
-
-                    // Save token ke DataStore
                     dataStoreManager.saveAuthData(
                         token = authResponse.token,
                         userId = authResponse.user.id,
                         userName = authResponse.user.name,
                         userEmail = authResponse.user.email
                     )
-
-                    // Save token ke RetrofitClient
                     RetrofitClient.setToken(authResponse.token)
-
-                    // Save user to local database
                     val userEntity = UserEntity(
                         id = authResponse.user.id,
                         name = authResponse.user.name,
@@ -150,7 +131,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                         total_active_days = authResponse.user.total_active_days
                     )
                     userDao.insertUser(userEntity)
-
                     _authState.value = AuthState.Success("Registrasi berhasil!")
                     _isLoggedIn.value = true
                 } else {
@@ -170,15 +150,9 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     fun logout() {
         viewModelScope.launch {
-            // Clear DataStore
             dataStoreManager.clearAuthData()
-
-            // Clear token from RetrofitClient
             RetrofitClient.setToken(null)
-
-            // Clear local database
             userDao.deleteUser()
-
             _isLoggedIn.value = false
             _authState.value = AuthState.Idle
         }
@@ -190,16 +164,14 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 val response = RetrofitClient.apiService.changePassword(
                     ChangePasswordRequest(currentPass, newPass)
                 )
-
                 if (response.isSuccessful) {
                     onSuccess()
                 } else {
-                    // PERBAIKAN: Parsing pesan error JSON yang benar
                     val errorBody = response.errorBody()?.string()
                     val message = try {
                         if (errorBody != null) {
                             val jsonObject = JSONObject(errorBody)
-                            jsonObject.getString("error") // Ambil teks "Password saat ini salah"
+                            jsonObject.getString("error")
                         } else {
                             "Gagal mengubah password"
                         }

@@ -2,6 +2,7 @@ package com.app.kenala.screens.mission
 
 import android.Manifest
 import android.content.Intent
+import android.location.Location
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -35,7 +36,8 @@ import kotlinx.coroutines.flow.collectLatest
 fun GuidanceScreen(
     missionId: String,
     onGiveUpClick: () -> Unit,
-    onArrivedClick: () -> Unit,
+    // Update callback menerima jarak
+    onArrivedClick: (totalDistance: Double) -> Unit,
     missionViewModel: MissionViewModel = viewModel(),
     settingsViewModel: SettingsViewModel = viewModel()
 ) {
@@ -43,7 +45,7 @@ fun GuidanceScreen(
     val missionWithClues by missionViewModel.missionWithClues.collectAsState()
     val locationResponse by missionViewModel.checkLocationResponse.collectAsState()
 
-    // 2. Ambil Status Pengaturan (Real-time dari DataStore)
+    // 2. Ambil Status Pengaturan
     val isLocationEnabledInSettings by settingsViewModel.locationEnabled.collectAsState()
     val isNotificationsEnabledInSettings by settingsViewModel.notificationsEnabled.collectAsState()
 
@@ -56,11 +58,17 @@ fun GuidanceScreen(
     val error by missionViewModel.error.collectAsState()
 
     // 4. State Logika UI
+    // Pastikan status "Tiba" benar-benar dari backend (isArrived)
     val hasArrivedAtDestination = locationResponse?.destination?.isArrived == true
     val currentClue = locationResponse?.currentClue
     val destination = locationResponse?.destination
 
-    // 5. Minta Izin Lokasi Android (Sistem)
+    // --- FITUR BARU: Tracking Jarak Real ---
+    var totalDistanceTraveled by remember { mutableDoubleStateOf(0.0) }
+    var lastLocation by remember { mutableStateOf<Location?>(null) }
+    // ---------------------------------------
+
+    // 5. Minta Izin Lokasi
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { }
@@ -75,7 +83,7 @@ fun GuidanceScreen(
         )
     }
 
-    // 6. Muat Data Misi (Reset progress dulu baru fetch)
+    // 6. Muat Data Misi
     LaunchedEffect(missionId) {
         if (missionId != null) {
             missionViewModel.resetMissionProgress(missionId) {
@@ -84,14 +92,28 @@ fun GuidanceScreen(
         }
     }
 
-    // 7. Logika Tracking Lokasi (Hanya jika diizinkan di Pengaturan)
-    LaunchedEffect(locationManager, missionWithClues, hasArrivedAtDestination, isLocationEnabledInSettings) {
-        // Jangan tracking jika data belum siap atau sudah sampai
+    // 7. Logika Tracking Lokasi & Hitung Jarak Real
+    LaunchedEffect(
+        locationManager,
+        missionWithClues,
+        hasArrivedAtDestination,
+        isLocationEnabledInSettings
+    ) {
         if (missionWithClues == null || hasArrivedAtDestination) return@LaunchedEffect
 
-        // Cek Izin HP DAN Pengaturan Aplikasi
         if (locationManager.hasLocationPermission() && isLocationEnabledInSettings) {
             locationManager.getLocationUpdates().collectLatest { location ->
+                // Hitung akumulasi jarak
+                if (lastLocation != null) {
+                    val distanceInc = lastLocation!!.distanceTo(location) // returns meters
+                    // Hanya tambahkan jika perpindahan masuk akal (misal > 2m untuk filter noise GPS saat diam)
+                    if (distanceInc > 2.0) {
+                        totalDistanceTraveled += distanceInc
+                    }
+                }
+                lastLocation = location
+
+                // Kirim ke backend untuk cek progress
                 missionViewModel.checkLocation(
                     latitude = location.latitude,
                     longitude = location.longitude
@@ -100,17 +122,15 @@ fun GuidanceScreen(
         }
     }
 
-    // 8. Logika Notifikasi (Hanya jika diizinkan di Pengaturan)
+    // 8. Logika Notifikasi
     LaunchedEffect(locationResponse) {
         val response = locationResponse ?: return@LaunchedEffect
-
         if (isNotificationsEnabledInSettings) {
             if (response.status == "clue_reached") {
                 notificationHelper.showDistanceNotification(
                     response.currentClue?.name ?: "Petunjuk", 0.0
                 )
             }
-
             if (response.destination?.isArrived == true) {
                 notificationHelper.showArrivalNotification(
                     response.destination.name
@@ -123,7 +143,17 @@ fun GuidanceScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Panduan Misi") },
+                title = {
+                    Column {
+                        Text("Panduan Misi")
+                        // Tampilkan jarak tempuh real-time (optional, buat debugging user)
+                        Text(
+                            text = "Jarak ditempuh: ${"%.2f".format(totalDistanceTraveled / 1000)} km",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = LightTextColor
+                        )
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onGiveUpClick) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
@@ -141,75 +171,44 @@ fun GuidanceScreen(
         }
     ) { innerPadding ->
 
-        // --- KONDISI 1: Jika Lokasi Dimatikan di Pengaturan ---
+        // Handle Permissions & Loading/Error States
         if (!isLocationEnabledInSettings) {
-            Box(modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        Icons.Default.LocationOff,
-                        contentDescription = null,
-                        tint = ErrorColor,
-                        modifier = Modifier.size(64.dp)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        "Akses Lokasi Dimatikan",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        "Aktifkan lokasi di menu Pengaturan\nuntuk melanjutkan petualangan ini.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = LightTextColor,
-                        textAlign = TextAlign.Center
+                        "Lokasi tidak aktif. Mohon aktifkan GPS.",
+                        color = MaterialTheme.colorScheme.error
                     )
                 }
             }
             return@Scaffold
         }
-
-        // --- KONDISI 2: Loading Data Awal ---
         if (isLoading && missionWithClues == null) {
-            Box(modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
                 contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
+            ) { CircularProgressIndicator() }
             return@Scaffold
         }
-
-        // --- KONDISI 3: Error ---
-        if (error != null) {
-            Box(modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(text = error!!, color = MaterialTheme.colorScheme.error)
-            }
-            return@Scaffold
-        }
-
-        // --- KONDISI 4: Data Kosong ---
+        // Tampilkan error sebagai snackbar/text, tapi jangan halangi UI utama jika masih bisa tracking
         if (missionWithClues == null) {
-            Box(modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
                 contentAlignment = Alignment.Center
-            ) {
-                Text(text = "Misi tidak valid atau gagal dimuat.")
-            }
+            ) { Text("Data misi tidak tersedia.") }
             return@Scaffold
         }
 
-        // --- UI UTAMA (GUIDANCE) ---
+        // --- UI UTAMA ---
         Box(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
@@ -218,6 +217,8 @@ fun GuidanceScreen(
                     .padding(horizontal = 25.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+
+                // Area konten tengah
                 Column(
                     modifier = Modifier.weight(1f),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -232,7 +233,6 @@ fun GuidanceScreen(
                     )
                     Spacer(modifier = Modifier.height(25.dp))
 
-                    // Animasi Icon Tengah
                     if (hasArrivedAtDestination) {
                         CheckmarkAnimation()
                     } else {
@@ -241,19 +241,14 @@ fun GuidanceScreen(
 
                     Spacer(modifier = Modifier.height(25.dp))
 
-                    // Kartu Jarak
                     locationResponse?.let {
                         DistanceCard(
-                            distanceMessage = if (hasArrivedAtDestination)
-                                "Anda Telah Tiba"
-                            else
-                                it.distance.formatted,
+                            distanceMessage = if (hasArrivedAtDestination) "Anda Telah Tiba" else it.distance.formatted,
                             hasArrived = hasArrivedAtDestination
                         )
                         Spacer(modifier = Modifier.height(20.dp))
                     }
 
-                    // Teks Petunjuk Utama
                     Text(
                         text = when {
                             hasArrivedAtDestination -> "🎉 Anda Telah Sampai!"
@@ -268,45 +263,18 @@ fun GuidanceScreen(
                         color = if (hasArrivedAtDestination) ForestGreen else MaterialTheme.colorScheme.onBackground
                     )
 
-                    // Info Tambahan (Hint / Notifikasi Mati)
-                    if (hasArrivedAtDestination) {
-                        Spacer(modifier = Modifier.height(12.dp))
+                    if (error != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Siap menulis jurnal petualanganmu?",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = LightTextColor,
+                            text = error!!,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
                             textAlign = TextAlign.Center
                         )
-                    } else if (currentClue != null && locationResponse?.clueReached == false) {
-                        // Tampilkan pesan jarak jika belum sampai
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = locationResponse?.distance?.message ?: "",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = AccentColor,
-                            fontWeight = FontWeight.SemiBold,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-
-                    // Indikator kecil jika notifikasi dimatikan user
-                    if (!isNotificationsEnabledInSettings && !hasArrivedAtDestination) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Surface(
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            shape = MaterialTheme.shapes.extraSmall
-                        ) {
-                            Text(
-                                text = "Notifikasi suara dimatikan",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = LightTextColor,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                            )
-                        }
                     }
                 }
 
-                // --- TOMBOL AKSI BAWAH ---
+                // --- TOMBOL AKSI ---
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -314,11 +282,12 @@ fun GuidanceScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Tombol Utama (Berubah fungsi)
+                    // Tombol Utama (Tulis Jurnal)
                     Button(
                         onClick = {
                             if (hasArrivedAtDestination) {
-                                onArrivedClick() // Ke Jurnal
+                                // Kirim total jarak tempuh ke Jurnal
+                                onArrivedClick(totalDistanceTraveled)
                             }
                         },
                         modifier = Modifier
@@ -328,7 +297,7 @@ fun GuidanceScreen(
                         colors = ButtonDefaults.buttonColors(
                             containerColor = if (hasArrivedAtDestination) ForestGreen else PrimaryBlue
                         ),
-                        // Tombol disable saat tracking, aktif saat sampai
+                        // DISABLED JIKA BELUM SAMPAI (Anti-Exploit)
                         enabled = hasArrivedAtDestination
                     ) {
                         Icon(
@@ -354,11 +323,13 @@ fun GuidanceScreen(
                             // Tombol Buka Peta
                             OutlinedButton(
                                 onClick = {
-                                    val targetLat = locationResponse?.currentClue?.latitude ?: locationResponse?.destination?.latitude
-                                    val targetLon = locationResponse?.currentClue?.longitude ?: locationResponse?.destination?.longitude
-
+                                    val targetLat = locationResponse?.currentClue?.latitude
+                                        ?: locationResponse?.destination?.latitude
+                                    val targetLon = locationResponse?.currentClue?.longitude
+                                        ?: locationResponse?.destination?.longitude
                                     if (targetLat != null && targetLon != null) {
-                                        val gmmIntentUri = Uri.parse("google.navigation:q=$targetLat,$targetLon")
+                                        val gmmIntentUri =
+                                            Uri.parse("google.navigation:q=$targetLat,$targetLon")
                                         val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
                                         mapIntent.setPackage("com.google.android.apps.maps")
                                         if (mapIntent.resolveActivity(context.packageManager) != null) {
@@ -374,30 +345,34 @@ fun GuidanceScreen(
                             ) {
                                 Icon(Icons.Default.Map, contentDescription = null)
                                 Spacer(modifier = Modifier.padding(horizontal = 4.dp))
-                                Text(
-                                    text = "Buka Peta",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = FontWeight.SemiBold
-                                )
+                                Text("Buka Peta", fontWeight = FontWeight.SemiBold)
                             }
 
-                            // Tombol Skip Clue
+                            // --- LOGIKA SKIP ---
+                            // Cek apakah ini langkah terakhir? (Sedang OTW destination atau status all_clues_completed)
+                            val isHeadingToDestination =
+                                locationResponse?.status == "all_clues_completed" || currentClue == null
+
+                            // Skip button DISABLED jika sedang menuju destination (Langkah Terakhir)
+                            val canSkip =
+                                !isLoading && currentClue != null && !isHeadingToDestination
+
                             TextButton(
                                 onClick = { missionViewModel.skipCurrentClue() },
                                 modifier = Modifier.height(56.dp),
-                                enabled = !isLoading && currentClue != null
+                                enabled = canSkip
                             ) {
                                 Text(
                                     "Lewati",
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (!isLoading && currentClue != null) AccentColor else LightTextColor
+                                    color = if (canSkip) AccentColor else LightTextColor.copy(alpha = 0.5f)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Icon(
                                     Icons.Default.SkipNext,
                                     contentDescription = "Lewati Petunjuk",
-                                    tint = if (!isLoading && currentClue != null) AccentColor else LightTextColor
+                                    tint = if (canSkip) AccentColor else LightTextColor.copy(alpha = 0.5f)
                                 )
                             }
                         }
@@ -405,7 +380,7 @@ fun GuidanceScreen(
                 }
             }
 
-            // Loading Overlay (saat Skip Clue misalnya)
+            // Loading Overlay
             if (isLoading && missionWithClues != null) {
                 Box(
                     modifier = Modifier
@@ -421,8 +396,7 @@ fun GuidanceScreen(
     }
 }
 
-// --- HELPER COMPOSABLES ---
-
+// Helper Composables
 @Composable
 fun CheckmarkAnimation() {
     val scale = remember { Animatable(0f) }
@@ -435,7 +409,6 @@ fun CheckmarkAnimation() {
             )
         )
     }
-
     Box(
         modifier = Modifier
             .size(100.dp)
@@ -461,9 +434,9 @@ fun LocationIcon() {
         animationSpec = infiniteRepeatable(
             tween(1000, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse
-        ), label = "pulse"
+        ),
+        label = "pulse"
     )
-
     Box(
         modifier = Modifier
             .size(100.dp)
@@ -474,7 +447,9 @@ fun LocationIcon() {
             Icons.Default.Place,
             contentDescription = "Lokasi",
             tint = PrimaryBlue,
-            modifier = Modifier.size(64.dp).scale(scale)
+            modifier = Modifier
+                .size(64.dp)
+                .scale(scale)
         )
     }
 }
@@ -486,8 +461,9 @@ fun DistanceCard(distanceMessage: String, hasArrived: Boolean) {
             .fillMaxWidth()
             .padding(horizontal = 20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (hasArrived) ForestGreen.copy(alpha = 0.1f)
-            else PrimaryBlue.copy(alpha = 0.1f)
+            containerColor = if (hasArrived) ForestGreen.copy(alpha = 0.1f) else PrimaryBlue.copy(
+                alpha = 0.1f
+            )
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         shape = MaterialTheme.shapes.large
@@ -499,7 +475,7 @@ fun DistanceCard(distanceMessage: String, hasArrived: Boolean) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = if(hasArrived) "Status" else "Jarak ke Petunjuk",
+                text = if (hasArrived) "Status" else "Jarak ke Petunjuk",
                 style = MaterialTheme.typography.bodyMedium,
                 color = LightTextColor
             )

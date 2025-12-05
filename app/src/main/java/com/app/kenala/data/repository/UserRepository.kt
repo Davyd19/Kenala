@@ -1,7 +1,7 @@
 package com.app.kenala.data.repository
 
 import com.app.kenala.api.ApiService
-import com.app.kenala.api.UpdateProfileRequest
+import com.app.kenala.data.remote.dto.UpdateProfileRequest // IMPORT DTO
 import com.app.kenala.data.local.dao.UserDao
 import com.app.kenala.data.local.entities.UserEntity
 import com.app.kenala.data.remote.dto.StatsDto
@@ -9,21 +9,17 @@ import com.app.kenala.data.remote.dto.UserDto
 import kotlinx.coroutines.flow.Flow
 import com.app.kenala.data.remote.dto.StreakDto
 
-// File ini diisi untuk mengelola data user dari API dan DB Lokal
 class UserRepository(
     private val apiService: ApiService,
     private val userDao: UserDao
 ) {
 
-    // Mendapatkan data user dari database lokal (Single source of truth)
     fun getUser(): Flow<UserEntity?> = userDao.getUser()
 
-    // Sinkronisasi data user dari API ke database lokal
     suspend fun syncUserProfile(): Result<Unit> {
         return try {
             val response = apiService.getProfile()
             if (response.isSuccessful && response.body() != null) {
-                // Konversi DTO ke Entity dan simpan ke Room
                 userDao.insertUser(response.body()!!.toEntity())
                 Result.success(Unit)
             } else {
@@ -34,7 +30,6 @@ class UserRepository(
         }
     }
 
-    // Mengambil data statistik langsung dari API
     suspend fun getStats(): Result<StatsDto> {
         return try {
             val response = apiService.getStats()
@@ -48,7 +43,6 @@ class UserRepository(
         }
     }
 
-    // FUNGSI BARU: Update profil user
     suspend fun updateProfile(
         name: String,
         phone: String?,
@@ -62,11 +56,9 @@ class UserRepository(
                 bio = bio,
                 profile_image_url = profileImageUrl
             )
-            // Panggil API untuk update
             val response = apiService.updateProfile(request)
 
             if (response.isSuccessful && response.body() != null) {
-                // Jika sukses, update juga database lokal (Room)
                 userDao.insertUser(response.body()!!.toEntity())
                 Result.success(Unit)
             } else {
@@ -76,6 +68,7 @@ class UserRepository(
             Result.failure(e)
         }
     }
+
     suspend fun getStreak(): Result<StreakDto> {
         return try {
             val response = apiService.getStreak()
@@ -90,7 +83,6 @@ class UserRepository(
     }
 }
 
-// Fungsi ekstensi untuk mengubah UserDto (dari API) ke UserEntity (untuk DB)
 fun UserDto.toEntity() = UserEntity(
     id = this.id,
     name = this.name,

@@ -1,7 +1,6 @@
 package com.app.kenala.navigation
 
 import androidx.compose.runtime.*
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -18,9 +17,6 @@ import com.app.kenala.screens.notifications.NotificationsCenterScreen
 import com.app.kenala.screens.profile.*
 import com.app.kenala.viewmodel.AuthState
 import com.app.kenala.viewmodel.AuthViewModel
-import kotlinx.coroutines.delay
-// 🔧 Tambahkan import berikut jika AdventureSuggestionScreen ada di package mission
-// import com.app.kenala.screens.mission.AdventureSuggestionScreen
 
 @Composable
 fun AppNavGraph(navController: NavHostController) {
@@ -63,33 +59,23 @@ fun AppNavGraph(navController: NavHostController) {
         navController = navController,
         startDestination = startDestination
     ) {
-
-        // ======== AUTH SCREENS ========
         composable(Screen.Onboarding.route) {
-            OnboardingScreen(
-                onNavigateToLogin = { navController.navigate(Screen.Login.route) }
-            )
+            OnboardingScreen(onNavigateToLogin = { navController.navigate(Screen.Login.route) })
         }
-
         composable(Screen.Login.route) {
             LaunchedEffect(Unit) { loginError = null }
             LoginScreen(
-                onLoginClick = { email, password ->
-                    authViewModel.login(email, password)
-                },
+                onLoginClick = { email, password -> authViewModel.login(email, password) },
                 onNavigateToRegister = { navController.navigate(Screen.Register.route) },
                 onNavigateBack = { navController.popBackStack() },
                 errorMessage = loginError,
                 isLoading = isLoading
             )
         }
-
         composable(Screen.Register.route) {
             LaunchedEffect(Unit) { registerError = null }
             RegisterScreen(
-                onRegisterClick = { name, email, password ->
-                    authViewModel.register(name, email, password)
-                },
+                onRegisterClick = { name, email, password -> authViewModel.register(name, email, password) },
                 onNavigateToLogin = { navController.popBackStack() },
                 onNavigateBack = { navController.popBackStack() },
                 errorMessage = registerError,
@@ -97,10 +83,7 @@ fun AppNavGraph(navController: NavHostController) {
             )
         }
 
-        // ======== MAIN SCREEN ========
-        composable(Screen.Main.route) {
-            MainScreen(navController = navController)
-        }
+        composable(Screen.Main.route) { MainScreen(navController = navController) }
 
         composable(Screen.MissionPreferences.route) {
             MissionPreferencesScreen(
@@ -115,21 +98,9 @@ fun AppNavGraph(navController: NavHostController) {
         composable(
             route = "${Screen.Gacha.route}?category={category}&budget={budget}&distance={distance}",
             arguments = listOf(
-                navArgument("category") {
-                    type = NavType.StringType
-                    nullable = true
-                    defaultValue = null
-                },
-                navArgument("budget") {
-                    type = NavType.StringType
-                    nullable = true
-                    defaultValue = null
-                },
-                navArgument("distance") {
-                    type = NavType.StringType
-                    nullable = true
-                    defaultValue = null
-                }
+                navArgument("category") { type = NavType.StringType; nullable = true; defaultValue = null },
+                navArgument("budget") { type = NavType.StringType; nullable = true; defaultValue = null },
+                navArgument("distance") { type = NavType.StringType; nullable = true; defaultValue = null }
             )
         ) { backStackEntry ->
             val category = backStackEntry.arguments?.getString("category")
@@ -140,7 +111,6 @@ fun AppNavGraph(navController: NavHostController) {
                 category = category,
                 budget = budget,
                 distance = distance,
-                // PERUBAHAN: Mengirim missionId saat navigasi
                 onMissionFound = { missionId ->
                     navController.navigate("${Screen.Guidance.route}/$missionId") {
                         popUpTo(Screen.Gacha.route) { inclusive = true }
@@ -149,7 +119,6 @@ fun AppNavGraph(navController: NavHostController) {
             )
         }
 
-        // PERUBAHAN: Menerima missionId sebagai argumen
         composable(
             route = "${Screen.Guidance.route}/{missionId}",
             arguments = listOf(navArgument("missionId") { type = NavType.StringType })
@@ -157,26 +126,35 @@ fun AppNavGraph(navController: NavHostController) {
             val missionId = backStackEntry.arguments?.getString("missionId")
 
             if (missionId == null) {
-                // Handle error jika ID null (seharusnya tidak terjadi)
                 navController.popBackStack()
             } else {
                 GuidanceScreen(
-                    missionId = missionId, // Mengirim missionId ke screen
+                    missionId = missionId,
                     onGiveUpClick = {
                         navController.navigate(Screen.Main.route) {
                             popUpTo(Screen.Main.route) { inclusive = true }
                         }
                     },
-                    onArrivedClick = {
-                        navController.navigate(Screen.JournalEntry.route)
+                    // Kirim distance (Double) ke JournalEntry via route argument
+                    onArrivedClick = { distance ->
+                        // Konversi Double ke Float untuk passing via NavArg (lebih aman)
+                        navController.navigate("${Screen.JournalEntry.route}?distance=${distance.toFloat()}")
                     }
                 )
             }
         }
 
-        // ======== JOURNAL FLOW ========
-        composable(Screen.JournalEntry.route) {
+        // Screen.JournalEntry sekarang menerima argument optional distance
+        composable(
+            route = "${Screen.JournalEntry.route}?distance={distance}",
+            arguments = listOf(
+                navArgument("distance") { type = NavType.FloatType; defaultValue = 0f }
+            )
+        ) { backStackEntry ->
+            val distance = backStackEntry.arguments?.getFloat("distance")?.toDouble() ?: 0.0
+
             JournalEntryScreen(
+                realDistance = distance, // Pass distance ke screen
                 onBackClick = { navController.popBackStack() },
                 onSaveClick = {
                     navController.navigate(Screen.Main.route) {
@@ -193,15 +171,12 @@ fun AppNavGraph(navController: NavHostController) {
             val journalId = backStackEntry.arguments?.getString("journalId")
             if (journalId != null) {
                 JournalDetailScreen(
-                    journalId = journalId, // ✅ tipe sudah String
+                    journalId = journalId,
                     onBackClick = { navController.popBackStack() },
-                    onEditClick = { id ->
-                        navController.navigate("${Screen.EditJournal.route}/$id")
-                    }
+                    onEditClick = { id -> navController.navigate("${Screen.EditJournal.route}/$id") }
                 )
             }
         }
-
 
         composable(
             route = "${Screen.EditJournal.route}/{journalId}",
@@ -222,40 +197,12 @@ fun AppNavGraph(navController: NavHostController) {
             }
         }
 
-        // ======== NOTIFICATIONS ========
-        composable(Screen.Notifications.route) {
-            NotificationsCenterScreen(onBackClick = { navController.popBackStack() })
-        }
-
-        // ======== PROFILE SCREENS ========
-        composable(Screen.EditProfile.route) {
-            EditProfileScreen(onNavigateBack = { navController.popBackStack() })
-        }
-
-        composable(Screen.Settings.route) {
-            SettingsScreen(
-                onNavigateBack = { navController.popBackStack() },
-                authViewModel = authViewModel
-            )
-        }
-
-        composable(Screen.DailyStreak.route) {
-            DailyStreakScreen(onNavigateBack = { navController.popBackStack() })
-        }
-
-        composable(Screen.BadgeCollection.route) {
-            BadgeCollectionScreen(
-                onNavigateBack = { navController.popBackStack() }
-            )
-        }
-
-        composable(Screen.DetailedStats.route) {
-            DetailedStatsScreen(onNavigateBack = { navController.popBackStack() })
-        }
-
-        // 🔧 Tambahkan composable untuk AdventureSuggestionScreen jika ada
-        composable(Screen.AdventureSuggestion.route) {
-            AdventureSuggestionScreen(onNavigateBack = { navController.popBackStack() })
-        }
+        composable(Screen.Notifications.route) { NotificationsCenterScreen(onBackClick = { navController.popBackStack() }) }
+        composable(Screen.EditProfile.route) { EditProfileScreen(onNavigateBack = { navController.popBackStack() }) }
+        composable(Screen.Settings.route) { SettingsScreen(onNavigateBack = { navController.popBackStack() }, authViewModel = authViewModel) }
+        composable(Screen.DailyStreak.route) { DailyStreakScreen(onNavigateBack = { navController.popBackStack() }) }
+        composable(Screen.BadgeCollection.route) { BadgeCollectionScreen(onNavigateBack = { navController.popBackStack() }) }
+        composable(Screen.DetailedStats.route) { DetailedStatsScreen(onNavigateBack = { navController.popBackStack() }) }
+        composable(Screen.AdventureSuggestion.route) { AdventureSuggestionScreen(onNavigateBack = { navController.popBackStack() }) }
     }
 }

@@ -1,26 +1,32 @@
 package com.app.kenala.data.repository
 
+import android.content.Context
+import android.net.Uri
 import com.app.kenala.api.ApiService
-import com.app.kenala.api.CreateJournalRequest
-import com.app.kenala.api.UpdateJournalRequest
-import com.app.kenala.data.local.dao.JournalDao
-import com.app.kenala.data.local.entities.JournalEntity
+import com.app.kenala.data.remote.dto.CreateJournalRequest
 import com.app.kenala.data.remote.dto.JournalDto
 import com.app.kenala.data.remote.dto.LocationDto
+import com.app.kenala.data.remote.dto.UpdateJournalRequest
+import com.app.kenala.data.local.dao.JournalDao
+import com.app.kenala.data.local.entities.JournalEntity
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import java.io.File
+import java.io.FileOutputStream
 
 class JournalRepository(
     private val apiService: ApiService,
     private val journalDao: JournalDao
 ) {
+    // ... (Kode implementasi tetap sama, hanya import yang diubah)
+    // Saya sertakan kode lengkap untuk menghindari kebingungan
 
-    // Get journals with offline-first approach
     fun getJournals(): Flow<List<JournalEntity>> {
         return journalDao.getAllJournals()
     }
 
-    // Sync journals from server
     suspend fun syncJournals(): Result<Unit> {
         return try {
             val response = apiService.getJournals()
@@ -38,7 +44,6 @@ class JournalRepository(
         }
     }
 
-    // Create journal (try server first, fallback to local)
     suspend fun createJournal(
         title: String,
         story: String,
@@ -95,7 +100,6 @@ class JournalRepository(
         }
     }
 
-    // Update journal
     suspend fun updateJournal(
         id: String,
         title: String,
@@ -119,7 +123,6 @@ class JournalRepository(
         }
     }
 
-    // Delete journal
     suspend fun deleteJournal(id: String): Result<Unit> {
         return try {
             val response = apiService.deleteJournal(id)

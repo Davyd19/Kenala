@@ -37,8 +37,6 @@ fun SettingsScreen(
     settingsViewModel: SettingsViewModel = viewModel()
 ) {
     // 1. State dari SettingsViewModel (DataStore)
-    val notificationsEnabled by settingsViewModel.notificationsEnabled.collectAsState()
-    val locationEnabled by settingsViewModel.locationEnabled.collectAsState()
     val darkModeEnabled by settingsViewModel.darkModeEnabled.collectAsState()
 
     // 2. State Lokal untuk Dialog
@@ -63,7 +61,6 @@ fun SettingsScreen(
     fun getAppVersion(context: Context): String {
         return try {
             val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-            // PERBAIKAN: Gunakan elvis operator (?:) karena versionName bisa null
             pInfo.versionName ?: "1.0.0"
         } catch (e: PackageManager.NameNotFoundException) {
             "1.0.0"
@@ -102,26 +99,8 @@ fun SettingsScreen(
                     .padding(horizontal = 25.dp, vertical = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // --- SEKSI 1: PREFERENSI ---
+                // --- SEKSI 1: PREFERENSI (Hanya Mode Gelap) ---
                 SettingsSection(title = "Preferensi") {
-                    SettingsSwitchItem(
-                        title = "Notifikasi",
-                        description = "Terima notifikasi dari aplikasi",
-                        checked = notificationsEnabled,
-                        onCheckedChange = { settingsViewModel.toggleNotifications(it) },
-                        icon = Icons.Default.Notifications
-                    )
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BorderColor)
-
-                    SettingsSwitchItem(
-                        title = "Lokasi",
-                        description = "Izinkan akses lokasi untuk aplikasi",
-                        checked = locationEnabled,
-                        onCheckedChange = { settingsViewModel.toggleLocation(it) },
-                        icon = Icons.Default.LocationOn
-                    )
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BorderColor)
-
                     SettingsSwitchItem(
                         title = "Mode Gelap",
                         description = "Tampilan dengan tema gelap",
@@ -131,7 +110,7 @@ fun SettingsScreen(
                     )
                 }
 
-                // --- SEKSI 2: AKUN ---
+                // --- SEKSI 2: AKUN (Hanya Ganti Password) ---
                 SettingsSection(title = "Akun") {
                     SettingsActionItem(
                         title = "Ganti Password",
@@ -139,49 +118,16 @@ fun SettingsScreen(
                         icon = Icons.Default.Lock,
                         onClick = { showPasswordDialog = true }
                     )
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BorderColor)
 
-                    SettingsActionItem(
-                        title = "Bahasa",
-                        description = "Indonesia",
-                        icon = Icons.Default.Language,
-                        onClick = {
-                            scope.launch {
-                                snackbarHostState.showSnackbar("Saat ini hanya Bahasa Indonesia yang tersedia")
-                            }
-                        }
-                    )
+                    // Opsi 'Bahasa' telah dihapus
                 }
 
-                // --- SEKSI 3: TENTANG ---
-                SettingsSection(title = "Tentang") {
-                    SettingsActionItem(
-                        title = "Versi Aplikasi",
-                        description = getAppVersion(context),
-                        icon = Icons.Default.Info,
-                        onClick = { }
-                    )
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BorderColor)
-
-                    SettingsActionItem(
-                        title = "Kebijakan Privasi",
-                        description = "Baca kebijakan privasi kami",
-                        icon = Icons.Default.PrivacyTip,
-                        onClick = { openUrl("https://google.com") }
-                    )
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BorderColor)
-
-                    SettingsActionItem(
-                        title = "Syarat & Ketentuan",
-                        description = "Baca syarat dan ketentuan",
-                        icon = Icons.Default.Description,
-                        onClick = { openUrl("https://google.com") }
-                    )
-                }
+                // --- SEKSI 3: TENTANG (Dihapus) ---
+                // Seluruh bagian "Tentang" telah dihapus
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // --- TOMBOL KELUAR (Non-Floating) ---
+                // --- TOMBOL KELUAR ---
                 Button(
                     onClick = { showLogoutDialog = true },
                     modifier = Modifier
@@ -190,7 +136,7 @@ fun SettingsScreen(
                     shape = MaterialTheme.shapes.large,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = ErrorColor,
-                        contentColor = Color.White // Paksa teks putih di semua mode
+                        contentColor = Color.White
                     ),
                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
                 ) {
@@ -230,7 +176,6 @@ fun SettingsScreen(
                         }
                     },
                     onError = { msg ->
-                        // Callback error ke dialog untuk ditampilkan di bawah input
                         onErrorCallback(msg)
                     }
                 )

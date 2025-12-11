@@ -21,8 +21,6 @@ class DataStoreManager(private val context: Context) {
         private val USER_ID_KEY = stringPreferencesKey("user_id")
         private val USER_NAME_KEY = stringPreferencesKey("user_name")
         private val USER_EMAIL_KEY = stringPreferencesKey("user_email")
-        private val NOTIFICATIONS_KEY = booleanPreferencesKey("notifications_enabled")
-        private val LOCATION_KEY = booleanPreferencesKey("location_enabled")
         private val DARK_MODE_KEY = booleanPreferencesKey("dark_mode_enabled")
     }
 
@@ -65,25 +63,8 @@ class DataStoreManager(private val context: Context) {
         return preferences[TOKEN_KEY]
     }
 
-    val notificationsEnabled: Flow<Boolean> = context.dataStore.data.map {
-        it[NOTIFICATIONS_KEY] ?: true // Default: Nyala
-    }
-
-    val locationEnabled: Flow<Boolean> = context.dataStore.data.map {
-        it[LOCATION_KEY] ?: true // Default: Nyala
-    }
-
     val darkModeEnabled: Flow<Boolean> = context.dataStore.data.map {
         it[DARK_MODE_KEY] ?: false // Default: Mati (Light Mode)
-    }
-
-    // Menyimpan pengaturan
-    suspend fun setNotificationsEnabled(enabled: Boolean) {
-        context.dataStore.edit { it[NOTIFICATIONS_KEY] = enabled }
-    }
-
-    suspend fun setLocationEnabled(enabled: Boolean) {
-        context.dataStore.edit { it[LOCATION_KEY] = enabled }
     }
 
     suspend fun setDarkModeEnabled(enabled: Boolean) {

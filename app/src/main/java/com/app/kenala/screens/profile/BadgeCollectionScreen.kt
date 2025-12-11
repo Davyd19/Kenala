@@ -24,28 +24,7 @@ import com.app.kenala.data.remote.dto.BadgeDto
 import com.app.kenala.ui.theme.*
 import com.app.kenala.viewmodel.BadgeViewModel
 
-private data class Badge(
-    val id: Int,
-    val name: String,
-    val description: String,
-    val icon: ImageVector,
-    val color: Color,
-    val isUnlocked: Boolean,
-    val unlockedDate: String? = null
-)
-
-private val badgesList = listOf(
-    Badge(1, "Petualang Pemula", "Selesaikan misi pertamamu", Icons.Default.Hiking, ForestGreen, true, "15 Okt 2025"),
-    Badge(2, "Penjelajah Kota", "Selesaikan 10 misi", Icons.Default.LocationCity, OceanBlue, true, "20 Okt 2025"),
-    Badge(3, "Kuliner Hunter", "Selesaikan 5 misi kuliner", Icons.Default.Restaurant, AccentColor, true, "22 Okt 2025"),
-    Badge(4, "Pecinta Seni", "Kunjungi 3 galeri seni", Icons.Default.Palette, SkyBlue, false),
-    Badge(5, "Penjaga Streak", "Pertahankan streak 7 hari", Icons.Default.LocalFireDepartment, ErrorColor, true, "24 Okt 2025"),
-    Badge(6, "Sosial Butterfly", "Ajak 3 teman bergabung", Icons.Default.Group, ForestGreen, false),
-    Badge(7, "Fotografer", "Upload 20 foto petualangan", Icons.Default.CameraAlt, OceanBlue, false),
-    Badge(8, "Maraton Petualang", "Tempuh jarak 50km", Icons.Default.DirectionsRun, AccentColor, false),
-    Badge(9, "Malam Gemilang", "Selesaikan misi malam hari", Icons.Default.NightsStay, MidnightBlue, false),
-    Badge(10, "Master Explorer", "Selesaikan 50 misi", Icons.Default.EmojiEvents, AccentColor, false),
-)
+// ... (kode data class Badge dihapus karena sudah diganti dengan BadgeDto)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -310,6 +289,8 @@ private fun BadgeDetailDialogFromApi(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        // WARNA CARD: Putih (surface theme)
+        containerColor = MaterialTheme.colorScheme.surface,
         icon = {
             Box(
                 modifier = Modifier
@@ -337,13 +318,16 @@ private fun BadgeDetailDialogFromApi(
         },
         text = {
             Column(
+                // PERBAIKAN 1: Rata tengah semua konten kolom
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
                     text = badge.description,
                     style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center,
+                    // PERBAIKAN 2: Paksa Text mengisi lebar maksimum
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center, // Rata tengah deskripsi
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 if (badge.is_unlocked && badge.unlocked_at != null) {

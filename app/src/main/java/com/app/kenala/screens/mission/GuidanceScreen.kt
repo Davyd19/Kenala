@@ -29,7 +29,6 @@ import com.app.kenala.utils.LocationManager
 import com.app.kenala.utils.NotificationHelper
 import com.app.kenala.viewmodel.MissionEvent
 import com.app.kenala.viewmodel.MissionViewModel
-import com.app.kenala.viewmodel.SettingsViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,13 +37,12 @@ fun GuidanceScreen(
     missionId: String,
     onGiveUpClick: () -> Unit,
     onArrivedClick: (totalDistance: Double) -> Unit,
-    missionViewModel: MissionViewModel = viewModel(),
-    settingsViewModel: SettingsViewModel = viewModel()
+    missionViewModel: MissionViewModel = viewModel()
+    // settingsViewModel telah dihapus
 ) {
     val missionWithClues by missionViewModel.missionWithClues.collectAsState()
     val locationResponse by missionViewModel.checkLocationResponse.collectAsState()
-    val isLocationEnabledInSettings by settingsViewModel.locationEnabled.collectAsState()
-    val isNotificationsEnabledInSettings by settingsViewModel.notificationsEnabled.collectAsState()
+    // isLocationEnabledInSettings dan isNotificationsEnabledInSettings telah dihapus
 
     val context = LocalContext.current
     val locationManager = remember { LocationManager(context) }
@@ -90,11 +88,11 @@ fun GuidanceScreen(
         }
     }
 
-    // Logika Tracking (Polling GPS)
-    LaunchedEffect(locationManager, missionWithClues, hasArrivedAtDestination, isLocationEnabledInSettings) {
+    // Logika Tracking (Polling GPS) - Hanya bergantung pada izin OS
+    LaunchedEffect(locationManager, missionWithClues, hasArrivedAtDestination) {
         if (missionWithClues == null || hasArrivedAtDestination) return@LaunchedEffect
 
-        if (locationManager.hasLocationPermission() && isLocationEnabledInSettings) {
+        if (locationManager.hasLocationPermission()) {
             locationManager.getLocationUpdates().collectLatest { location ->
                 if (lastLocation != null) {
                     val distanceInc = lastLocation!!.distanceTo(location)
@@ -112,14 +110,13 @@ fun GuidanceScreen(
         }
     }
 
-    // Notifikasi
+    // Notifikasi - Hanya bergantung pada izin OS
     LaunchedEffect(Unit) {
         missionViewModel.missionEvent.collectLatest { event ->
-            if (isNotificationsEnabledInSettings) {
-                when (event) {
-                    is MissionEvent.ShowNotification -> {
-                        notificationHelper.showArrivalNotification(event.title)
-                    }
+            when (event) {
+                is MissionEvent.ShowNotification -> {
+                    // event.title kini berisi pesan yang lebih akurat dari ViewModel
+                    notificationHelper.showArrivalNotification(event.title)
                 }
             }
         }
@@ -155,13 +152,8 @@ fun GuidanceScreen(
             )
         }
     ) { innerPadding ->
+        // Blok pengecekan if (!isLocationEnabledInSettings) telah dihapus.
 
-        if (!isLocationEnabledInSettings) {
-            Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
-                Text("Lokasi tidak aktif.", color = MaterialTheme.colorScheme.error)
-            }
-            return@Scaffold
-        }
         if (isLoading && missionWithClues == null) {
             Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             return@Scaffold
@@ -333,6 +325,7 @@ fun GuidanceScreen(
     }
 }
 
+// ... (Fungsi CheckmarkAnimation, LocationIcon, dan DistanceCard tetap)
 @Composable
 fun CheckmarkAnimation() {
     val scale = remember { Animatable(0f) }
@@ -362,21 +355,17 @@ fun LocationIcon() {
     }
 }
 
-// --- OPTIMASI TAMPILAN KARTU JARAK ---
 @Composable
 fun DistanceCard(distanceMessage: String, hasArrived: Boolean) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 10.dp),
-        // Hapus shadow elevation yang aneh
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
-            // Gunakan background semi-transparan tapi solid secara visual
             containerColor = if (hasArrived) ForestGreen.copy(alpha = 0.15f) else PrimaryBlue.copy(alpha = 0.1f)
         ),
-        // Tambahkan border halus sebagai pengganti shadow
         border = BorderStroke(
             width = 1.dp,
             color = if (hasArrived) ForestGreen.copy(alpha = 0.3f) else PrimaryBlue.copy(alpha = 0.3f)
@@ -396,7 +385,7 @@ fun DistanceCard(distanceMessage: String, hasArrived: Boolean) {
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = distanceMessage,
-                style = MaterialTheme.typography.displaySmall, // Ukuran font lebih besar
+                style = MaterialTheme.typography.displaySmall,
                 fontWeight = FontWeight.Bold,
                 color = if (hasArrived) ForestGreen else PrimaryBlue
             )

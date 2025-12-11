@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -108,34 +109,34 @@ private fun DashboardContent(stats: StatsDto, modifier: Modifier = Modifier) {
         item {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    StatCard(
+                    GradientStatCard( // Menggunakan GradientStatCard
                         label = "Misi Selesai",
                         value = stats.total_missions.toString(),
                         icon = Icons.Default.Flag,
-                        color = ForestGreen,
+                        gradient = listOf(ForestGreen, ForestGreen.copy(alpha = 0.7f)),
                         modifier = Modifier.weight(1f)
                     )
-                    StatCard(
+                    GradientStatCard( // Menggunakan GradientStatCard
                         label = "Jarak Tempuh",
                         value = "${stats.total_distance.toInt()} km",
                         icon = Icons.Default.DirectionsRun,
-                        color = OceanBlue,
+                        gradient = listOf(OceanBlue, SkyBlue),
                         modifier = Modifier.weight(1f)
                     )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    StatCard(
+                    GradientStatCard( // Menggunakan GradientStatCard
                         label = "Hari Aktif",
                         value = stats.total_active_days.toString(),
                         icon = Icons.Default.CalendarToday,
-                        color = SkyBlue,
+                        gradient = listOf(SkyBlue, OceanBlue),
                         modifier = Modifier.weight(1f)
                     )
-                    StatCard(
+                    GradientStatCard( // Menggunakan GradientStatCard
                         label = "Jurnal Ditulis",
                         value = stats.journal_count.toString(),
                         icon = Icons.Default.Book,
-                        color = AccentColor,
+                        gradient = listOf(AccentColor, AccentColor.copy(alpha = 0.7f)),
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -156,60 +157,62 @@ private fun DashboardContent(stats: StatsDto, modifier: Modifier = Modifier) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+// DEFINISI GradientStatCard BARU (Menggantikan StatCard Lama)
 @Composable
-private fun StatCard(
-    label: String,
+private fun GradientStatCard(
     value: String,
+    label: String,
     icon: ImageVector,
-    color: Color,
-    modifier: Modifier = Modifier,
-    onClick: (() -> Unit)? = null
+    gradient: List<Color>,
+    modifier: Modifier
 ) {
     Card(
-        onClick = { onClick?.invoke() },
-        enabled = (onClick != null),
-        modifier = modifier.height(120.dp),
+        modifier = modifier
+            .height(120.dp),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
-            containerColor = color.copy(alpha = 0.1f)
+            containerColor = Color.Transparent
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.linearGradient(colors = gradient)
+                )
+                .padding(16.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(color.copy(alpha = 0.2f), CircleShape),
-                contentAlignment = Alignment.Center
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.SpaceBetween
             ) {
                 Icon(
                     imageVector = icon,
-                    contentDescription = label,
-                    tint = color,
-                    modifier = Modifier.size(20.dp)
+                    contentDescription = null,
+                    tint = Color.White.copy(alpha = 0.9f),
+                    modifier = Modifier.size(24.dp)
                 )
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Column {
-                Text(
-                    text = value,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = color
-                )
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Column {
+                    Text(
+                        text = value,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.9f)
+                    )
+                }
             }
         }
     }
 }
+
+
+// FUNGSI StatCard LAMA TELAH DIHAPUS
 
 @Composable
 private fun CategoryBarChart(breakdown: Map<String, Int>) {

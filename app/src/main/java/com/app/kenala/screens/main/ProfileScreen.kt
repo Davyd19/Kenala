@@ -17,18 +17,19 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.app.kenala.data.local.entities.UserEntity
 import com.app.kenala.data.remote.dto.StatsDto
-import com.app.kenala.screens.profile.AchievementPreviewCard // <-- 1. IMPORT SUDAH DITAMBAHKAN
+import com.app.kenala.screens.profile.AchievementPreviewCard
 import com.app.kenala.ui.theme.*
 import com.app.kenala.viewmodel.ProfileViewModel
 
 @Composable
 fun ProfileScreen(
-    profileViewModel: ProfileViewModel = viewModel(), // Terima ViewModel
+    profileViewModel: ProfileViewModel = viewModel(),
     onNavigateToEditProfile: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToStreak: () -> Unit,
@@ -36,7 +37,6 @@ fun ProfileScreen(
     onNavigateToDetailedStats: () -> Unit,
     onNavigateToSuggestions: () -> Unit
 ) {
-    // Ambil data dari ViewModel
     val user by profileViewModel.user.collectAsState()
     val stats by profileViewModel.stats.collectAsState()
 
@@ -48,57 +48,31 @@ fun ProfileScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
+            // JUDUL UTAMA: "Profil"
             item {
                 Text(
-                    text = "Profil & Pencapaian",
+                    text = "Profil",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(start = 25.dp, top = 20.dp)
                 )
             }
-            item { ProfileHeader(user = user, stats = stats) } // Pass data
-            item { Spacer(modifier = Modifier.height(24.dp)) }
+            item { ProfileHeader(user = user, stats = stats) }
 
-            // Quick Stats Cards
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 25.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    QuickStatCard(
-                        value = stats?.total_missions?.toString() ?: "0", // Data dinamis
-                        label = "Misi Selesai",
-                        icon = Icons.Default.Flag,
-                        gradient = listOf(ForestGreen, ForestGreen.copy(alpha = 0.7f)),
-                        modifier = Modifier.weight(1f)
-                    )
-                    QuickStatCard(
-                        value = "${stats?.total_distance?.toInt() ?: 0} km", // Data dinamis
-                        label = "Jarak Tempuh",
-                        icon = Icons.Default.DirectionsRun,
-                        gradient = listOf(OceanBlue, SkyBlue),
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
+            // MENGGANTI Spacer(24.dp) dan Spacer(20.dp) menjadi satu Spacer(16.dp)
+            item { Spacer(modifier = Modifier.height(16.dp)) }
 
-            item { Spacer(modifier = Modifier.height(20.dp)) }
-
-            // Streak Card
             item {
                 StreakCard(
-                    currentStreak = stats?.current_streak ?: 0, // Data dinamis
-                    longestStreak = stats?.longest_streak ?: 0, // Data dinamis
-                    totalActiveDays = stats?.total_active_days ?: 0, // Data dinamis
+                    currentStreak = stats?.current_streak ?: 0,
+                    longestStreak = stats?.longest_streak ?: 0,
+                    totalActiveDays = stats?.total_active_days ?: 0,
                     onClick = onNavigateToStreak
                 )
             }
 
             item { Spacer(modifier = Modifier.height(20.dp)) }
 
-            // Achievements Preview
             item {
                 Row(
                     modifier = Modifier
@@ -120,7 +94,6 @@ fun ProfileScreen(
 
             item { Spacer(modifier = Modifier.height(20.dp)) }
 
-            // Menu Section
             item {
                 Text(
                     text = "Lainnya",
@@ -194,7 +167,6 @@ private fun ProfileHeader(user: UserEntity?, stats: StatsDto?) {
                 ),
             contentAlignment = Alignment.Center
         ) {
-            // Gunakan AsyncImage jika ada URL, jika tidak, gunakan inisial
             if (!user?.profile_image_url.isNullOrEmpty()) {
                 AsyncImage(
                     model = user?.profile_image_url,
@@ -203,7 +175,7 @@ private fun ProfileHeader(user: UserEntity?, stats: StatsDto?) {
                 )
             } else {
                 Text(
-                    text = user?.name?.firstOrNull()?.toString()?.uppercase() ?: "K", // Data dinamis
+                    text = user?.name?.firstOrNull()?.toString()?.uppercase() ?: "K",
                     style = MaterialTheme.typography.displayMedium,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
@@ -212,65 +184,26 @@ private fun ProfileHeader(user: UserEntity?, stats: StatsDto?) {
         }
         Spacer(modifier = Modifier.height(15.dp))
         Text(
-            text = user?.name ?: "Pengguna Kenala", // Data dinamis
+            text = user?.name ?: "Pengguna Kenala",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
-    }
-}
-
-@Composable
-private fun QuickStatCard(
-    value: String,
-    label: String,
-    icon: ImageVector,
-    gradient: List<Color>,
-    modifier: Modifier
-) {
-    Card(
-        modifier = modifier // Hapus modifier ukuran tetap
-            .height(100.dp),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(
-            containerColor = Color.Transparent
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.linearGradient(colors = gradient)
+        // TAMBAHAN: Tampilkan Bio pengguna
+        user?.bio?.let { bio ->
+            if (bio.isNotBlank()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = bio,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 32.dp),
+                    textAlign = TextAlign.Center
                 )
-                .padding(16.dp)
-        ) {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = Color.White.copy(alpha = 0.9f),
-                    modifier = Modifier.size(24.dp)
-                )
-                Column {
-                    Text(
-                        text = value,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.9f)
-                    )
-                }
             }
         }
     }
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -446,8 +379,6 @@ private fun StreakCard(
         }
     }
 }
-
-// <-- 3. FUNGSI ACHIEVEMENTPREVIEWCARD PALSU TELAH DIHAPUS DARI SINI
 
 @Composable
 private fun MenuCard(content: @Composable ColumnScope.() -> Unit) {

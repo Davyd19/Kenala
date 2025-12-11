@@ -40,6 +40,7 @@ fun AdventureSuggestionScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
 
+    // PERBAIKAN KRITIS: Deklarasi state yang diperlukan untuk 'when (screenMode)'
     var screenMode by remember { mutableStateOf(ScreenMode.LIST) }
     var selectedSuggestion by remember { mutableStateOf<SuggestionDto?>(null) }
 
@@ -76,7 +77,6 @@ fun AdventureSuggestionScreen(
             ScreenMode.ADD -> AddSuggestionScreen(
                 isLoading = isLoading,
                 onNavigateBack = { screenMode = ScreenMode.LIST },
-                // Menerima 4 parameter: name, address, category, description
                 onSave = { name, address, category, description ->
                     viewModel.addSuggestion(name, address, category, description) {
                         screenMode = ScreenMode.LIST
@@ -97,13 +97,15 @@ fun AdventureSuggestionScreen(
                         }
                     }
                 )
+            } ?: run {
+                // Fail-safe jika state null
+                screenMode = ScreenMode.LIST
             }
             ScreenMode.EDIT -> selectedSuggestion?.let { suggestion ->
                 EditSuggestionScreen(
                     suggestion = suggestion,
                     isLoading = isLoading,
                     onNavigateBack = { screenMode = ScreenMode.DETAIL },
-                    // Menerima 4 parameter untuk update
                     onSave = { editedName, editedAddress, editedCategory, editedDescription ->
                         viewModel.updateSuggestion(
                             suggestion.id,
@@ -117,6 +119,9 @@ fun AdventureSuggestionScreen(
                         }
                     }
                 )
+            } ?: run {
+                // Fail-safe jika state null
+                screenMode = ScreenMode.LIST
             }
         }
     }
@@ -360,11 +365,10 @@ private fun SuggestionCard(
 private fun AddSuggestionScreen(
     isLoading: Boolean,
     onNavigateBack: () -> Unit,
-    // Tambahkan parameter address di sini
     onSave: (String, String, String, String) -> Unit
 ) {
     var locationName by remember { mutableStateOf("") }
-    var address by remember { mutableStateOf("") } // State untuk alamat
+    var address by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("Kuliner") }
     var description by remember { mutableStateOf("") }
     var showCategoryMenu by remember { mutableStateOf(false) }
@@ -782,18 +786,29 @@ private fun EditSuggestionScreen(
     suggestion: SuggestionDto,
     isLoading: Boolean,
     onNavigateBack: () -> Unit,
-    // Tambahkan parameter address di sini
     onSave: (String, String, String, String) -> Unit
 ) {
     var locationName by remember { mutableStateOf(suggestion.locationName) }
-    // Inisialisasi address dari suggestion
     var address by remember { mutableStateOf(suggestion.address ?: "") }
     var selectedCategory by remember { mutableStateOf(suggestion.category) }
     var description by remember { mutableStateOf(suggestion.description) }
     var showCategoryMenu by remember { mutableStateOf(false) }
 
     val categories = listOf("Kuliner", "Rekreasi", "Seni & Budaya", "Sejarah", "Belanja", "Alam")
-    val canSave = locationName.isNotBlank() && description.isNotBlank() && !isLoading
+
+    // LOGIKA PERUBAHAN: Cek apakah ada perubahan
+    val isChanged = remember(locationName, address, selectedCategory, description) {
+        val originalAddress = suggestion.address.orEmpty().trim()
+        val currentAddress = address.trim()
+
+        locationName != suggestion.locationName ||
+                currentAddress != originalAddress ||
+                selectedCategory != suggestion.category ||
+                description != suggestion.description
+    }
+
+    // Logika canSave: Harus valid (tidak kosong), tidak sedang loading, DAN ADA perubahan
+    val canSave = locationName.isNotBlank() && description.isNotBlank() && !isLoading && isChanged
 
     Scaffold(
         topBar = {
@@ -923,7 +938,6 @@ private fun EditSuggestionScreen(
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(
-                        // Pass address ke fungsi onSave
                         onClick = { onSave(locationName, address, selectedCategory, description) },
                         modifier = Modifier
                             .fillMaxWidth()

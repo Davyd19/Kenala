@@ -216,23 +216,6 @@ private fun ProfileHeader(user: UserEntity?, stats: StatsDto?) {
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Star,
-                contentDescription = null,
-                tint = AccentColor,
-                modifier = Modifier.size(16.dp)
-            )
-            Text(
-                text = "Level ${stats?.level ?: 1} • Petualang Lokal", // Data dinamis
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = FontWeight.Medium
-            )
-        }
     }
 }
 

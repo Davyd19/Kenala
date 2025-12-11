@@ -76,7 +76,6 @@ fun HomeScreen(
             item {
                 HomeHeader(
                     userName = user?.name,
-                    userLevel = stats?.level,
                     avatarUrl = user?.profile_image_url,
                     onNavigateToNotifications = onNavigateToNotifications
                 )
@@ -96,7 +95,6 @@ fun HomeScreen(
 @Composable
 private fun HomeHeader(
     userName: String?,
-    userLevel: Int?,
     avatarUrl: String?,
     onNavigateToNotifications: () -> Unit
 ) {
@@ -109,28 +107,11 @@ private fun HomeHeader(
     ) {
         Column {
             Text(
-                text = "Hai, ${userName ?: "Petualang"}!", // Gunakan data dinamis
+                text = "Hai, ${userName ?: "Petualang"}!",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
             )
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Star,
-                    contentDescription = null,
-                    tint = AccentColor,
-                    modifier = Modifier.size(16.dp)
-                )
-                Text(
-                    text = "Level ${userLevel ?: 1}: Petualang Lokal", // Gunakan data dinamis
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.Medium
-                )
-            }
         }
         Row(
             verticalAlignment = Alignment.CenterVertically,

@@ -22,12 +22,10 @@ import com.app.kenala.data.remote.dto.StatsDto
 import com.app.kenala.ui.theme.*
 import com.app.kenala.viewmodel.ProfileViewModel
 
-// Daftar lengkap semua kategori yang ada di aplikasi
 private val allCategories = listOf(
     "Kuliner", "Alam", "Seni & Budaya", "Sejarah", "Rekreasi", "Belanja"
 )
 
-// Helper untuk ikon & warna kategori
 private fun getCategoryStyle(category: String): Pair<ImageVector, Color> {
     return when (category.lowercase()) {
         "kuliner" -> Icons.Default.Restaurant to AccentColor
@@ -49,12 +47,9 @@ fun DetailedStatsScreen(
     val stats by viewModel.stats.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
 
-    // --- PERBAIKAN UTAMA DI SINI ---
-    // Setiap kali layar ini dibuka, panggil fetchStats() untuk refresh data terbaru
     LaunchedEffect(Unit) {
         viewModel.fetchStats()
     }
-    // -------------------------------
 
     Scaffold(
         topBar = {
@@ -86,7 +81,6 @@ fun DetailedStatsScreen(
                 Text("Gagal memuat statistik.")
             }
         } else {
-            // Tampilkan dashboard jika data ada
             DashboardContent(
                 stats = stats!!,
                 modifier = Modifier.padding(innerPadding)
@@ -104,7 +98,6 @@ private fun DashboardContent(stats: StatsDto, modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
 
-        // --- 1. KPI GRID 2x2 ---
         item {
             Text(
                 text = "Ringkasan Total",
@@ -149,7 +142,6 @@ private fun DashboardContent(stats: StatsDto, modifier: Modifier = Modifier) {
             }
         }
 
-        // --- 2. DIAGRAM BATANG ---
         item {
             Text(
                 text = "Progres Kategori",
@@ -164,7 +156,6 @@ private fun DashboardContent(stats: StatsDto, modifier: Modifier = Modifier) {
     }
 }
 
-// Composable untuk 4 kartu KPI di atas
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun StatCard(
@@ -220,7 +211,6 @@ private fun StatCard(
     }
 }
 
-// Composable untuk Diagram Batang
 @Composable
 private fun CategoryBarChart(breakdown: Map<String, Int>) {
     Card(
@@ -231,10 +221,9 @@ private fun CategoryBarChart(breakdown: Map<String, Int>) {
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        // Gunakan daftar lengkap, ambil data dari 'breakdown'
         val categoryData = allCategories.map { categoryName ->
             val (icon, color) = getCategoryStyle(categoryName)
-            val count = breakdown[categoryName] ?: 0 // <-- Default ke 0
+            val count = breakdown[categoryName] ?: 0
             Triple(categoryName, count, icon to color)
         }
 
@@ -257,7 +246,6 @@ private fun CategoryBarChart(breakdown: Map<String, Int>) {
     }
 }
 
-// Composable untuk satu item di Diagram Batang
 @Composable
 private fun BarChartItem(
     label: String,

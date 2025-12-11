@@ -11,7 +11,6 @@ data class UserEntity(
     val phone: String?,
     val bio: String?,
     val profile_image_url: String?,
-    val level: Int,
     val total_missions: Int,
     val total_distance: Float,
     val current_streak: Int,

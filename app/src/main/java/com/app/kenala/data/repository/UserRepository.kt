@@ -90,7 +90,6 @@ fun UserDto.toEntity() = UserEntity(
     phone = this.phone,
     bio = this.bio,
     profile_image_url = this.profile_image_url,
-    level = this.level,
     total_missions = this.total_missions,
     total_distance = this.total_distance,
     current_streak = this.current_streak,

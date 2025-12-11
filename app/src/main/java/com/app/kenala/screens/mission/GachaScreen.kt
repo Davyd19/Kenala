@@ -10,6 +10,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.LocationCity
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -40,15 +41,14 @@ import kotlin.random.Random
 private enum class GachaState {
     Idle,
     ReadyToPull,
-    Searching, // Animasi shuffle & API call berjalan
-    Revealing, // Animasi reveal kartu hasil
-    ShowingInfo, // Dialog muncul
-    Finished // Menunggu navigasi
+    Searching,
+    Revealing,
+    ShowingInfo,
+    Finished
 }
 
 @Composable
 fun GachaScreen(
-    // PERUBAHAN: Menerima missionId, bukan () -> Unit
     onMissionFound: (missionId: String) -> Unit,
     category: String? = null,
     budget: String? = null,
@@ -57,7 +57,10 @@ fun GachaScreen(
 ) {
     var gachaState by remember { mutableStateOf(GachaState.Idle) }
     var missionDistance by remember { mutableStateOf<String?>(null) }
-    var estimatedTime by remember { mutableIntStateOf(0) }
+    var estimatedTime by remember { mutableStateOf<Int?>(null) }
+
+    // Kita gunakan mutableFloatStateOf untuk dragOffset agar performa drag responsif (synchronous)
+    // Untuk animasi balik (fling), kita gunakan animate() dengan qualifier lengkap untuk hindari error
     var dragOffset by remember { mutableFloatStateOf(0f) }
 
     var isAnimatingSearch by remember { mutableStateOf(false) }
@@ -83,14 +86,13 @@ fun GachaScreen(
         )
     }
 
-    // --- !!! PERBAIKAN BUG DI SINI !!! ---
     LaunchedEffect(selectedMission, gachaState) {
         if (selectedMission != null && gachaState == GachaState.Revealing) {
+            missionDistance = null
+            estimatedTime = null
             if (locationManager.hasLocationPermission()) {
                 locationManager.getCurrentLocation { location ->
-                    // Mengganti .let{} dengan if/else untuk menangani 'location' null
                     if (location != null) {
-                        // KASUS SUKSES: Lokasi didapat
                         val distanceMeters = LocationManager.calculateDistance(
                             location.latitude,
                             location.longitude,
@@ -99,23 +101,18 @@ fun GachaScreen(
                         )
                         missionDistance = LocationManager.formatDistance(distanceMeters)
                         estimatedTime = LocationManager.estimateTime(distanceMeters)
-                        gachaState = GachaState.ShowingInfo
+                        // Trigger pindah ke dialog info setelah data siap (atau timeout visual di EpicRevealCard)
                     } else {
-                        // KASUS GAGAL: Lokasi null (GPS mati, dll)
                         missionDistance = "Tidak diketahui"
                         estimatedTime = 0
-                        gachaState = GachaState.ShowingInfo
                     }
                 }
             } else {
-                // KASUS GAGAL: Tidak ada izin lokasi
-                missionDistance = "Tidak diketahui"
+                missionDistance = "Izin Ditolak"
                 estimatedTime = 0
-                gachaState = GachaState.ShowingInfo
             }
         }
     }
-    // --- AKHIR PERBAIKAN ---
 
     LaunchedEffect(isAnimatingSearch, isLoading, selectedMission, error) {
         if (gachaState == GachaState.Searching && !isAnimatingSearch && !isLoading) {
@@ -127,12 +124,10 @@ fun GachaScreen(
         }
     }
 
-    // PERUBAHAN: LaunchedEffect ini sekarang MENGIRIM ID MISI
     LaunchedEffect(gachaState) {
         if (gachaState == GachaState.Finished) {
-            // Pastikan selectedMission tidak null sebelum mengirim ID
             selectedMission?.id?.let {
-                onMissionFound(it) // Mengirim ID misi ke NavGraph
+                onMissionFound(it)
             }
         }
     }
@@ -152,70 +147,53 @@ fun GachaScreen(
                 .fillMaxSize()
                 .background(
                     Brush.radialGradient(
-                        colors = listOf(
-                            DeepBlue.copy(alpha = 0.9f),
-                            MidnightBlue
-                        ),
+                        colors = listOf(DeepBlue.copy(alpha = 0.9f), MidnightBlue),
                         radius = 1200f
                     )
                 )
                 .padding(innerPadding)
         ) {
-            EnhancedFloatingParticles(isActive = gachaState == GachaState.Searching)
             AmbientParticles()
+            EnhancedFloatingParticles(isActive = gachaState == GachaState.Searching)
 
             Column(
                 modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                val (title, subtitle, instruction) = when (gachaState) {
-                    GachaState.Idle -> Triple("Tarik Kartu Petualanganmu", "", "Ketuk kartu untuk memulai")
-                    GachaState.ReadyToPull -> Triple("Siap Untuk Petualangan?", "", "Tarik kartu ke bawah!")
-                    GachaState.Searching -> Triple("Mencari Misi Sempurna...", "Menganalisis preferensimu...", "")
-                    GachaState.Revealing -> Triple("Misi Ditemukan!", "", "")
-                    GachaState.ShowingInfo, GachaState.Finished -> Triple(
-                        "🎉 Misi Ditemukan!",
-                        selectedMission?.name ?: "",
-                        ""
-                    )
+                val (title, subtitle) = when (gachaState) {
+                    GachaState.Idle -> "Tarik Kartu Petualangan" to "Ketuk kartu untuk memulai"
+                    GachaState.ReadyToPull -> "Siap Berpetualang?" to "Tarik ke bawah!"
+                    GachaState.Searching -> "Mencari Misi..." to "Menyesuaikan preferensimu"
+                    GachaState.Revealing -> "Misi Ditemukan!" to ""
+                    GachaState.ShowingInfo, GachaState.Finished -> " " to ""
                 }
 
-                AnimatedText(
-                    text = title,
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = if (gachaState == GachaState.Finished || gachaState == GachaState.ShowingInfo || gachaState == GachaState.Revealing)
-                        AccentColor else Color.White
-                )
-
-                if (subtitle.isNotEmpty() && gachaState != GachaState.ShowingInfo && gachaState != GachaState.Finished) {
-                    Spacer(modifier = Modifier.height(8.dp))
+                if (gachaState != GachaState.ShowingInfo) {
                     AnimatedText(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.7f)
+                        text = title,
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = if (gachaState == GachaState.Revealing) AccentColor else Color.White
                     )
+                    if (subtitle.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                    }
                 }
 
-                if (instruction.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    PulsingText(
-                        text = instruction,
-                        color = AccentColor
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(60.dp))
+                Spacer(modifier = Modifier.height(40.dp))
 
                 Box(
-                    modifier = Modifier.size(width = 200.dp, height = 280.dp),
+                    modifier = Modifier.size(width = 220.dp, height = 320.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     when (gachaState) {
                         GachaState.Idle -> {
-                            InteractiveMissionCardBack(
-                                onClick = { gachaState = GachaState.ReadyToPull }
-                            )
+                            InteractiveMissionCardBack(onClick = { gachaState = GachaState.ReadyToPull })
                         }
                         GachaState.ReadyToPull -> {
                             DraggableMissionCard(
@@ -232,9 +210,12 @@ fun GachaScreen(
                                 },
                                 onDragEnd = {
                                     coroutineScope.launch {
-                                        animate(dragOffset, 0f, animationSpec = spring()) { value, _ ->
-                                            dragOffset = value
-                                        }
+                                        // PENTING: Gunakan fully qualified name untuk menghindari ambiguitas
+                                        androidx.compose.animation.core.animate(
+                                            initialValue = dragOffset,
+                                            targetValue = 0f,
+                                            animationSpec = spring()
+                                        ) { value, _ -> dragOffset = value }
                                     }
                                 }
                             )
@@ -242,278 +223,110 @@ fun GachaScreen(
                         GachaState.Searching -> {
                             if (isAnimatingSearch) {
                                 EpicShufflingCards(
-                                    onAnimationComplete = {
-                                        isAnimatingSearch = false
+                                    onAnimationComplete = { isAnimatingSearch = false }
+                                )
+                            } else if (isLoading) {
+                                CircularProgressIndicator(color = AccentColor)
+                            }
+                        }
+                        GachaState.Revealing -> {
+                            selectedMission?.let { mission ->
+                                EpicRevealCard(
+                                    missionName = mission.name,
+                                    onRevealFinished = {
+                                        gachaState = GachaState.ShowingInfo
                                     }
                                 )
                             }
-                            if (!isAnimatingSearch && isLoading) {
-                                CircularProgressIndicator(color = Color.White)
-                            }
                         }
-                        GachaState.Revealing, GachaState.ShowingInfo, GachaState.Finished -> {
-                            selectedMission?.let { mission ->
-                                EpicRevealCard(missionName = mission.name)
-                            }
-                        }
+                        else -> {}
                     }
                 }
-
-                Spacer(modifier = Modifier.height(60.dp))
             }
 
-            if (gachaState == GachaState.ShowingInfo && selectedMission != null && missionDistance != null) {
+            if (gachaState == GachaState.ShowingInfo && selectedMission != null) {
                 MissionInfoDialog(
                     missionName = selectedMission!!.name,
-                    distance = missionDistance!!,
+                    distance = missionDistance,
                     estimatedTime = estimatedTime,
-                    onDismissRequest = { // Saat klik di luar dialog
-                        // PERUBAHAN: Sekarang aman untuk membersihkan misi
+                    onDismissRequest = {
                         gachaState = GachaState.Idle
                         missionViewModel.clearSelectedMission()
-                        missionDistance = null
                     },
-                    onDismissButton = { // Saat klik tombol "Cari Misi Lain"
+                    onDismissButton = {
                         gachaState = GachaState.Idle
                         missionViewModel.clearSelectedMission()
-                        missionDistance = null
                     },
-                    onAccept = { // Saat klik tombol "Mulai Petualangan"
+                    onAccept = {
                         gachaState = GachaState.Finished
                     }
                 )
             }
 
-            error?.let { errorMsg ->
+            error?.let {
                 Snackbar(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(16.dp),
-                    action = {
-                        TextButton(onClick = { missionViewModel.clearError() }) {
-                            Text("OK")
-                        }
-                    }
-                ) {
-                    Text(errorMsg)
-                }
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
+                    action = { TextButton(onClick = { missionViewModel.clearError() }) { Text("OK") } },
+                    containerColor = ErrorColor
+                ) { Text(it, color = Color.White) }
             }
         }
     }
 }
 
+// --- KOMPONEN UI & ANIMASI (FIXED WITH Animatable) ---
+
 @Composable
-private fun AnimatedText(
-    text: String,
-    style: androidx.compose.ui.text.TextStyle,
-    color: Color
-) {
+private fun AnimatedText(text: String, style: androidx.compose.ui.text.TextStyle, color: Color) {
     var visible by remember { mutableStateOf(false) }
-
-    val alpha by animateFloatAsState(
-        targetValue = if (visible) 1f else 0f,
-        animationSpec = tween(500),
-        label = "textAlpha"
-    )
-
+    val alpha by animateFloatAsState(if (visible) 1f else 0f, tween(500), label = "textAlpha")
     LaunchedEffect(text) {
         visible = false
         delay(50)
         visible = true
     }
-
     Text(
         text = text,
         style = style,
         fontWeight = FontWeight.Bold,
         color = color,
         textAlign = TextAlign.Center,
-        modifier = Modifier
-            .padding(horizontal = 20.dp)
-            .alpha(alpha)
-    )
-}
-
-@Composable
-private fun PulsingText(text: String, color: Color) {
-    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    val alpha by infiniteTransition.animateFloat(
-        initialValue = 0.4f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulseAlpha"
-    )
-
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodyMedium,
-        color = color.copy(alpha = alpha),
-        textAlign = TextAlign.Center,
-        fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.padding(horizontal = 20.dp)
-    )
-}
-
-@Composable
-private fun AmbientParticles() {
-    val particles = remember {
-        (1..25).map {
-            ParticleData(
-                startX = Random.nextFloat() * 400f - 200f,
-                startY = Random.nextFloat() * 800f,
-                size = Random.nextFloat() * 4f + 2f,
-                duration = Random.nextInt(3000, 5000),
-                delay = Random.nextInt(0, 2000)
-            )
-        }
-    }
-
-    particles.forEach { particle ->
-        AnimatedParticle(particle, isIntense = false)
-    }
-}
-
-@Composable
-private fun EnhancedFloatingParticles(isActive: Boolean) {
-    val particles = remember {
-        (1..50).map {
-            ParticleData(
-                startX = Random.nextFloat() * 400f - 200f,
-                startY = Random.nextFloat() * 200f + 400f,
-                size = Random.nextFloat() * 6f + 3f,
-                duration = Random.nextInt(1500, 3000),
-                delay = Random.nextInt(0, 1000)
-            )
-        }
-    }
-
-    if (isActive) {
-        particles.forEach { particle ->
-            AnimatedParticle(particle, isIntense = true)
-        }
-    }
-}
-
-private data class ParticleData(
-    val startX: Float,
-    val startY: Float,
-    val size: Float,
-    val duration: Int,
-    val delay: Int
-)
-
-@Composable
-private fun AnimatedParticle(particle: ParticleData, isIntense: Boolean) {
-    var offsetY by remember { mutableFloatStateOf(particle.startY) }
-    var offsetX by remember { mutableFloatStateOf(particle.startX) }
-    var alpha by remember { mutableFloatStateOf(0f) }
-
-    LaunchedEffect(Unit) {
-        delay(particle.delay.toLong())
-
-        while (true) {
-            animate(0f, 0.8f, animationSpec = tween(300)) { value, _ ->
-                alpha = value
-            }
-
-            animate(
-                initialValue = particle.startY,
-                targetValue = -200f,
-                animationSpec = tween(particle.duration, easing = LinearEasing)
-            ) { value, _ ->
-                offsetY = value
-                offsetX = particle.startX + kotlin.math.sin(value / 50f) * 20f
-            }
-
-            animate(0.8f, 0f, animationSpec = tween(300)) { value, _ ->
-                alpha = value
-            }
-
-            offsetY = particle.startY
-            offsetX = particle.startX
-
-            if (!isIntense) delay(Random.nextLong(1000, 3000))
-        }
-    }
-
-    Box(
-        modifier = Modifier
-            .offset(x = offsetX.dp, y = offsetY.dp)
-            .size(particle.size.dp)
-            .alpha(alpha)
-            .blur(1.dp)
-            .background(
-                if (isIntense) AccentColor else Color.White.copy(alpha = 0.6f),
-                shape = MaterialTheme.shapes.small
-            )
+        modifier = Modifier.alpha(alpha)
     )
 }
 
 @Composable
 private fun InteractiveMissionCardBack(onClick: () -> Unit) {
-    var scale by remember { mutableFloatStateOf(1f) }
-    var glowAnimation by remember { mutableFloatStateOf(0f) }
-    val coroutineScope = rememberCoroutineScope()
+    val infiniteTransition = rememberInfiniteTransition(label = "glow")
+    val glowAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f, targetValue = 0.8f,
+        animationSpec = infiniteRepeatable(tween(1500, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "glowAlpha"
+    )
 
-    LaunchedEffect(Unit) {
-        while (true) {
-            animate(0.3f, 1f, animationSpec = infiniteRepeatable(
-                animation = tween(1500, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse
-            )) { value, _ ->
-                glowAnimation = value
-            }
-        }
+    // Menggunakan Animatable untuk scale agar tidak konflik
+    val scale = remember { Animatable(1f) }
+
+    // Efek klik sederhana
+    LaunchedEffect(scale) {
+        // Reset scale jika perlu
     }
 
     Card(
-        onClick = {
-            coroutineScope.launch {
-                animate(1f, 0.9f, animationSpec = tween(100)) { value, _ -> scale = value }
-                animate(0.9f, 1f, animationSpec = spring()) { value, _ -> scale = value }
-            }
-            onClick()
-        },
+        onClick = onClick,
         modifier = Modifier
-            .size(width = 200.dp, height = 280.dp)
-            .scale(scale)
-            .border(
-                width = 3.dp,
-                brush = Brush.linearGradient(
-                    colors = listOf(
-                        AccentColor.copy(alpha = glowAnimation),
-                        AccentColor.copy(alpha = 0.5f)
-                    )
-                ),
-                shape = MaterialTheme.shapes.extraLarge
-            ),
+            .fillMaxSize()
+            .scale(scale.value)
+            .border(3.dp, Brush.verticalGradient(listOf(AccentColor.copy(alpha = glowAlpha), Color.Transparent)), MaterialTheme.shapes.extraLarge),
         shape = MaterialTheme.shapes.extraLarge,
-        colors = CardDefaults.cardColors(
-            containerColor = DeepBlue.copy(alpha = 0.9f)
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 16.dp)
+        colors = CardDefaults.cardColors(containerColor = DeepBlue),
+        elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(
-                            OceanBlue.copy(alpha = 0.6f),
-                            DeepBlue.copy(alpha = 0.9f)
-                        )
-                    )
-                )
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Image(
                 painter = painterResource(id = R.drawable.logo_kenala),
-                contentDescription = "Logo Kenala",
-                modifier = Modifier.size(120.dp)
+                contentDescription = null,
+                modifier = Modifier.size(100.dp).alpha(0.8f)
             )
         }
     }
@@ -526,117 +339,91 @@ private fun DraggableMissionCard(
     onDrag: (Float) -> Unit,
     onDragEnd: () -> Unit
 ) {
-    val rotation = (dragOffset / 10f).coerceIn(-15f, 15f)
-    val scale = 1f + (dragOffset / 500f).coerceIn(0f, 0.15f)
-    val glowIntensity = (dragOffset / 150f).coerceIn(0f, 1f)
+    val rotation = (dragOffset / 10f).coerceIn(-10f, 10f)
+    val scale = 1f - (dragOffset / 1000f).coerceIn(0f, 0.1f)
 
     Card(
         modifier = Modifier
-            .size(width = 200.dp, height = 280.dp)
+            .fillMaxSize()
             .offset(y = dragOffset.dp)
-            .scale(scale)
             .rotate(rotation)
-            .border(
-                width = 3.dp,
-                brush = Brush.linearGradient(
-                    colors = listOf(
-                        AccentColor.copy(alpha = glowIntensity),
-                        AccentColor.copy(alpha = 0.5f)
-                    )
-                ),
-                shape = MaterialTheme.shapes.extraLarge
-            )
+            .scale(scale)
             .pointerInput(Unit) {
                 detectDragGestures(
                     onDragStart = { onDragStart() },
                     onDragEnd = { onDragEnd() },
                     onDrag = { change, dragAmount ->
                         change.consume()
-                        val newOffset = (dragOffset + dragAmount.y).coerceIn(0f, 200f)
+                        val newOffset = (dragOffset + dragAmount.y).coerceAtLeast(0f)
                         onDrag(newOffset)
                     }
                 )
             },
         shape = MaterialTheme.shapes.extraLarge,
-        colors = CardDefaults.cardColors(
-            containerColor = DeepBlue.copy(alpha = 0.9f)
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 16.dp)
+        colors = CardDefaults.cardColors(containerColor = DeepBlue),
+        elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(
-                            OceanBlue.copy(alpha = 0.6f),
-                            DeepBlue.copy(alpha = 0.9f)
-                        )
-                    )
-                )
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Image(
                 painter = painterResource(id = R.drawable.logo_kenala),
-                contentDescription = "Logo Kenala",
-                modifier = Modifier.size(120.dp)
+                contentDescription = null,
+                modifier = Modifier.size(100.dp)
             )
+            Icon(Icons.Default.KeyboardArrowDown, null, tint = AccentColor, modifier = Modifier.align(Alignment.BottomCenter).padding(20.dp))
         }
     }
 }
 
 @Composable
 private fun EpicShufflingCards(onAnimationComplete: () -> Unit) {
-    var rotation by remember { mutableFloatStateOf(0f) }
-    var scale by remember { mutableFloatStateOf(1f) }
-    var offsetX by remember { mutableFloatStateOf(0f) }
-    var offsetY by remember { mutableFloatStateOf(0f) }
-    var alpha by remember { mutableFloatStateOf(1f) }
+    // Pengganti mutableFloatStateOf + animate() yang error
+    val rotation = remember { Animatable(0f) }
+    val scale = remember { Animatable(1f) }
+    val offsetX = remember { Animatable(0f) }
+    val offsetY = remember { Animatable(0f) }
+    val alpha = remember { Animatable(1f) }
 
     LaunchedEffect(Unit) {
+        // Animasi Shuffle Cycle
         repeat(3) { cycle ->
-            animate(0f, 720f, animationSpec = tween(800, easing = FastOutSlowInEasing)) { value, _ ->
-                rotation = value
+            // Rotasi berputar cepat
+            launch {
+                rotation.animateTo(
+                    targetValue = (cycle + 1) * 360f,
+                    animationSpec = tween(800, easing = FastOutSlowInEasing)
+                )
             }
 
-            animate(1f, 1.3f, animationSpec = tween(200)) { value, _ ->
-                scale = value
-            }
-            animate(1.3f, 0.8f, animationSpec = tween(200)) { value, _ ->
-                scale = value
+            // Scale membesar-mengecil (pulse)
+            launch {
+                scale.animateTo(1.3f, tween(200))
+                scale.animateTo(0.8f, tween(200))
             }
 
-            val angle = cycle * 120f
-            animate(0f, 60f, animationSpec = tween(400)) { value, _ ->
-                offsetX = kotlin.math.cos(Math.toRadians((angle + value).toDouble())).toFloat() * 50f
-                offsetY = kotlin.math.sin(Math.toRadians((angle + value).toDouble())).toFloat() * 50f
+            // Gerakan orbit (circular)
+            launch {
+                val angle = cycle * 120f
+                val rad = Math.toRadians(angle.toDouble())
+                offsetX.snapTo(kotlin.math.cos(rad).toFloat() * 50f)
+                offsetY.snapTo(kotlin.math.sin(rad).toFloat() * 50f)
+
+                // Kembali ke tengah
+                offsetX.animateTo(0f, tween(400))
+                offsetY.animateTo(0f, tween(400))
             }
+
+            delay(800) // Tunggu 1 cycle selesai
         }
 
-        animate(offsetX, 0f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)) { value, _ ->
-            offsetX = value
-        }
-        animate(offsetY, 0f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)) { value, _ ->
-            offsetY = value
-        }
-
+        // Final Shake
         repeat(5) {
-            animate(rotation, rotation + 180f, animationSpec = tween(150)) { value, _ ->
-                rotation = value
-            }
-            animate(1f, 1.15f, animationSpec = tween(75)) { value, _ ->
-                scale = value
-            }
-            animate(1.15f, 1f, animationSpec = tween(75)) { value, _ ->
-                scale = value
-            }
-            delay(50)
+            rotation.animateTo(rotation.value + 10f, tween(50))
+            rotation.animateTo(rotation.value - 10f, tween(50))
         }
+        rotation.animateTo(0f, spring())
 
-        animate(1f, 0f, animationSpec = tween(300)) { value, _ ->
-            alpha = value
-        }
+        // Fade Out
+        alpha.animateTo(0f, tween(300))
 
         delay(100)
         onAnimationComplete()
@@ -644,14 +431,14 @@ private fun EpicShufflingCards(onAnimationComplete: () -> Unit) {
 
     Box(
         modifier = Modifier
-            .offset(x = offsetX.dp, y = offsetY.dp)
-            .scale(scale)
-            .rotate(rotation)
-            .alpha(alpha)
+            .offset(x = offsetX.value.dp, y = offsetY.value.dp)
+            .scale(scale.value)
+            .rotate(rotation.value)
+            .alpha(alpha.value)
     ) {
         Card(
             modifier = Modifier
-                .size(width = 200.dp, height = 280.dp)
+                .fillMaxSize()
                 .border(
                     width = 3.dp,
                     brush = Brush.linearGradient(
@@ -690,90 +477,199 @@ private fun EpicShufflingCards(onAnimationComplete: () -> Unit) {
 }
 
 @Composable
-private fun EpicRevealCard(missionName: String) {
-    var scale by remember { mutableFloatStateOf(0f) }
-    var rotation by remember { mutableFloatStateOf(180f) }
-    var alpha by remember { mutableFloatStateOf(0f) }
+private fun EpicRevealCard(missionName: String, onRevealFinished: () -> Unit) {
+    // Gunakan Animatable untuk animasi yang bersih
+    val scale = remember { Animatable(0f) }
+    val rotation = remember { Animatable(180f) }
+    val alpha = remember { Animatable(0f) }
 
     LaunchedEffect(Unit) {
         delay(200)
-        animate(0f, 1.2f, animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        )) { value, _ ->
-            scale = value
+        // Paralel animations
+        launch {
+            scale.animateTo(
+                1.2f,
+                spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
+            )
+            scale.animateTo(1f, spring())
         }
 
-        animate(180f, 360f, animationSpec = tween(600, easing = FastOutSlowInEasing)) { value, _ ->
-            rotation = value
+        launch {
+            rotation.animateTo(360f, tween(600, easing = FastOutSlowInEasing))
         }
 
-        animate(0f, 1f, animationSpec = tween(600)) { value, _ ->
-            alpha = value
+        launch {
+            alpha.animateTo(1f, tween(600))
         }
 
-        animate(1.2f, 1f, animationSpec = spring()) { value, _ ->
-            scale = value
-        }
+        delay(1000) // Tahan sebentar agar user bisa baca nama misi
+        onRevealFinished()
     }
+
+    // Tentukan sisi mana yang terlihat
+    val isFrontVisible = rotation.value >= 270f || rotation.value <= 90f
 
     Card(
         modifier = Modifier
-            .size(width = 200.dp, height = 280.dp)
-            .scale(scale)
+            .fillMaxSize()
+            .scale(scale.value)
             .graphicsLayer {
-                rotationY = rotation
+                rotationY = rotation.value
+                cameraDistance = 12f * density
             }
-            .alpha(alpha),
+            .alpha(alpha.value),
         shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 20.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color.White,
-                            AccentColor.copy(alpha = 0.08f)
-                        )
-                    )
-                )
-        ) {
-            Column(
+        if (rotation.value > 270f) { // Sisi Depan (Hasil)
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color.White, AccentColor.copy(alpha = 0.08f))
+                        )
+                    )
             ) {
-                Box(
+                Column(
                     modifier = Modifier
-                        .size(80.dp)
-                        .background(
-                            AccentColor.copy(alpha = 0.15f),
-                            MaterialTheme.shapes.large
-                        ),
-                    contentAlignment = Alignment.Center
+                        .fillMaxSize()
+                        .padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.LocationCity,
-                        contentDescription = "Misi",
-                        modifier = Modifier.size(48.dp),
-                        tint = AccentColor
+                    Box(
+                        modifier = Modifier
+                            .size(80.dp)
+                            .background(AccentColor.copy(alpha = 0.15f), MaterialTheme.shapes.large),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.LocationCity,
+                            contentDescription = "Misi",
+                            modifier = Modifier.size(48.dp),
+                            tint = AccentColor
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Text(
+                        text = missionName,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = DeepBlue,
+                        textAlign = TextAlign.Center
                     )
                 }
-                Spacer(modifier = Modifier.height(24.dp))
-                Text(
-                    text = missionName,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = DeepBlue,
-                    textAlign = TextAlign.Center,
-                    lineHeight = MaterialTheme.typography.titleLarge.lineHeight
-                )
             }
+        } else { // Sisi Belakang (Cover)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(DeepBlue)
+            )
         }
     }
+}
+
+// --- PARTICLE EFFECTS (FIXED) ---
+
+private data class ParticleData(
+    val startX: Float,
+    val startY: Float,
+    val size: Float,
+    val duration: Int,
+    val delay: Int
+)
+
+@Composable
+fun AmbientParticles() {
+    val particles = remember {
+        (1..25).map {
+            ParticleData(
+                startX = Random.nextFloat() * 400f - 200f,
+                startY = Random.nextFloat() * 800f,
+                size = Random.nextFloat() * 4f + 2f,
+                duration = Random.nextInt(3000, 5000),
+                delay = Random.nextInt(0, 2000)
+            )
+        }
+    }
+    particles.forEach { particle -> AnimatedParticle(particle, isIntense = false) }
+}
+
+@Composable
+fun EnhancedFloatingParticles(isActive: Boolean) {
+    val particles = remember {
+        (1..50).map {
+            ParticleData(
+                startX = Random.nextFloat() * 400f - 200f,
+                startY = Random.nextFloat() * 200f + 400f,
+                size = Random.nextFloat() * 6f + 3f,
+                duration = Random.nextInt(1500, 3000),
+                delay = Random.nextInt(0, 1000)
+            )
+        }
+    }
+    if (isActive) {
+        particles.forEach { particle -> AnimatedParticle(particle, isIntense = true) }
+    }
+}
+
+@Composable
+private fun AnimatedParticle(particle: ParticleData, isIntense: Boolean) {
+    // Gunakan Animatable
+    val offsetY = remember { Animatable(particle.startY) }
+    val offsetX = remember { Animatable(particle.startX) }
+    val alpha = remember { Animatable(0f) }
+
+    LaunchedEffect(Unit) {
+        delay(particle.delay.toLong())
+
+        while (true) {
+            // Reset
+            offsetY.snapTo(particle.startY)
+            offsetX.snapTo(particle.startX)
+            alpha.snapTo(0f)
+
+            // Fade In
+            launch { alpha.animateTo(0.8f, tween(300)) }
+
+            // Move Up
+            launch {
+                offsetY.animateTo(-200f, tween(particle.duration, easing = LinearEasing))
+            }
+
+            // Wiggle X (Manual Simulation using loop)
+            launch {
+                val startTime = withFrameNanos { it }
+                while (offsetY.value > -200f) {
+                    val time = (withFrameNanos { it } - startTime) / 1_000_000f // ms
+                    val wave = kotlin.math.sin(time / 500f) * 20f
+                    offsetX.snapTo(particle.startX + wave)
+                }
+            }
+
+            // Tunggu gerakan selesai (agak kasar tapi cukup untuk partikel)
+            delay(particle.duration - 300L)
+
+            // Fade Out
+            alpha.animateTo(0f, tween(300))
+
+            // Random delay before rebirth
+            if (!isIntense) delay(Random.nextLong(1000, 3000))
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .offset(x = offsetX.value.dp, y = offsetY.value.dp)
+            .size(particle.size.dp)
+            .alpha(alpha.value)
+            .blur(1.dp)
+            .background(
+                if (isIntense) AccentColor else Color.White.copy(alpha = 0.6f),
+                shape = MaterialTheme.shapes.small
+            )
+    )
 }

@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -23,10 +24,10 @@ import com.app.kenala.ui.theme.*
 @Composable
 fun MissionInfoDialog(
     missionName: String,
-    distance: String,
-    estimatedTime: Int,
-    onDismissRequest: () -> Unit, // PERUBAHAN: Menggantikan onDismiss
-    onDismissButton: () -> Unit,  // PERUBAHAN: Tombol "Cari Lain"
+    distance: String?, // Nullable untuk state loading
+    estimatedTime: Int?, // Nullable untuk state loading
+    onDismissRequest: () -> Unit,
+    onDismissButton: () -> Unit,
     onAccept: () -> Unit
 ) {
     var visible by remember { mutableStateOf(false) }
@@ -37,15 +38,12 @@ fun MissionInfoDialog(
 
     val scale by animateFloatAsState(
         targetValue = if (visible) 1f else 0.8f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
         label = "dialogScale"
     )
 
     Dialog(
-        onDismissRequest = onDismissRequest, // PERUBAHAN: Dihubungkan ke onDismissRequest
+        onDismissRequest = onDismissRequest,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Card(
@@ -53,127 +51,100 @@ fun MissionInfoDialog(
                 .fillMaxWidth(0.9f)
                 .scale(scale),
             shape = MaterialTheme.shapes.extraLarge,
-            colors = CardDefaults.cardColors(
-                containerColor = Color.Transparent
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 16.dp)
+            // Menggunakan Deep Blue solid sesuai referensi gambar
+            colors = CardDefaults.cardColors(containerColor = DeepBlue),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
-            Box(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(GradientStart, GradientEnd)
-                        )
-                    )
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                Column(
+                // Icon Header
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                        .size(80.dp)
+                        .background(AccentColor.copy(alpha = 0.2f), CircleShape),
+                    contentAlignment = Alignment.Center
                 ) {
-                    // Icon
-                    Box(
-                        modifier = Modifier
-                            .size(80.dp)
-                            .background(
-                                AccentColor.copy(alpha = 0.2f),
-                                CircleShape
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Explore,
-                            contentDescription = null,
-                            modifier = Modifier.size(48.dp),
-                            tint = AccentColor
-                        )
-                    }
+                    Icon(
+                        Icons.Default.Explore,
+                        contentDescription = null,
+                        modifier = Modifier.size(40.dp),
+                        tint = AccentColor
+                    )
+                }
 
-                    // Title
+                // Title Section
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text = "Misi Baru Ditemukan!",
-                        style = MaterialTheme.typography.headlineSmall,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        textAlign = TextAlign.Center
+                        color = Color.White
                     )
-
-                    // Mission Name
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = missionName,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.ExtraBold,
                         color = AccentColor,
                         textAlign = TextAlign.Center
                     )
+                }
 
-                    // Info Cards
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                // Info Rows (Jarak & Waktu)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.White.copy(alpha = 0.1f), MaterialTheme.shapes.medium)
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    InfoRow(
+                        icon = Icons.Default.NearMe,
+                        label = "Jarak",
+                        value = distance, // Pass nullable value
+                        isLoading = distance == null
+                    )
+                    Divider(color = Color.White.copy(alpha = 0.1f))
+                    InfoRow(
+                        icon = Icons.Default.AccessTime,
+                        label = "Estimasi Waktu",
+                        value = estimatedTime?.let { "$it menit" }, // Format jika ada
+                        isLoading = estimatedTime == null
+                    )
+                }
+
+                // Buttons
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Button(
+                        onClick = onAccept,
+                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        shape = MaterialTheme.shapes.large,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = AccentColor,
+                            contentColor = DeepBlue
+                        )
                     ) {
-                        InfoItem(
-                            icon = Icons.Default.NearMe,
-                            label = "Jarak",
-                            value = distance
-                        )
-                        InfoItem(
-                            icon = Icons.Default.AccessTime,
-                            label = "Estimasi Waktu",
-                            value = "$estimatedTime menit"
-                        )
+                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("MULAI PETUALANGAN", fontWeight = FontWeight.Bold)
                     }
 
-                    // Buttons
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    OutlinedButton(
+                        onClick = onDismissButton,
+                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        shape = MaterialTheme.shapes.large,
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                        border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.dp, brush = androidx.compose.ui.graphics.SolidColor(Color.White))
                     ) {
-                        Button(
-                            onClick = onAccept,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp),
-                            shape = MaterialTheme.shapes.large,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = AccentColor,
-                                contentColor = DeepBlue
-                            ),
-                            elevation = ButtonDefaults.buttonElevation(
-                                defaultElevation = 4.dp
-                            )
-                        ) {
-                            Icon(Icons.Default.Check, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                "MULAI PETUALANGAN",
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-
-                        OutlinedButton(
-                            onClick = onDismissButton, // PERUBAHAN: Dihubungkan ke onDismissButton
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp),
-                            shape = MaterialTheme.shapes.large,
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = Color.White
-                            ),
-                            border = ButtonDefaults.outlinedButtonBorder.copy(
-                                width = 2.dp
-                            )
-                        ) {
-                            Text(
-                                "Cari Misi Lain",
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
+                        Text("Cari Misi Lain", fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -182,45 +153,51 @@ fun MissionInfoDialog(
 }
 
 @Composable
-private fun InfoItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+private fun InfoRow(
+    icon: ImageVector,
     label: String,
-    value: String
+    value: String?,
+    isLoading: Boolean
 ) {
-    Surface(
+    Row(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        color = Color.White.copy(alpha = 0.15f)
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .background(AccentColor.copy(alpha = 0.2f), CircleShape),
+            contentAlignment = Alignment.Center
         ) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(
-                        AccentColor.copy(alpha = 0.2f),
-                        CircleShape
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    icon,
-                    contentDescription = null,
-                    tint = AccentColor,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-            Column(modifier = Modifier.weight(1f)) {
+            Icon(icon, contentDescription = null, tint = AccentColor, modifier = Modifier.size(20.dp))
+        }
+        Spacer(modifier = Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.7f)
+            )
+            if (isLoading) {
+                // Loading State (Shimmering Text / Progress)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(14.dp),
+                        strokeWidth = 2.dp,
+                        color = Color.White
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Menghitung...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.White.copy(alpha = 0.5f),
+                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                    )
+                }
+            } else {
                 Text(
-                    text = label,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.8f)
-                )
-                Text(
-                    text = value,
+                    text = value ?: "-",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = Color.White

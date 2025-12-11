@@ -10,9 +10,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -35,7 +37,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.app.kenala.ui.theme.AccentBlue
-import com.app.kenala.ui.theme.BrightBlue
+import com.app.kenala.ui.theme.AccentColor
+import com.app.kenala.ui.theme.DeepBlue
 import com.app.kenala.ui.theme.LightBlue
 import com.app.kenala.ui.theme.PrimaryBlue
 import com.app.kenala.ui.theme.PrimaryDark
@@ -57,7 +60,7 @@ fun MissionPreferencesScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "Atur Preferensi Misi",
+                        "Atur Preferensi",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -67,7 +70,7 @@ fun MissionPreferencesScreen(
                         Icon(
                             Icons.Default.ArrowBack,
                             contentDescription = "Kembali",
-                            tint = PrimaryBlue
+                            tint = MaterialTheme.colorScheme.onBackground
                         )
                     }
                 },
@@ -85,7 +88,13 @@ fun MissionPreferencesScreen(
                 .padding(horizontal = 25.dp)
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = "Sesuaikan misimu hari ini!",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(24.dp))
 
                 PreferenceSection(
                     title = "Jenis Aktivitas",
@@ -111,7 +120,6 @@ fun MissionPreferencesScreen(
 
             Button(
                 onClick = {
-                    // Pass selected preferences to Gacha screen
                     onNavigateToGacha(
                         if (selectedCategory != "Acak") selectedCategory else null,
                         if (selectedBudget != "Acak") selectedBudget else null,
@@ -121,17 +129,18 @@ fun MissionPreferencesScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
-                    .padding(bottom = 16.dp),
+                    .padding(bottom = 20.dp),
                 shape = MaterialTheme.shapes.large,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = PrimaryBlue,
+                    containerColor = DeepBlue,
                     contentColor = WhiteColor
-                )
+                ),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
             ) {
-                Icon(Icons.Default.Search, contentDescription = null)
+                Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(modifier = Modifier.padding(horizontal = 4.dp))
                 Text(
-                    text = "CARI MISI",
+                    text = "TEMUKAN MISI",
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold
                 )
@@ -154,14 +163,14 @@ private fun PreferenceSection(
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = PrimaryDark
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
         )
         Spacer(modifier = Modifier.height(12.dp))
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             optionsWithRandom.forEach { option ->
                 PreferenceChip(
@@ -179,14 +188,25 @@ private fun PreferenceChip(text: String, selected: Boolean, onClick: () -> Unit)
     FilterChip(
         selected = selected,
         onClick = onClick,
-        label = { Text(text) },
-        shape = MaterialTheme.shapes.small,
+        label = {
+            Text(
+                text,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+            )
+        },
+        shape = MaterialTheme.shapes.large,
         colors = FilterChipDefaults.filterChipColors(
             containerColor = Color.Transparent,
-            labelColor = LightBlue,
-            selectedContainerColor = AccentBlue,
-            selectedLabelColor = PrimaryDark
+            labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            selectedContainerColor = DeepBlue,
+            selectedLabelColor = AccentColor
         ),
-        border = if (selected) null else BorderStroke(1.dp, LightBlue)
+        border = FilterChipDefaults.filterChipBorder(
+            enabled = true,
+            selected = selected,
+            borderColor = if (selected) DeepBlue else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+            borderWidth = 1.dp
+        )
     )
 }

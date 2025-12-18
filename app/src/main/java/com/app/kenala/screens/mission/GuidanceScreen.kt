@@ -3,6 +3,7 @@ package com.app.kenala.screens.mission
 import android.Manifest
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
@@ -38,11 +39,9 @@ fun GuidanceScreen(
     onGiveUpClick: () -> Unit,
     onArrivedClick: (totalDistance: Double) -> Unit,
     missionViewModel: MissionViewModel = viewModel()
-    // settingsViewModel telah dihapus
 ) {
     val missionWithClues by missionViewModel.missionWithClues.collectAsState()
     val locationResponse by missionViewModel.checkLocationResponse.collectAsState()
-    // isLocationEnabledInSettings dan isNotificationsEnabledInSettings telah dihapus
 
     val context = LocalContext.current
     val locationManager = remember { LocationManager(context) }
@@ -88,7 +87,7 @@ fun GuidanceScreen(
         }
     }
 
-    // Logika Tracking (Polling GPS) - Hanya bergantung pada izin OS
+    // Logika Tracking (Polling GPS)
     LaunchedEffect(locationManager, missionWithClues, hasArrivedAtDestination) {
         if (missionWithClues == null || hasArrivedAtDestination) return@LaunchedEffect
 
@@ -110,13 +109,16 @@ fun GuidanceScreen(
         }
     }
 
-    // Notifikasi - Hanya bergantung pada izin OS
+    // Notifikasi & Event Handler
     LaunchedEffect(Unit) {
         missionViewModel.missionEvent.collectLatest { event ->
             when (event) {
                 is MissionEvent.ShowNotification -> {
-                    // event.title kini berisi pesan yang lebih akurat dari ViewModel
                     notificationHelper.showArrivalNotification(event.title)
+                }
+                is MissionEvent.MissionCompletedSuccessfully -> {
+                    // Beri feedback visual bahwa data sudah tersimpan di DB
+                    Toast.makeText(context, "Misi berhasil diselesaikan dan dicatat!", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -152,7 +154,6 @@ fun GuidanceScreen(
             )
         }
     ) { innerPadding ->
-        // Blok pengecekan if (!isLocationEnabledInSettings) telah dihapus.
 
         if (isLoading && missionWithClues == null) {
             Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
@@ -193,7 +194,6 @@ fun GuidanceScreen(
 
                     Spacer(modifier = Modifier.height(30.dp))
 
-                    // --- PERBAIKAN DISTANCE CARD ---
                     locationResponse?.let {
                         DistanceCard(
                             distanceMessage = if (hasArrivedAtDestination) "Anda Telah Tiba" else it.distance.formatted,
@@ -261,7 +261,6 @@ fun GuidanceScreen(
                             containerColor = if (hasArrivedAtDestination) ForestGreen else PrimaryBlue,
                             disabledContainerColor = PrimaryBlue.copy(alpha = 0.5f)
                         ),
-                        // Tetap enable tombol tapi logic di onClick, atau ubah teks
                         enabled = true
                     ) {
                         if (hasArrivedAtDestination) {
@@ -269,7 +268,6 @@ fun GuidanceScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("TULIS JURNAL", fontWeight = FontWeight.Bold)
                         } else {
-                            // Indikator visual saja, tombol ini sebenarnya pasif sampai sampai
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(16.dp),
@@ -325,7 +323,6 @@ fun GuidanceScreen(
     }
 }
 
-// ... (Fungsi CheckmarkAnimation, LocationIcon, dan DistanceCard tetap)
 @Composable
 fun CheckmarkAnimation() {
     val scale = remember { Animatable(0f) }

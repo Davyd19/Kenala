@@ -13,28 +13,33 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-// Event khusus untuk notifikasi agar terpisah dari State UI
+// Event khusus untuk notifikasi dan navigasi setelah misi selesai
 sealed class MissionEvent {
     data class ShowNotification(val title: String, val message: String) : MissionEvent()
+    object MissionCompletedSuccessfully : MissionEvent()
 }
 
 class MissionViewModel(application: Application) : AndroidViewModel(application) {
 
     private val apiService = RetrofitClient.apiService
 
+    // State untuk daftar misi
     private val _missions = MutableStateFlow<List<MissionDto>>(emptyList())
     val missions: StateFlow<List<MissionDto>> = _missions.asStateFlow()
 
+    // State untuk misi yang sedang dipilih
     private val _selectedMission = MutableStateFlow<MissionDto?>(null)
     val selectedMission: StateFlow<MissionDto?> = _selectedMission.asStateFlow()
 
+    // State untuk detail misi dan clue-clue nya
     private val _missionWithClues = MutableStateFlow<MissionWithCluesResponse?>(null)
     val missionWithClues: StateFlow<MissionWithCluesResponse?> = _missionWithClues.asStateFlow()
 
+    // State untuk hasil tracking lokasi terbaru
     private val _checkLocationResponse = MutableStateFlow<CheckLocationResponse?>(null)
     val checkLocationResponse: StateFlow<CheckLocationResponse?> = _checkLocationResponse.asStateFlow()
 
-    // Flow untuk one-time events (seperti notifikasi)
+    // Flow untuk event satu kali (notifikasi/toast)
     private val _missionEvent = MutableSharedFlow<MissionEvent>()
     val missionEvent: SharedFlow<MissionEvent> = _missionEvent.asSharedFlow()
 
@@ -44,9 +49,12 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    // Guard agar API complete tidak terpanggil berkali-kali dalam satu sesi
     private var isMissionFinished = false
 
-    // ... (Fungsi fetchMissions, getRandomMission, fetchMissionWithClues TETAP SAMA) ...
+    /**
+     * Mengambil daftar misi berdasarkan kategori, budget, dan jarak
+     */
     fun fetchMissions(category: String? = null, budget: String? = null, distance: String? = null) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -69,6 +77,9 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    /**
+     * Mengambil misi secara acak (Gacha)
+     */
     fun getRandomMission(category: String? = null, budget: String? = null, distance: String? = null) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -97,6 +108,9 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    /**
+     * Mengambil detail misi beserta list clues
+     */
     fun fetchMissionWithClues(missionId: String) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -115,7 +129,9 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // --- LOGIKA CEK LOKASI (Otomatis by GPS) ---
+    /**
+     * Logika Cek Lokasi: Dipanggil otomatis oleh GPS
+     */
     fun checkLocation(latitude: Double, longitude: Double) {
         if (isMissionFinished) return
 
@@ -128,51 +144,92 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
 
                 if (response.isSuccessful) {
                     val locationResponse = response.body()
-
-                    // Cek perubahan status untuk memicu notifikasi HANYA JIKA dari GPS
                     val previousStatus = _checkLocationResponse.value?.status
-                    val currentStatus = locationResponse?.status
                     val isArrived = locationResponse?.destination?.isArrived == true
                     val clueReached = locationResponse?.clueReached == true
 
                     _checkLocationResponse.value = locationResponse
 
-                    // Logic Notifikasi: Hanya muncul jika trigger dari GPS (checkLocation)
+                    // 1. Notifikasi jika sampai di clue
                     if (clueReached && previousStatus != "clue_reached") {
                         _missionEvent.emit(MissionEvent.ShowNotification(
                             "Petunjuk Ditemukan!",
                             "Anda telah mencapai lokasi petunjuk."
                         ))
-                    } else if (isArrived && !isMissionFinished) {
-                        _missionEvent.emit(MissionEvent.ShowNotification(
-                            "Tiba di Tujuan!",
-                            "Selamat, Anda telah sampai di ${locationResponse?.destination?.name}."
-                        ))
-                        isMissionFinished = true
                     }
 
-                } else {
-                    println("Gagal cek lokasi: ${response.message()}")
+                    // 2. TRIGGER OTOMATIS: Jika sampai di tujuan akhir misi
+                    else if (isArrived && !isMissionFinished) {
+                        isMissionFinished = true
+
+                        _missionEvent.emit(MissionEvent.ShowNotification(
+                            "Tiba di Tujuan!",
+                            "Selamat! Menyimpan hasil misi Anda..."
+                        ))
+
+                        // Panggil API complete agar Statistik & Badge tercatat di Database
+                        val dist = locationResponse?.destination?.distance ?: 0.0
+                        autoCompleteMissionOnArrival(missionId, dist)
+                    }
+
                 }
             } catch (e: Exception) {
-                println("Terjadi kesalahan koneksi: ${e.message}")
+                println("Koneksi terganggu: ${e.message}")
             }
         }
     }
 
-    // --- LOGIKA SKIP CLUE (Manual by User) ---
+    /**
+     * Fungsi internal untuk sinkronisasi data ke server saat misi selesai
+     */
+    private fun autoCompleteMissionOnArrival(missionId: String, distance: Double) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                // Pastikan parameter ini SAMA dengan yang didefinisikan di CompleteMissionRequest
+                val request = CompleteMissionRequest(
+                    missionId = missionId,
+                    realDistanceMeters = distance
+                )
+                val response = apiService.completeMission(request)
+
+                if (response.isSuccessful) {
+                    // Berhasil catat, emit event sukses
+                    _missionEvent.emit(MissionEvent.MissionCompletedSuccessfully)
+                } else {
+                    // Cek detail error dari server
+                    val errorBody = response.errorBody()?.string() ?: ""
+
+                    // Jika backend menolak karena duplikasi, anggap sukses di UI agar user tidak bingung
+                    if (errorBody.contains("already completed", ignoreCase = true)) {
+                        _missionEvent.emit(MissionEvent.MissionCompletedSuccessfully)
+                    } else {
+                        _error.value = "Server gagal mencatat: ${response.message()}"
+                        isMissionFinished = false // Reset lock agar bisa coba lagi
+                    }
+                }
+            } catch (e: Exception) {
+                _error.value = "Kesalahan koneksi saat menyimpan hasil misi."
+                isMissionFinished = false
+            }
+            _isLoading.value = false
+        }
+    }
+
+    /**
+     * Melewati clue saat ini secara manual
+     */
     fun skipCurrentClue() {
         val missionId = _missionWithClues.value?.mission?.id
         val clueId = _checkLocationResponse.value?.currentClue?.id
 
         if (missionId == null || clueId == null) {
-            _error.value = "Tidak bisa melewati clue: data tidak lengkap."
+            _error.value = "Data tidak lengkap untuk melewati clue."
             return
         }
 
         viewModelScope.launch {
             _isLoading.value = true
-            _error.value = null
             try {
                 val request = SkipClueRequest(missionId = missionId, clueId = clueId)
                 val response = apiService.skipClue(request)
@@ -181,28 +238,28 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
                     val skipResponse = response.body()
                     _checkLocationResponse.value = skipResponse
 
-                    // PENTING: Saat skip, kita TIDAK emit event notifikasi "Anda Telah Tiba".
-                    // Kita hanya update UI state saja.
-
                     if (skipResponse?.destination?.isArrived == true) {
-                        isMissionFinished = true
+                        // Jika skip clue terakhir membawa ke tujuan akhir
+                        checkLocation(0.0, 0.0)
                     }
                 } else {
                     val errorMsg = response.errorBody()?.string() ?: response.message()
-                    if (errorMsg.contains("Clue terakhir")) {
-                        _error.value = "Clue terakhir tidak bisa dilewati! Silakan menuju lokasi tujuan."
+                    _error.value = if (errorMsg.contains("Clue terakhir")) {
+                        "Clue terakhir tidak bisa dilewati!"
                     } else {
-                        _error.value = "Gagal melewati clue: $errorMsg"
+                        "Gagal melewati clue."
                     }
                 }
             } catch (e: Exception) {
-                _error.value = "Terjadi kesalahan: ${e.message}"
+                _error.value = "Kesalahan koneksi: ${e.message}"
             }
             _isLoading.value = false
         }
     }
 
-    // ... (Sisa fungsi resetMissionProgress, completeMission, clear... TETAP SAMA) ...
+    /**
+     * Menghapus progress misi saat ini (Reset)
+     */
     fun resetMissionProgress(missionId: String, onComplete: () -> Unit) {
         viewModelScope.launch {
             _missionWithClues.value = null
@@ -212,17 +269,20 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
                 val request = ResetProgressRequest(missionId = missionId)
                 apiService.resetMissionProgress(request)
             } catch (e: Exception) {
-                println("Gagal reset progress: ${e.message}")
+                println("Gagal reset: ${e.message}")
             }
             onComplete()
         }
     }
 
+    /**
+     * Fungsi manual untuk menyelesaikan misi (jika dibutuhkan tombol manual)
+     */
     fun completeMission(missionId: String, realDistanceMeters: Double = 0.0, onSuccess: () -> Unit) {
         viewModelScope.launch {
             _isLoading.value = true
-            _error.value = null
             try {
+                // PERBAIKAN: Gunakan parameter CamelCase
                 val request = CompleteMissionRequest(
                     missionId = missionId,
                     realDistanceMeters = realDistanceMeters
@@ -231,10 +291,10 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
                 if (response.isSuccessful) {
                     onSuccess()
                 } else {
-                    _error.value = "Gagal menyelesaikan misi: ${response.message()}"
+                    _error.value = "Gagal menyimpan misi."
                 }
             } catch (e: Exception) {
-                _error.value = "Terjadi kesalahan: ${e.message}"
+                _error.value = e.message
             }
             _isLoading.value = false
         }

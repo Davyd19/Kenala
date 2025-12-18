@@ -12,7 +12,7 @@ import com.app.kenala.data.local.entities.UserEntity
 
 @Database(
     entities = [JournalEntity::class, UserEntity::class],
-    version = 1,
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

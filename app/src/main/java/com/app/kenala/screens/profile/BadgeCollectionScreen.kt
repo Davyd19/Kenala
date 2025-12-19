@@ -24,7 +24,6 @@ import com.app.kenala.data.remote.dto.BadgeDto
 import com.app.kenala.ui.theme.*
 import com.app.kenala.viewmodel.BadgeViewModel
 
-// ... (kode data class Badge dihapus karena sudah diganti dengan BadgeDto)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,7 +36,6 @@ fun BadgeCollectionScreen(
     val error by badgeViewModel.error.collectAsState()
     var selectedBadge by remember { mutableStateOf<BadgeDto?>(null) }
 
-    // Fetch badges on first load
     LaunchedEffect(Unit) {
         badgeViewModel.fetchBadges()
     }
@@ -127,7 +125,6 @@ fun BadgeCollectionScreen(
                         }
                     }
 
-                    // Badge Grid
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(2),
                         modifier = Modifier.weight(1f),
@@ -148,7 +145,6 @@ fun BadgeCollectionScreen(
         }
     }
 
-    // Badge Detail Dialog
     selectedBadge?.let { badge ->
         BadgeDetailDialogFromApi(
             badge = badge,
@@ -210,7 +206,6 @@ private fun BadgeCardFromApi(
                 verticalArrangement = Arrangement.Center,
                 modifier = Modifier.padding(16.dp)
             ) {
-                // Icon berdasarkan icon_name dari API
                 val icon = when (badge.icon_name) {
                     "hiking" -> Icons.Default.Hiking
                     "location_city" -> Icons.Default.LocationCity
@@ -318,16 +313,14 @@ private fun BadgeDetailDialogFromApi(
         },
         text = {
             Column(
-                // PERBAIKAN 1: Rata tengah semua konten kolom
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
                     text = badge.description,
                     style = MaterialTheme.typography.bodyMedium,
-                    // PERBAIKAN 2: Paksa Text mengisi lebar maksimum
                     modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center, // Rata tengah deskripsi
+                    textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 if (badge.is_unlocked && badge.unlocked_at != null) {

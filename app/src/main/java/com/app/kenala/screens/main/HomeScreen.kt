@@ -124,14 +124,34 @@ private fun HomeHeader(
                     tint = MaterialTheme.colorScheme.primary
                 )
             }
-            AsyncImage(
-                model = avatarUrl ?: "https://i.pravatar.cc/100", // Gunakan avatarUrl
-                contentDescription = "Avatar Profil",
+
+            Box(
                 modifier = Modifier
                     .size(44.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceVariant) // Fallback background
-            )
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(OceanBlue, DeepBlue)
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                if (!avatarUrl.isNullOrEmpty()) {
+                    AsyncImage(
+                        model = avatarUrl,
+                        contentDescription = "Avatar Profil",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Text(
+                        text = userName?.firstOrNull()?.toString()?.uppercase() ?: "P",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+            }
         }
     }
 }

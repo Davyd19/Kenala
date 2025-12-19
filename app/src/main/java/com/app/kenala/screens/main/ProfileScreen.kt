@@ -48,18 +48,15 @@ fun ProfileScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // JUDUL UTAMA: "Profil"
             item {
                 Text(
-                    text = "Profil",
+                    text = "Profil & Pencapaian",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(start = 25.dp, top = 20.dp)
                 )
             }
             item { ProfileHeader(user = user, stats = stats) }
-
-            // MENGGANTI Spacer(24.dp) dan Spacer(20.dp) menjadi satu Spacer(16.dp)
             item { Spacer(modifier = Modifier.height(16.dp)) }
 
             item {

@@ -128,8 +128,7 @@ fun MissionPreferencesScreen(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp)
-                    .padding(bottom = 20.dp),
+                    .height(48.dp),
                 shape = MaterialTheme.shapes.large,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = DeepBlue,
@@ -145,6 +144,7 @@ fun MissionPreferencesScreen(
                     fontWeight = FontWeight.Bold
                 )
             }
+            Spacer(modifier = Modifier.height(20.dp))
         }
     }
 }

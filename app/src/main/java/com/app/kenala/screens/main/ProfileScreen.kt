@@ -21,6 +21,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 import com.app.kenala.data.local.entities.UserEntity
 import com.app.kenala.data.remote.dto.StatsDto
 import com.app.kenala.screens.profile.AchievementPreviewCard
@@ -168,7 +169,10 @@ private fun ProfileHeader(user: UserEntity?, stats: StatsDto?) {
                 AsyncImage(
                     model = user?.profile_image_url,
                     contentDescription = "Avatar Profil",
-                    modifier = Modifier.fillMaxSize()
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape)
                 )
             } else {
                 Text(

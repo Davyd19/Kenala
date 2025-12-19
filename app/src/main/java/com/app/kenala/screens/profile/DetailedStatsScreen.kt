@@ -109,30 +109,30 @@ private fun DashboardContent(stats: StatsDto, modifier: Modifier = Modifier) {
         item {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    GradientStatCard( // Menggunakan GradientStatCard
+                    GradientStatCard(
                         label = "Misi Selesai",
                         value = stats.total_missions.toString(),
                         icon = Icons.Default.Flag,
                         gradient = listOf(ForestGreen, ForestGreen.copy(alpha = 0.7f)),
                         modifier = Modifier.weight(1f)
                     )
-                    GradientStatCard( // Menggunakan GradientStatCard
+                    GradientStatCard(
                         label = "Jarak Tempuh",
-                        value = "${stats.total_distance.toInt()} km",
+                        value = "%.1f km".format(stats.total_distance),
                         icon = Icons.Default.DirectionsRun,
                         gradient = listOf(OceanBlue, SkyBlue),
                         modifier = Modifier.weight(1f)
                     )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    GradientStatCard( // Menggunakan GradientStatCard
+                    GradientStatCard(
                         label = "Hari Aktif",
                         value = stats.total_active_days.toString(),
                         icon = Icons.Default.CalendarToday,
                         gradient = listOf(SkyBlue, OceanBlue),
                         modifier = Modifier.weight(1f)
                     )
-                    GradientStatCard( // Menggunakan GradientStatCard
+                    GradientStatCard(
                         label = "Jurnal Ditulis",
                         value = stats.journal_count.toString(),
                         icon = Icons.Default.Book,
@@ -157,7 +157,6 @@ private fun DashboardContent(stats: StatsDto, modifier: Modifier = Modifier) {
     }
 }
 
-// DEFINISI GradientStatCard BARU (Menggantikan StatCard Lama)
 @Composable
 private fun GradientStatCard(
     value: String,
@@ -210,9 +209,6 @@ private fun GradientStatCard(
         }
     }
 }
-
-
-// FUNGSI StatCard LAMA TELAH DIHAPUS
 
 @Composable
 private fun CategoryBarChart(breakdown: Map<String, Int>) {

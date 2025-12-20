@@ -1,10 +1,12 @@
 package com.app.kenala.viewmodel
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.kenala.api.RetrofitClient
 import com.app.kenala.data.remote.dto.*
+import com.app.kenala.utils.SocketManager
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -12,6 +14,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 
 // Event khusus untuk notifikasi dan navigasi setelah misi selesai
 sealed class MissionEvent {
@@ -48,6 +51,10 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
+
+    // State tracking
+    private val _isTracking = MutableStateFlow(false)
+    val isTracking: StateFlow<Boolean> = _isTracking.asStateFlow()
 
     // Guard agar API complete tidak terpanggil berkali-kali dalam satu sesi
     private var isMissionFinished = false
@@ -297,6 +304,42 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
                 _error.value = e.message
             }
             _isLoading.value = false
+        }
+    }
+
+    // --- INTEGRASI REAL-TIME TRACKING (SOCKET.IO) ---
+    // Dipanggil dari GuidanceScreen saat masuk
+    fun startRealtimeTracking(missionId: String, userId: String) {
+        viewModelScope.launch {
+            _isTracking.value = true
+            try {
+                SocketManager.connect()
+                val joinData = JSONObject().apply {
+                    put("missionId", missionId)
+                    put("userId", userId)
+                }
+                SocketManager.emit("join_mission", joinData)
+                Log.d("MissionViewModel", "Socket join_mission emitted for mission $missionId")
+            } catch (e: Exception) {
+                Log.e("MissionViewModel", "Socket error: ${e.message}")
+            }
+        }
+    }
+
+    fun stopRealtimeTracking(missionId: String, userId: String) {
+        viewModelScope.launch {
+            _isTracking.value = false
+            try {
+                val leaveData = JSONObject().apply {
+                    put("missionId", missionId)
+                    put("userId", userId)
+                }
+                SocketManager.emit("leave_mission", leaveData)
+                Log.d("MissionViewModel", "Socket leave_mission emitted")
+                // Opsional: SocketManager.disconnect() jika ingin memutus koneksi sepenuhnya
+            } catch (e: Exception) {
+                Log.e("MissionViewModel", "Socket error: ${e.message}")
+            }
         }
     }
 

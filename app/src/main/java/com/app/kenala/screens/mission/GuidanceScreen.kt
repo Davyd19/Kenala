@@ -25,6 +25,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.app.kenala.services.TrackingService
 import com.app.kenala.ui.theme.*
 import com.app.kenala.utils.LocationManager
 import com.app.kenala.utils.NotificationHelper
@@ -79,20 +80,56 @@ fun GuidanceScreen(
         )
     }
 
+    // --- LOGIKA REAL-TIME (SOCKET & BACKGROUND SERVICE) ---
+    // Ini adalah kunci agar aplikasi berjalan seperti "Gojek" (Real-time & Background)
     LaunchedEffect(missionId) {
-        if (missionId != null) {
+        if (missionId.isNotEmpty()) {
+            // 1. Reset progress lama & ambil data baru
             missionViewModel.resetMissionProgress(missionId) {
                 missionViewModel.fetchMissionWithClues(missionId)
             }
+
+            // TODO: Sebaiknya ambil ID User yang login dari DataStore/Preferences
+            // Untuk sementara gunakan placeholder atau ambil jika tersedia di scope ini
+            val currentUserId = "user_placeholder_123"
+
+            // 2. Mulai Socket.IO untuk update server real-time
+            missionViewModel.startRealtimeTracking(missionId, currentUserId)
+
+            // 3. Mulai Foreground Service (Agar tracking jalan saat layar mati/aplikasi diminimize)
+            val serviceIntent = Intent(context, TrackingService::class.java).apply {
+                action = "START_TRACKING"
+                try {
+                    putExtra("missionId", missionId.toInt())
+                } catch (e: NumberFormatException) {
+                    // Handle jika ID string bukan angka
+                }
+                putExtra("userId", currentUserId)
+            }
+            context.startForegroundService(serviceIntent)
         }
     }
 
-    // Logika Tracking (Polling GPS)
+    // Cleanup saat user keluar dari layar ini (STOP Service & Socket)
+    DisposableEffect(Unit) {
+        onDispose {
+            val currentUserId = "user_placeholder_123"
+            missionViewModel.stopRealtimeTracking(missionId, currentUserId)
+
+            val serviceIntent = Intent(context, TrackingService::class.java).apply {
+                action = "STOP_TRACKING"
+            }
+            context.startService(serviceIntent)
+        }
+    }
+
+    // Logika Tracking Lokal untuk UI (Polling GPS HP -> UI Update)
     LaunchedEffect(locationManager, missionWithClues, hasArrivedAtDestination) {
         if (missionWithClues == null || hasArrivedAtDestination) return@LaunchedEffect
 
         if (locationManager.hasLocationPermission()) {
             locationManager.getLocationUpdates().collectLatest { location ->
+                // Hitung Jarak Lokal (untuk display UI instan)
                 if (lastLocation != null) {
                     val distanceInc = lastLocation!!.distanceTo(location)
                     if (distanceInc > 2.0) {
@@ -101,6 +138,7 @@ fun GuidanceScreen(
                 }
                 lastLocation = location
 
+                // Kirim koordinat ke API untuk cek Game Logic (Sampai di clue? Sampai finish?)
                 missionViewModel.checkLocation(
                     latitude = location.latitude,
                     longitude = location.longitude
@@ -186,10 +224,11 @@ fun GuidanceScreen(
                     )
                     Spacer(modifier = Modifier.height(30.dp))
 
+                    // --- VISUALISASI TANPA PETA (IKON) ---
                     if (hasArrivedAtDestination) {
                         CheckmarkAnimation()
                     } else {
-                        LocationIcon()
+                        LocationIcon() // Animasi Pulse
                     }
 
                     Spacer(modifier = Modifier.height(30.dp))

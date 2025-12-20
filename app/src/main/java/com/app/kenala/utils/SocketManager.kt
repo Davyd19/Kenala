@@ -5,91 +5,65 @@ import io.socket.client.IO
 import io.socket.client.Socket
 import org.json.JSONObject
 import java.net.URISyntaxException
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 
 object SocketManager {
-    private const val TAG = "SocketManager"
+    private var socket: Socket? = null
 
-    // GANTI IP INI SESUAI ENV ANDA:
-    // Emulator: "http://10.0.2.2:5000"
-    // Device Fisik: "http://192.168.x.x:5000" (Cek IP Laptop Anda)
-    private const val SERVER_URL = "http://10.0.2.2:5000"
-
-    private var mSocket: Socket? = null
-
-    // StateFlow untuk UI agar bisa observe data real-time
-    private val _trackingUpdates = MutableStateFlow<JSONObject?>(null)
-    val trackingUpdates: StateFlow<JSONObject?> = _trackingUpdates
-
-    private val _connectionStatus = MutableStateFlow(false)
-    val connectionStatus: StateFlow<Boolean> = _connectionStatus
-
-    @Synchronized
-    fun init() {
-        if (mSocket == null) {
-            try {
-                val options = IO.Options().apply {
-                    reconnection = true
-                    reconnectionAttempts = Int.MAX_VALUE
-                    reconnectionDelay = 1000
-                    timeout = 20000
-                }
-                mSocket = IO.socket(SERVER_URL, options)
-                setupListeners()
-            } catch (e: URISyntaxException) {
-                Log.e(TAG, "URI Error: ${e.message}")
-            }
-        }
-    }
-
-    private fun setupListeners() {
-        mSocket?.on(Socket.EVENT_CONNECT) {
-            Log.d(TAG, "Connected to server")
-            _connectionStatus.value = true
-        }?.on(Socket.EVENT_DISCONNECT) {
-            Log.d(TAG, "Disconnected from server")
-            _connectionStatus.value = false
-        }?.on(Socket.EVENT_CONNECT_ERROR) { args ->
-            Log.e(TAG, "Connection Error: ${args.getOrElse(0) { "Unknown" }}")
-            _connectionStatus.value = false
-        }?.on("tracking_update") { args ->
-            if (args.isNotEmpty()) {
-                val data = args[0] as JSONObject
-                Log.d(TAG, "Received Update: $data")
-                _trackingUpdates.value = data
-            }
-        }
-    }
+    // Ganti URL ini dengan IP Address komputer Anda jika menggunakan Emulator (biasanya 10.0.2.2)
+    // atau IP Address LAN jika menggunakan Device Fisik (misal 192.168.1.X:3000)
+    private const val SOCKET_URL = "http://10.0.2.2:3000"
 
     fun connect() {
-        if (mSocket?.connected() == false) {
-            mSocket?.connect()
+        if (socket == null) {
+            try {
+                val options = IO.Options()
+                options.transports = arrayOf("websocket")
+                options.reconnection = true
+
+                socket = IO.socket(SOCKET_URL, options)
+
+                socket?.on(Socket.EVENT_CONNECT) {
+                    Log.d("SocketManager", "Connected to server: ${socket?.id()}")
+                }
+
+                socket?.on(Socket.EVENT_CONNECT_ERROR) { args ->
+                    Log.e("SocketManager", "Connection error: ${args.getOrElse(0) { "Unknown" }}")
+                }
+
+                socket?.connect()
+
+            } catch (e: URISyntaxException) {
+                Log.e("SocketManager", "URI Syntax Error: ${e.message}")
+            }
+        } else if (socket?.connected() == false) {
+            socket?.connect()
+        }
+    }
+
+    // Fungsi ini yang sebelumnya hilang dan menyebabkan error
+    fun emit(event: String, data: Any) {
+        if (socket == null) {
+            connect()
+        }
+
+        if (socket?.connected() == true) {
+            socket?.emit(event, data)
+            Log.d("SocketManager", "Emitted event: $event with data: $data")
+        } else {
+            Log.w("SocketManager", "Socket not connected. Failed to emit: $event")
+            // Coba reconnect
+            socket?.connect()
         }
     }
 
     fun disconnect() {
-        mSocket?.disconnect()
+        socket?.disconnect()
+        socket?.off()
+        socket = null
+        Log.d("SocketManager", "Disconnected")
     }
 
-    fun joinMission(userId: Int, missionId: Int) {
-        val data = JSONObject()
-        data.put("userId", userId)
-        data.put("missionId", missionId)
-        mSocket?.emit("join_mission_tracking", data)
-    }
-
-    fun sendLocation(lat: Double, lng: Double, speed: Float = 0f) {
-        if (mSocket?.connected() == true) {
-            val data = JSONObject()
-            data.put("latitude", lat)
-            data.put("longitude", lng)
-            data.put("speed", speed)
-            mSocket?.emit("update_location", data)
-        }
-    }
-
-    fun stopTracking() {
-        mSocket?.emit("stop_tracking")
+    fun isConnected(): Boolean {
+        return socket?.connected() == true
     }
 }

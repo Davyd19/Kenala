@@ -85,4 +85,7 @@ dependencies {
     // Lifecycle ViewModel
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
+
+    // --- SOCKET.IO CLIENT (Tambahan Baru) ---
+    implementation("io.socket:socket.io-client:2.1.0")
 }

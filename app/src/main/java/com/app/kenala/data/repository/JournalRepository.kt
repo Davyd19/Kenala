@@ -23,16 +23,18 @@ class JournalRepository(
     // ... (Kode implementasi tetap sama, hanya import yang diubah)
     // Saya sertakan kode lengkap untuk menghindari kebingungan
 
-    fun getJournals(): Flow<List<JournalEntity>> {
-        return journalDao.getAllJournals()
+    fun getJournals(userId: String): Flow<List<JournalEntity>> {
+        return journalDao.getAllJournals(userId)
     }
 
-    suspend fun syncJournals(): Result<Unit> {
+    suspend fun syncJournals(userId: String): Result<Unit> {
         return try {
             val response = apiService.getJournals()
             if (response.isSuccessful) {
                 response.body()?.let { journals ->
-                    val entities = journals.map { it.toEntity() }
+                    // Filter hanya jurnal milik user yang sedang login
+                    val userJournals = journals.filter { it.user_id == userId }
+                    val entities = userJournals.map { it.toEntity() }
                     journalDao.insertJournals(entities)
                 }
                 Result.success(Unit)
@@ -45,6 +47,7 @@ class JournalRepository(
     }
 
     suspend fun createJournal(
+        userId: String, // Tambahkan userId parameter
         title: String,
         story: String,
         imageUrl: String?,
@@ -70,6 +73,7 @@ class JournalRepository(
                 // Save locally if server fails
                 val localEntity = JournalEntity(
                     id = "local_${System.currentTimeMillis()}",
+                    userId = userId, // Tambahkan userId
                     title = title,
                     story = story,
                     date = System.currentTimeMillis().toString(),
@@ -86,6 +90,7 @@ class JournalRepository(
             // Network error - save locally
             val localEntity = JournalEntity(
                 id = "local_${System.currentTimeMillis()}",
+                userId = userId, // Tambahkan userId
                 title = title,
                 story = story,
                 date = System.currentTimeMillis().toString(),
@@ -141,6 +146,7 @@ class JournalRepository(
 // Extension function to convert DTO to Entity
 fun JournalDto.toEntity() = JournalEntity(
     id = this.id,
+    userId = this.user_id, // Tambahkan user_id dari DTO
     title = this.title,
     story = this.story,
     date = this.date,

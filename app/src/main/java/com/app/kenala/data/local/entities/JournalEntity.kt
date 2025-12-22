@@ -6,6 +6,7 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "journals")
 data class JournalEntity(
     @PrimaryKey val id: String,
+    val userId: String, // Tambahkan user_id untuk isolasi per user
     val title: String,
     val story: String,
     val date: String,

@@ -1,15 +1,19 @@
 package com.app.kenala.screens.main
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -19,7 +23,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.app.kenala.data.local.entities.JournalEntity
+import com.app.kenala.ui.theme.AccentColor
 import com.app.kenala.ui.theme.LightTextColor
+import com.app.kenala.ui.theme.OceanBlue
 import com.app.kenala.viewmodel.JournalViewModel
 
 @Composable
@@ -140,48 +146,121 @@ private fun JournalCard(journal: JournalEntity, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = MaterialTheme.shapes.large,
+        shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
         Column {
-            journal.imageUrl?.let { url ->
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(url)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = journal.title,
-                    contentScale = ContentScale.Crop,
+            // Hero Image dengan gradient overlay
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+            ) {
+                if (journal.imageUrl != null) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(journal.imageUrl)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = journal.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    // Fallback gradient untuk jurnal tanpa gambar
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.linearGradient(
+                                    colors = listOf(
+                                        OceanBlue.copy(alpha = 0.6f),
+                                        AccentColor.copy(alpha = 0.4f)
+                                    )
+                                )
+                            )
+                    )
+                }
+                
+                // Gradient overlay untuk readability
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(150.dp)
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.3f),
+                                    MaterialTheme.colorScheme.surface
+                                )
+                            )
+                        )
                 )
             }
 
-            Column(modifier = Modifier.padding(15.dp)) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                // Date badge
+                Surface(
+                    color = AccentColor.copy(alpha = 0.12f),
+                    shape = MaterialTheme.shapes.small,
+                    modifier = Modifier.width(IntrinsicSize.Max)
+                ) {
+                    Text(
+                        text = journal.date,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AccentColor,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                // Title
                 Text(
                     text = journal.title,
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Bold,
                     maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
-                Text(
-                    text = journal.date,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = LightTextColor,
-                    modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
-                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                // Story preview
                 Text(
                     text = journal.story,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 3,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    lineHeight = MaterialTheme.typography.bodyMedium.lineHeight.times(1.4f)
                 )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                // Read more indicator
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "Baca selengkapnya",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AccentColor,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Icon(
+                        imageVector = Icons.Default.ArrowForward,
+                        contentDescription = null,
+                        tint = AccentColor,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
             }
         }
     }

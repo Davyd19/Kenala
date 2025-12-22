@@ -11,6 +11,7 @@ import com.app.kenala.data.remote.dto.UpdateJournalRequest // IMPORT DTO
 import com.app.kenala.data.local.AppDatabase
 import com.app.kenala.data.local.entities.JournalEntity
 import com.app.kenala.data.repository.JournalRepository
+import com.app.kenala.utils.DataStoreManager
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -25,12 +26,23 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
 
     private val database = AppDatabase.getDatabase(application)
     private val apiService = RetrofitClient.apiService
+    private val dataStoreManager = DataStoreManager(application)
     private val repository = JournalRepository(
         apiService,
         database.journalDao()
     )
 
-    val journals: StateFlow<List<JournalEntity>> = repository.getJournals()
+    // Get current user ID
+    private val currentUserId: Flow<String?> = dataStoreManager.userId
+
+    val journals: StateFlow<List<JournalEntity>> = currentUserId
+        .flatMapLatest { userId ->
+            if (userId != null) {
+                repository.getJournals(userId)
+            } else {
+                flowOf(emptyList())
+            }
+        }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -50,10 +62,15 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
     fun syncJournals() {
         viewModelScope.launch {
             _isLoading.value = true
-            repository.syncJournals()
-                .onFailure {
-                    _error.value = it.message
-                }
+            val userId = currentUserId.first()
+            if (userId != null) {
+                repository.syncJournals(userId)
+                    .onFailure {
+                        _error.value = it.message
+                    }
+            } else {
+                _error.value = "User tidak terautentikasi"
+            }
             _isLoading.value = false
         }
     }
@@ -71,6 +88,13 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
             _error.value = null
 
             try {
+                val userId = currentUserId.first()
+                if (userId == null) {
+                    _error.value = "User tidak terautentikasi"
+                    _isLoading.value = false
+                    return@launch
+                }
+
                 val imageUrl = if (imageUri != null) {
                     val uploadResult = uploadImage(imageUri)
                     if (uploadResult.isSuccess) {
@@ -84,7 +108,7 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
                     null
                 }
 
-                repository.createJournal(title, story, imageUrl, locationName, latitude, longitude)
+                repository.createJournal(userId, title, story, imageUrl, locationName, latitude, longitude)
                     .onFailure {
                         _error.value = it.message
                     }

@@ -8,11 +8,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -84,11 +86,11 @@ fun JournalDetailScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             if (journal != null) {
-                // Hero Image Section
+                // Hero Image Section dengan parallax effect
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(320.dp)
+                        .height(380.dp)
                 ) {
                     if (journal.imageUrl != null) {
                         AsyncImage(
@@ -101,29 +103,43 @@ fun JournalDetailScreen(
                             modifier = Modifier.fillMaxSize()
                         )
                     } else {
-                        // Fallback gradient + text
+                        // Fallback gradient yang lebih menarik
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .background(
-                                    Brush.verticalGradient(
-                                        listOf(
-                                            DeepBlue.copy(alpha = 0.6f),
-                                            AccentColor.copy(alpha = 0.3f)
-                                        )
+                                    Brush.linearGradient(
+                                        colors = listOf(
+                                            OceanBlue.copy(alpha = 0.8f),
+                                            AccentColor.copy(alpha = 0.5f),
+                                            DeepBlue.copy(alpha = 0.7f)
+                                        ),
+                                        start = Offset(0f, 0f),
+                                        end = Offset(1000f, 0f)
                                     )
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = "Tidak ada foto",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = Color.White.copy(alpha = 0.9f)
-                            )
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PhotoCamera,
+                                    contentDescription = null,
+                                    tint = Color.White.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(48.dp)
+                                )
+                                Text(
+                                    text = "Tidak ada foto",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = Color.White.copy(alpha = 0.9f)
+                                )
+                            }
                         }
                     }
 
-                    // Gradient overlay
+                    // Enhanced gradient overlay untuk transisi yang lebih smooth
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -131,22 +147,23 @@ fun JournalDetailScreen(
                                 Brush.verticalGradient(
                                     colors = listOf(
                                         Color.Transparent,
-                                        MaterialTheme.colorScheme.background.copy(alpha = 0.3f),
+                                        Color.Transparent,
+                                        MaterialTheme.colorScheme.background.copy(alpha = 0.4f),
+                                        MaterialTheme.colorScheme.background.copy(alpha = 0.7f),
                                         MaterialTheme.colorScheme.background
-                                    ),
-                                    startY = 200f
+                                    )
                                 )
                             )
                     )
                 }
 
-                // Content Section
+                // Content Section dengan offset yang lebih halus
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .offset(y = (-32).dp)
+                        .offset(y = (-40).dp)
                 ) {
-                    // Title Card
+                    // Title Card dengan desain lebih modern
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -155,99 +172,105 @@ fun JournalDetailScreen(
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surface
                         ),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                        elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
                     ) {
                         Column(
-                            modifier = Modifier.padding(24.dp)
+                            modifier = Modifier.padding(28.dp)
                         ) {
-                            Text(
-                                text = journal.title,
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                lineHeight = MaterialTheme.typography.headlineSmall.lineHeight
-                            )
-
-                            Spacer(modifier = Modifier.height(12.dp))
-
-                            // Date Badge
+                            // Date Badge di atas
                             Surface(
-                                color = AccentColor.copy(alpha = 0.12f),
-                                shape = MaterialTheme.shapes.small,
+                                color = AccentColor.copy(alpha = 0.15f),
+                                shape = MaterialTheme.shapes.medium,
                                 modifier = Modifier.width(IntrinsicSize.Max)
                             ) {
                                 Row(
                                     modifier = Modifier.padding(
-                                        horizontal = 12.dp,
-                                        vertical = 6.dp
+                                        horizontal = 14.dp,
+                                        vertical = 8.dp
                                     ),
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.CalendarToday,
                                         contentDescription = null,
                                         tint = AccentColor,
-                                        modifier = Modifier.size(14.dp)
+                                        modifier = Modifier.size(16.dp)
                                     )
                                     Text(
                                         text = journal.date,
-                                        style = MaterialTheme.typography.bodySmall,
+                                        style = MaterialTheme.typography.bodyMedium,
                                         color = AccentColor,
-                                        fontWeight = FontWeight.SemiBold
+                                        fontWeight = FontWeight.Bold
                                     )
                                 }
                             }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            // Title dengan line height yang lebih baik
+                            Text(
+                                text = journal.title,
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                lineHeight = MaterialTheme.typography.headlineMedium.lineHeight.times(1.2f)
+                            )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(28.dp))
 
-                    // Story Content
+                    // Story Content dengan desain lebih menarik
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 25.dp),
-                        shape = MaterialTheme.shapes.large,
+                        shape = MaterialTheme.shapes.extraLarge,
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surface
                         ),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                     ) {
                         Column(
-                            modifier = Modifier.padding(24.dp)
+                            modifier = Modifier.padding(28.dp)
                         ) {
-                            // Section Header
+                            // Section Header yang lebih menarik
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(4.dp, 24.dp)
+                                        .size(5.dp, 32.dp)
                                         .clip(MaterialTheme.shapes.small)
-                                        .background(AccentColor)
+                                        .background(
+                                            Brush.verticalGradient(
+                                                colors = listOf(AccentColor, AccentColor.copy(alpha = 0.7f))
+                                            )
+                                        )
                                 )
                                 Text(
                                     text = "Cerita Petualangan",
-                                    style = MaterialTheme.typography.titleMedium,
+                                    style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
 
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(20.dp))
 
+                            // Story text dengan typography yang lebih baik
                             Text(
                                 text = journal.story,
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurface,
-                                lineHeight = MaterialTheme.typography.bodyLarge.lineHeight.times(1.6f)
+                                lineHeight = MaterialTheme.typography.bodyLarge.lineHeight.times(1.7f)
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(32.dp))
+                    Spacer(modifier = Modifier.height(40.dp))
                 }
             } else {
                 // Journal not found

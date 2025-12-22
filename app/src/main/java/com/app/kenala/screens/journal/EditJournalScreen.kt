@@ -3,15 +3,20 @@ package com.app.kenala.screens.journal
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -21,6 +26,8 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -45,14 +52,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.app.kenala.ui.theme.AccentColor
+import com.app.kenala.ui.theme.DeepBlue
 import com.app.kenala.ui.theme.LightTextColor
-import com.app.kenala.ui.theme.PrimaryBlue
 import com.app.kenala.ui.theme.WhiteColor
 import com.app.kenala.viewmodel.JournalViewModel
 
@@ -161,104 +170,186 @@ fun EditJournalScreen(
                     .fillMaxSize()
                     .padding(innerPadding)
                     .padding(horizontal = 25.dp, vertical = 20.dp)
-                    .verticalScroll(rememberScrollState()), // Tambahkan scroll
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.Start
             ) {
-                // --- 2. TAMBAHAN BARU: Preview Gambar ---
+                // Section header untuk foto
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(bottom = 16.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(4.dp)
+                            .height(24.dp)
+                            .clip(MaterialTheme.shapes.small)
+                            .background(AccentColor)
+                    )
+                    Text(
+                        text = "Foto Jurnal",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                // Preview Gambar dengan card wrapper
                 val displayImage: Any? = imageUri ?: journal.imageUrl
 
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(displayImage)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = "Preview Gambar Jurnal",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                        .clip(MaterialTheme.shapes.large)
-                        .align(Alignment.CenterHorizontally)
-                )
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.extraLarge,
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                ) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(displayImage)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = "Preview Gambar Jurnal",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(220.dp)
+                            .clip(MaterialTheme.shapes.extraLarge)
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Tombol Ubah Foto dengan styling lebih baik
                 OutlinedButton(
-                    onClick = { imagePickerLauncher.launch("image/*") }, // Panggil image picker
+                    onClick = { imagePickerLauncher.launch("image/*") },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
-                    enabled = !isLoading
+                    enabled = !isLoading,
+                    shape = MaterialTheme.shapes.large,
+                    border = BorderStroke(
+                        1.5.dp,
+                        AccentColor.copy(alpha = 0.5f)
+                    )
                 ) {
-                    Icon(Icons.Default.PhotoCamera, contentDescription = null)
-                    Spacer(modifier = Modifier.padding(horizontal = 4.dp))
-                    Text("Ubah Foto")
+                    Icon(
+                        Icons.Default.PhotoCamera,
+                        contentDescription = null,
+                        tint = AccentColor
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        "Ubah Foto",
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
-                // ----------------------------------------
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
+                // Section header untuk konten
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(bottom = 16.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(4.dp)
+                            .height(24.dp)
+                            .clip(MaterialTheme.shapes.small)
+                            .background(AccentColor)
+                    )
+                    Text(
+                        text = "Konten Jurnal",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                // Judul field dengan styling lebih baik
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
                     label = { Text("Judul Cerita") },
+                    placeholder = { Text("Contoh: Petualangan Seru di Gunung...") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     enabled = !isLoading,
+                    shape = MaterialTheme.shapes.large,
                     keyboardOptions = KeyboardOptions(
                         capitalization = KeyboardCapitalization.Sentences,
                         imeAction = ImeAction.Next
                     ),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = PrimaryBlue,
-                        unfocusedBorderColor = LightTextColor
+                        focusedBorderColor = AccentColor,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline
                     )
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
+                // Story field dengan styling lebih baik
                 OutlinedTextField(
                     value = story,
                     onValueChange = { story = it },
                     label = { Text("Ceritamu...") },
+                    placeholder = { Text("Bagikan pengalaman petualanganmu...") },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 150.dp), // Beri tinggi minimal
+                        .heightIn(min = 180.dp),
                     enabled = !isLoading,
+                    shape = MaterialTheme.shapes.large,
                     keyboardOptions = KeyboardOptions(
                         capitalization = KeyboardCapitalization.Sentences
                     ),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = PrimaryBlue,
-                        unfocusedBorderColor = LightTextColor
+                        focusedBorderColor = AccentColor,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline
                     )
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(30.dp))
 
+                // Tombol Simpan dengan styling lebih menarik
                 Button(
                     onClick = {
-                        // --- 3. PERBAIKAN: Panggil fungsi ViewModel yang benar ---
                         viewModel.updateJournal(
                             id = journal.id,
                             title = title,
                             story = story,
-                            imageUri = imageUri, // (Error 2) Kirim URI baru jika ada
-                            existingImageUrl = journal.imageUrl // (Error 3) Kirim URL lama
+                            imageUri = imageUri,
+                            existingImageUrl = journal.imageUrl
                         )
-                        // --------------------------------------------------
                         onSaveClick()
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(56.dp)
-                        .padding(top = 16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
-                    shape = MaterialTheme.shapes.large,
-                    enabled = title.isNotBlank() && story.isNotBlank() && !isLoading
+                        .height(58.dp),
+                    shape = MaterialTheme.shapes.extraLarge,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = AccentColor,
+                        contentColor = DeepBlue
+                    ),
+                    enabled = title.isNotBlank() && story.isNotBlank() && !isLoading,
+                    elevation = ButtonDefaults.buttonElevation(
+                        defaultElevation = 4.dp,
+                        pressedElevation = 2.dp
+                    )
                 ) {
-                    Text("Simpan Perubahan", color = WhiteColor)
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = DeepBlue,
+                            strokeWidth = 2.5.dp
+                        )
+                    } else {
+                        Text(
+                            "Simpan Perubahan",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
                 }
+
+                Spacer(modifier = Modifier.height(20.dp))
             }
         }
     }

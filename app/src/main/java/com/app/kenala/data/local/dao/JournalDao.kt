@@ -7,8 +7,8 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface JournalDao {
 
-    @Query("SELECT * FROM journals ORDER BY date DESC")
-    fun getAllJournals(): Flow<List<JournalEntity>>
+    @Query("SELECT * FROM journals WHERE userId = :userId ORDER BY date DESC")
+    fun getAllJournals(userId: String): Flow<List<JournalEntity>>
 
     @Query("SELECT * FROM journals WHERE id = :id")
     suspend fun getJournalById(id: String): JournalEntity?
@@ -28,9 +28,9 @@ interface JournalDao {
     @Query("DELETE FROM journals WHERE id = :id")
     suspend fun deleteJournalById(id: String)
 
-    @Query("SELECT * FROM journals WHERE isSynced = 0")
-    suspend fun getUnsyncedJournals(): List<JournalEntity>
+    @Query("SELECT * FROM journals WHERE isSynced = 0 AND userId = :userId")
+    suspend fun getUnsyncedJournals(userId: String): List<JournalEntity>
 
-    @Query("DELETE FROM journals")
-    suspend fun deleteAllJournals()
+    @Query("DELETE FROM journals WHERE userId = :userId")
+    suspend fun deleteAllJournals(userId: String)
 }

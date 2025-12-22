@@ -226,7 +226,8 @@ private fun CategoryBarChart(breakdown: Map<String, Int>) {
             Triple(categoryName, count, icon to color)
         }
 
-        val maxTarget = (categoryData.maxOfOrNull { it.second } ?: 0).coerceAtLeast(5).toFloat()
+        val currentMax = categoryData.maxOfOrNull { it.second } ?: 0
+        val maxTarget = (((currentMax / 5) + 1) * 5).toFloat()
 
         Column(
             modifier = Modifier.padding(vertical = 12.dp, horizontal = 20.dp),

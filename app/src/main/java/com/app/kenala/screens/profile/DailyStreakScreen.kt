@@ -4,11 +4,9 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack // <-- IMPORT BARU
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -42,32 +40,26 @@ fun DailyStreakScreen(
     onNavigateBack: () -> Unit,
     viewModel: ProfileViewModel = viewModel()
 ) {
-    // Ambil data dari ViewModel
     val streakData by viewModel.streakData.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
 
-    // Ambil data saat layar dibuka
     LaunchedEffect(Unit) {
         viewModel.fetchStreak()
     }
 
-    // Gunakan data dari API, atau default 0 jika null
     val currentStreak = streakData?.currentStreak ?: 0
     val longestStreak = streakData?.longestStreak ?: 0
     val totalDays = streakData?.totalActiveDays ?: 0
     val activityMap = streakData?.recentActivity ?: emptyMap()
 
-    // Generate 14 hari terakhir secara dinamis berdasarkan activityMap
-    val last14Days = remember(activityMap) {
+    val last7Days = remember(activityMap) {
         val today = LocalDate.now()
-        (13 downTo 0).map { daysAgo ->
+        (6 downTo 0).map { daysAgo ->
             val date = today.minusDays(daysAgo.toLong())
-            // Format tanggal ke String "YYYY-MM-DD" untuk dicocokkan dengan Map
             val dateString = date.format(DateTimeFormatter.ISO_LOCAL_DATE)
 
             DayStreak(
                 date = date,
-                // Cek apakah tanggal ini ada di map activity dari backend
                 hasActivity = activityMap.containsKey(dateString),
                 isToday = daysAgo == 0
             )
@@ -80,7 +72,6 @@ fun DailyStreakScreen(
                 title = { Text("Streak Petualangan", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        // --- PERBAIKAN 1: Gunakan AutoMirrored ---
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
                     }
                 },
@@ -105,12 +96,10 @@ fun DailyStreakScreen(
             ) {
                 item { Spacer(modifier = Modifier.height(4.dp)) }
 
-                // Current Streak Card
                 item {
                     CurrentStreakCard(currentStreak = currentStreak)
                 }
 
-                // Stats Row
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -133,10 +122,9 @@ fun DailyStreakScreen(
                     }
                 }
 
-                // Calendar View
                 item {
                     Text(
-                        text = "14 Hari Terakhir",
+                        text = "7 Hari Terakhir",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -150,18 +138,19 @@ fun DailyStreakScreen(
                             containerColor = MaterialTheme.colorScheme.surface
                         )
                     ) {
-                        LazyRow(
-                            modifier = Modifier.padding(16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            itemsIndexed(last14Days) { index, day ->
+                            last7Days.forEachIndexed { index, day ->
                                 DayItem(day = day, position = index)
                             }
                         }
                     }
                 }
 
-                // Tips Section
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -332,7 +321,6 @@ private fun DayItem(day: DayStreak, position: Int) {
         modifier = Modifier.graphicsLayer { alpha = animatedAlpha }
     ) {
         Text(
-            // --- PERBAIKAN 2: Gunakan Locale.forLanguageTag ---
             text = day.date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.forLanguageTag("id-ID")),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -343,8 +331,7 @@ private fun DayItem(day: DayStreak, position: Int) {
                 .clip(CircleShape)
                 .background(
                     when {
-                        day.isToday && day.hasActivity -> AccentColor
-                        day.hasActivity -> ForestGreen.copy(alpha = 0.8f)
+                        day.hasActivity -> OceanBlue
                         else -> MaterialTheme.colorScheme.surfaceVariant
                     }
                 ),
@@ -354,7 +341,7 @@ private fun DayItem(day: DayStreak, position: Int) {
                 Icon(
                     Icons.Default.Check,
                     contentDescription = "Aktif",
-                    tint = if (day.isToday) DeepBlue else Color.White,
+                    tint = Color.White,
                     modifier = Modifier.size(20.dp)
                 )
             } else {

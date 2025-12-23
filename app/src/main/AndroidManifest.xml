@@ -35,14 +35,12 @@
             </intent-filter>
         </activity>
 
-        <!-- Registrasi Service Tracking (Sudah Ada) -->
         <service
             android:name=".services.TrackingService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="location" />
 
-        <!-- Registrasi Service Firebase Messaging (TAMBAHAN BARU) -->
         <service
             android:name=".services.MyFirebaseMessagingService"
             android:exported="false">

@@ -28,7 +28,6 @@ fun AppNavGraph(navController: NavHostController) {
     var registerError by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
 
-    // Efek Samping untuk Navigasi berdasarkan AuthState
     LaunchedEffect(authState) {
         when (val state = authState) {
             is AuthState.Loading -> isLoading = true
@@ -36,7 +35,6 @@ fun AppNavGraph(navController: NavHostController) {
                 isLoading = false
                 loginError = null
                 registerError = null
-                // Login/Register Sukses -> Masuk ke Main
                 navController.navigate(Screen.Main.route) {
                     popUpTo(navController.graph.id) { inclusive = true }
                 }
@@ -51,12 +49,10 @@ fun AppNavGraph(navController: NavHostController) {
                 }
                 authViewModel.resetAuthState()
             }
-            // TAMBAHAN: Menangani Logout
             is AuthState.LoggedOut -> {
                 isLoading = false
-                // Logout -> Kembali ke Onboarding dan hapus semua backstack
                 navController.navigate(Screen.Onboarding.route) {
-                    popUpTo(0) { inclusive = true } // Hapus semua history
+                    popUpTo(0) { inclusive = true }
                 }
                 authViewModel.resetAuthState()
             }
@@ -210,7 +206,7 @@ fun AppNavGraph(navController: NavHostController) {
             }
         }
 
-        composable(Screen.Notifications.route) { NotificationsCenterScreen(onBackClick = { navController.popBackStack() }) }
+        composable(Screen.Notifications.route) { NotificationsCenterScreen(onNavigateBack = { navController.popBackStack() }) }
         composable(Screen.EditProfile.route) { EditProfileScreen(onNavigateBack = { navController.popBackStack() }) }
         composable(Screen.Settings.route) { SettingsScreen(onNavigateBack = { navController.popBackStack() }, authViewModel = authViewModel) }
         composable(Screen.DailyStreak.route) { DailyStreakScreen(onNavigateBack = { navController.popBackStack() }) }

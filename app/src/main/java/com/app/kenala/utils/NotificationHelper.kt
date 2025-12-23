@@ -17,12 +17,10 @@ import com.app.kenala.R
 class NotificationHelper(private val context: Context) {
 
     companion object {
-        // Channel ID Lama (JANGAN DIHAPUS)
         private const val CHANNEL_ID = "kenala_location_channel"
         private const val CHANNEL_NAME = "Kenala Location Updates"
         private const val NOTIFICATION_ID = 1001
 
-        // Channel ID Baru untuk Firebase/Maintenance (TAMBAHAN)
         const val ANNOUNCEMENT_CHANNEL_ID = "kenala_announcement_channel"
         private const val ANNOUNCEMENT_CHANNEL_NAME = "Pengumuman & Info"
     }
@@ -35,14 +33,12 @@ class NotificationHelper(private val context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-            // 1. Buat Channel Lama (Location)
             val importance = NotificationManager.IMPORTANCE_HIGH
             val locationChannel = NotificationChannel(CHANNEL_ID, CHANNEL_NAME, importance).apply {
                 description = "Notifikasi untuk update jarak ke tujuan"
             }
             notificationManager.createNotificationChannel(locationChannel)
 
-            // 2. Buat Channel Baru (Announcement/Firebase)
             val announcementChannel = NotificationChannel(
                 ANNOUNCEMENT_CHANNEL_ID,
                 ANNOUNCEMENT_CHANNEL_NAME,
@@ -53,8 +49,6 @@ class NotificationHelper(private val context: Context) {
             notificationManager.createNotificationChannel(announcementChannel)
         }
     }
-
-    // --- FUNGSI LAMA (TETAP ADA) ---
 
     fun showDistanceNotification(destinationName: String, distance: Double) {
         if (!hasNotificationPermission()) return
@@ -95,7 +89,6 @@ class NotificationHelper(private val context: Context) {
         try {
             NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, notification)
         } catch (e: SecurityException) {
-            // Permission not granted
         }
     }
 
@@ -123,13 +116,10 @@ class NotificationHelper(private val context: Context) {
         try {
             NotificationManagerCompat.from(context).notify(NOTIFICATION_ID + 1, notification)
         } catch (e: SecurityException) {
-            // Permission not granted
         }
     }
 
-    // --- FUNGSI BARU (UNTUK FIREBASE) ---
-
-    fun showSimpleNotification(title: String, message: String, intent: Intent? = null) {
+    fun showNotification(title: String, message: String, intent: Intent? = null) {
         if (!hasNotificationPermission()) return
 
         val targetIntent = intent ?: Intent(context, MainActivity::class.java).apply {
@@ -144,10 +134,10 @@ class NotificationHelper(private val context: Context) {
         )
 
         val builder = NotificationCompat.Builder(context, ANNOUNCEMENT_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground) // Menggunakan icon yang sama agar konsisten
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(title)
             .setContentText(message)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(message)) // Support teks panjang
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
@@ -155,7 +145,6 @@ class NotificationHelper(private val context: Context) {
         try {
             NotificationManagerCompat.from(context).notify(System.currentTimeMillis().toInt(), builder.build())
         } catch (e: SecurityException) {
-            // Permission not granted
         }
     }
 

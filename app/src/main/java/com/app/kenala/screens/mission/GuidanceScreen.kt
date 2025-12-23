@@ -3,7 +3,6 @@ package com.app.kenala.screens.mission
 import android.Manifest
 import android.content.Intent
 import android.net.Uri
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
@@ -12,6 +11,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -31,6 +31,7 @@ import com.app.kenala.utils.LocationManager
 import com.app.kenala.utils.NotificationHelper
 import com.app.kenala.viewmodel.MissionEvent
 import com.app.kenala.viewmodel.MissionViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -43,6 +44,7 @@ fun GuidanceScreen(
 ) {
     val missionWithClues by missionViewModel.missionWithClues.collectAsState()
     val locationResponse by missionViewModel.checkLocationResponse.collectAsState()
+    val distanceTraveled by missionViewModel.distanceTraveled.collectAsState()
 
     val context = LocalContext.current
     val locationManager = remember { LocationManager(context) }
@@ -62,10 +64,6 @@ fun GuidanceScreen(
     val currentClueOrder = currentClue?.order ?: 0
     val isLastClue = currentClue != null && (currentClueOrder == totalClues)
 
-    // Tracking Jarak Real
-    var totalDistanceTraveled by remember { mutableDoubleStateOf(0.0) }
-    var lastLocation by remember { mutableStateOf<android.location.Location?>(null) }
-
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { }
@@ -81,41 +79,29 @@ fun GuidanceScreen(
     }
 
     // --- LOGIKA REAL-TIME (SOCKET & BACKGROUND SERVICE) ---
-    // Ini adalah kunci agar aplikasi berjalan seperti "Gojek" (Real-time & Background)
     LaunchedEffect(missionId) {
         if (missionId.isNotEmpty()) {
-            // 1. Reset progress lama & ambil data baru
             missionViewModel.resetMissionProgress(missionId) {
                 missionViewModel.fetchMissionWithClues(missionId)
             }
-
-            // TODO: Sebaiknya ambil ID User yang login dari DataStore/Preferences
-            // Untuk sementara gunakan placeholder atau ambil jika tersedia di scope ini
             val currentUserId = "user_placeholder_123"
-
-            // 2. Mulai Socket.IO untuk update server real-time
             missionViewModel.startRealtimeTracking(missionId, currentUserId)
 
-            // 3. Mulai Foreground Service (Agar tracking jalan saat layar mati/aplikasi diminimize)
             val serviceIntent = Intent(context, TrackingService::class.java).apply {
                 action = "START_TRACKING"
                 try {
                     putExtra("missionId", missionId.toInt())
-                } catch (e: NumberFormatException) {
-                    // Handle jika ID string bukan angka
-                }
+                } catch (e: NumberFormatException) {}
                 putExtra("userId", currentUserId)
             }
             context.startForegroundService(serviceIntent)
         }
     }
 
-    // Cleanup saat user keluar dari layar ini (STOP Service & Socket)
     DisposableEffect(Unit) {
         onDispose {
             val currentUserId = "user_placeholder_123"
             missionViewModel.stopRealtimeTracking(missionId, currentUserId)
-
             val serviceIntent = Intent(context, TrackingService::class.java).apply {
                 action = "STOP_TRACKING"
             }
@@ -123,22 +109,13 @@ fun GuidanceScreen(
         }
     }
 
-    // Logika Tracking Lokal untuk UI (Polling GPS HP -> UI Update)
+    // Logika Tracking Lokal untuk UI
     LaunchedEffect(locationManager, missionWithClues, hasArrivedAtDestination) {
         if (missionWithClues == null || hasArrivedAtDestination) return@LaunchedEffect
 
         if (locationManager.hasLocationPermission()) {
             locationManager.getLocationUpdates().collectLatest { location ->
-                // Hitung Jarak Lokal (untuk display UI instan)
-                if (lastLocation != null) {
-                    val distanceInc = lastLocation!!.distanceTo(location)
-                    if (distanceInc > 2.0) {
-                        totalDistanceTraveled += distanceInc
-                    }
-                }
-                lastLocation = location
-
-                // Kirim koordinat ke API untuk cek Game Logic (Sampai di clue? Sampai finish?)
+                missionViewModel.updateOdometer(location)
                 missionViewModel.checkLocation(
                     latitude = location.latitude,
                     longitude = location.longitude
@@ -147,7 +124,7 @@ fun GuidanceScreen(
         }
     }
 
-    // Notifikasi & Event Handler
+    // Handler Event Misi (Notifikasi & Auto Navigasi)
     LaunchedEffect(Unit) {
         missionViewModel.missionEvent.collectLatest { event ->
             when (event) {
@@ -155,8 +132,10 @@ fun GuidanceScreen(
                     notificationHelper.showArrivalNotification(event.title)
                 }
                 is MissionEvent.MissionCompletedSuccessfully -> {
-                    // Beri feedback visual bahwa data sudah tersimpan di DB
-                    Toast.makeText(context, "Misi berhasil diselesaikan dan dicatat!", Toast.LENGTH_SHORT).show()
+                    // Hapus Toast "Data tersimpan"
+                    // Beri jeda 2 detik agar user melihat animasi sukses, lalu pindah otomatis
+                    delay(2000)
+                    onArrivedClick(distanceTraveled)
                 }
             }
         }
@@ -165,31 +144,29 @@ fun GuidanceScreen(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("Panduan Misi", fontWeight = FontWeight.Bold)
-                        Text(
-                            text = "Jarak ditempuh: ${"%.2f".format(totalDistanceTraveled / 1000)} km",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = LightTextColor
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onGiveUpClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onGiveUpClick) {
-                        Icon(Icons.Default.Flag, contentDescription = "Menyerah", tint = ErrorColor)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
+            // Sembunyikan TopBar jika sudah sampai agar tampilan sukses lebih bersih
+            if (!hasArrivedAtDestination) {
+                TopAppBar(
+                    title = {
+                        Column {
+                            Text("Panduan Misi", fontWeight = FontWeight.Bold)
+                            Text(
+                                text = "Jarak ditempuh: ${"%.2f".format(distanceTraveled / 1000)} km",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = LightTextColor
+                            )
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onGiveUpClick) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background
+                    )
                 )
-            )
+            }
         }
     ) { innerPadding ->
 
@@ -203,110 +180,103 @@ fun GuidanceScreen(
         }
 
         Box(modifier = Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(horizontal = 25.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
+            if (hasArrivedAtDestination) {
+                // TAMPILAN SUKSES KHUSUS (Lebih Bagus)
+                ArrivalSuccessView(
+                    modifier = Modifier.padding(innerPadding),
+                    missionName = missionWithClues?.mission?.name ?: "Misi"
+                )
+            } else {
+                // TAMPILAN GUIDANCE NORMAL
                 Column(
-                    modifier = Modifier.weight(1f),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .padding(horizontal = 25.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(
-                        text = missionWithClues?.mission?.name ?: "Memuat Misi...",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = LightTextColor,
-                        fontWeight = FontWeight.SemiBold,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(30.dp))
-
-                    // --- VISUALISASI TANPA PETA (IKON) ---
-                    if (hasArrivedAtDestination) {
-                        CheckmarkAnimation()
-                    } else {
-                        LocationIcon() // Animasi Pulse
-                    }
-
-                    Spacer(modifier = Modifier.height(30.dp))
-
-                    locationResponse?.let {
-                        DistanceCard(
-                            distanceMessage = if (hasArrivedAtDestination) "Anda Telah Tiba" else it.distance.formatted,
-                            hasArrived = hasArrivedAtDestination
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = missionWithClues?.mission?.name ?: "Memuat Misi...",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = LightTextColor,
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = TextAlign.Center
                         )
-                        Spacer(modifier = Modifier.height(24.dp))
-                    }
+                        Spacer(modifier = Modifier.height(30.dp))
 
-                    Text(
-                        text = when {
-                            hasArrivedAtDestination -> "🎉 Anda Telah Sampai!"
-                            isHeadingToDestination -> "Menuju tujuan akhir: ${destination?.name}"
-                            currentClue != null -> currentClue.description
-                            else -> "Mencari sinyal GPS..."
-                        },
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center,
-                        lineHeight = 32.sp,
-                        color = if (hasArrivedAtDestination) ForestGreen else MaterialTheme.colorScheme.onBackground
-                    )
+                        LocationIcon() // Animasi Pulse
 
-                    if (isLastClue && !hasArrivedAtDestination && !isHeadingToDestination) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = ErrorColor.copy(alpha = 0.1f)),
-                            border = BorderStroke(1.dp, ErrorColor.copy(alpha = 0.3f))
-                        ) {
-                            Text(
-                                text = "Petunjuk terakhir! Tidak bisa dilewati.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = ErrorColor,
-                                textAlign = TextAlign.Center,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(8.dp)
+                        Spacer(modifier = Modifier.height(30.dp))
+
+                        locationResponse?.let {
+                            DistanceCard(
+                                distanceMessage = it.distance.formatted,
+                                hasArrived = false
                             )
+                            Spacer(modifier = Modifier.height(24.dp))
+                        }
+
+                        Text(
+                            text = when {
+                                isHeadingToDestination -> "Menuju tujuan akhir: ${destination?.name}"
+                                currentClue != null -> currentClue.description
+                                else -> "Mencari sinyal GPS..."
+                            },
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                            lineHeight = 32.sp,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+
+                        if (isLastClue && !isHeadingToDestination) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = ErrorColor.copy(alpha = 0.1f)),
+                                border = BorderStroke(1.dp, ErrorColor.copy(alpha = 0.3f))
+                            ) {
+                                Text(
+                                    text = "Petunjuk terakhir! Tidak bisa dilewati.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = ErrorColor,
+                                    textAlign = TextAlign.Center,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(8.dp)
+                                )
+                            }
+                        }
+
+                        if (error != null) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(text = error!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                         }
                     }
 
-                    if (error != null) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(text = error!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-
-                // Action Buttons
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 30.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Button(
-                        onClick = {
-                            if (hasArrivedAtDestination) {
-                                onArrivedClick(totalDistanceTraveled)
-                            }
-                        },
+                    // Action Buttons (Normal)
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(56.dp),
-                        shape = MaterialTheme.shapes.large,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (hasArrivedAtDestination) ForestGreen else PrimaryBlue,
-                            disabledContainerColor = PrimaryBlue.copy(alpha = 0.5f)
-                        ),
-                        enabled = true
+                            .padding(bottom = 30.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        if (hasArrivedAtDestination) {
-                            Icon(Icons.Default.Check, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("TULIS JURNAL", fontWeight = FontWeight.Bold)
-                        } else {
+                        Button(
+                            onClick = { /* Menunggu sampai */ },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
+                            shape = MaterialTheme.shapes.large,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = PrimaryColor,
+                                disabledContainerColor = PrimaryColor.copy(alpha = 0.5f)
+                            ),
+                            enabled = true
+                        ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(16.dp),
@@ -317,9 +287,7 @@ fun GuidanceScreen(
                                 Text("MENUJU LOKASI...", fontWeight = FontWeight.Bold)
                             }
                         }
-                    }
 
-                    if (!hasArrivedAtDestination) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -329,11 +297,15 @@ fun GuidanceScreen(
                                     val targetLat = locationResponse?.currentClue?.latitude ?: locationResponse?.destination?.latitude
                                     val targetLon = locationResponse?.currentClue?.longitude ?: locationResponse?.destination?.longitude
                                     if (targetLat != null && targetLon != null) {
-                                        val gmmIntentUri = Uri.parse("google.navigation:q=$targetLat,$targetLon")
+                                        val gmmIntentUri = Uri.parse("geo:$targetLat,$targetLon?q=$targetLat,$targetLon(Tujuan)")
                                         val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
                                         mapIntent.setPackage("com.google.android.apps.maps")
-                                        if (mapIntent.resolveActivity(context.packageManager) != null) {
+
+                                        try {
                                             context.startActivity(mapIntent)
+                                        } catch (e: Exception) {
+                                            val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/maps/search/?api=1&query=$targetLat,$targetLon"))
+                                            context.startActivity(browserIntent)
                                         }
                                     }
                                 },
@@ -362,19 +334,101 @@ fun GuidanceScreen(
     }
 }
 
+// --- KOMPONEN UI BARU: ArrivalSuccessView ---
 @Composable
-fun CheckmarkAnimation() {
+fun ArrivalSuccessView(
+    modifier: Modifier = Modifier,
+    missionName: String
+) {
+    // Animasi Scale untuk Checkmark
     val scale = remember { Animatable(0f) }
     LaunchedEffect(Unit) {
         scale.animateTo(1f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy))
     }
-    Box(
-        modifier = Modifier.size(100.dp).scale(scale.value).background(ForestGreen.copy(alpha = 0.1f), CircleShape),
-        contentAlignment = Alignment.Center
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        Icon(Icons.Default.CheckCircle, "Berhasil", tint = ForestGreen, modifier = Modifier.size(64.dp))
+        // Lingkaran Hijau Besar Berdenyut
+        Box(
+            contentAlignment = Alignment.Center
+        ) {
+            // Efek Glow/Ring belakang
+            Box(
+                modifier = Modifier
+                    .size(180.dp)
+                    .scale(scale.value)
+                    .background(ForestGreen.copy(alpha = 0.1f), CircleShape)
+            )
+            Box(
+                modifier = Modifier
+                    .size(140.dp)
+                    .scale(scale.value)
+                    .background(ForestGreen.copy(alpha = 0.2f), CircleShape)
+            )
+            // Icon Utama
+            Icon(
+                imageVector = Icons.Default.CheckCircle,
+                contentDescription = "Success",
+                tint = ForestGreen,
+                modifier = Modifier
+                    .size(100.dp)
+                    .scale(scale.value)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(40.dp))
+
+        Text(
+            text = "Selamat!",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            color = ForestGreen
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "Anda telah tiba di tujuan misi:",
+            style = MaterialTheme.typography.bodyLarge,
+            color = LightTextColor,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = missionName,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.ExtraBold,
+            color = MaterialTheme.colorScheme.onBackground,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(48.dp))
+
+        // Indikator Loading Pengalihan
+        CircularProgressIndicator(
+            modifier = Modifier.size(32.dp),
+            color = ForestGreen,
+            strokeWidth = 3.dp
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "Menyimpan data & membuka jurnal...",
+            style = MaterialTheme.typography.bodyMedium,
+            color = LightTextColor
+        )
     }
 }
+
+// ... Animation Components Lama (LocationIcon, DistanceCard) ...
 
 @Composable
 fun LocationIcon() {
@@ -384,10 +438,10 @@ fun LocationIcon() {
         animationSpec = infiniteRepeatable(tween(1000), RepeatMode.Reverse), label = "pulse"
     )
     Box(
-        modifier = Modifier.size(100.dp).background(PrimaryBlue.copy(alpha = 0.1f), CircleShape),
+        modifier = Modifier.size(100.dp).background(PrimaryColor.copy(alpha = 0.1f), CircleShape),
         contentAlignment = Alignment.Center
     ) {
-        Icon(Icons.Default.Place, "Lokasi", tint = PrimaryBlue, modifier = Modifier.size(64.dp).scale(scale))
+        Icon(Icons.Default.Place, "Lokasi", tint = PrimaryColor, modifier = Modifier.size(64.dp).scale(scale))
     }
 }
 
@@ -400,11 +454,11 @@ fun DistanceCard(distanceMessage: String, hasArrived: Boolean) {
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
-            containerColor = if (hasArrived) ForestGreen.copy(alpha = 0.15f) else PrimaryBlue.copy(alpha = 0.1f)
+            containerColor = if (hasArrived) ForestGreen.copy(alpha = 0.15f) else PrimaryColor.copy(alpha = 0.1f)
         ),
         border = BorderStroke(
             width = 1.dp,
-            color = if (hasArrived) ForestGreen.copy(alpha = 0.3f) else PrimaryBlue.copy(alpha = 0.3f)
+            color = if (hasArrived) ForestGreen.copy(alpha = 0.3f) else PrimaryColor.copy(alpha = 0.3f)
         )
     ) {
         Column(
@@ -423,7 +477,7 @@ fun DistanceCard(distanceMessage: String, hasArrived: Boolean) {
                 text = distanceMessage,
                 style = MaterialTheme.typography.displaySmall,
                 fontWeight = FontWeight.Bold,
-                color = if (hasArrived) ForestGreen else PrimaryBlue
+                color = if (hasArrived) ForestGreen else PrimaryColor
             )
         }
     }

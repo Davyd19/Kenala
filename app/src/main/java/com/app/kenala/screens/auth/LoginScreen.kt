@@ -166,16 +166,6 @@ fun LoginScreen(
                 enabled = !isLoading
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            TextButton(
-                onClick = { /* TODO: Handle Lupa Password */ },
-                modifier = Modifier.align(Alignment.End),
-                enabled = !isLoading
-            ) {
-                Text("Lupa Password?", color = PrimaryBlue, fontWeight = FontWeight.SemiBold)
-            }
-
             Spacer(modifier = Modifier.height(24.dp))
 
             Button(
@@ -194,38 +184,6 @@ fun LoginScreen(
                 } else {
                     Text("Masuk", fontWeight = FontWeight.Bold)
                 }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Divider dengan text
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                HorizontalDivider(modifier = Modifier.weight(1f))
-                Text(
-                    text = "atau",
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = LightBlue
-                )
-                HorizontalDivider(modifier = Modifier.weight(1f))
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Google Sign In Button (placeholder)
-            OutlinedButton(
-                onClick = { /* TODO: Implement Google Sign In */ },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = MaterialTheme.shapes.large,
-                enabled = !isLoading
-            ) {
-                // TODO: Add Google icon
-                Text("Masuk dengan Google", fontWeight = FontWeight.SemiBold)
             }
 
             Spacer(modifier = Modifier.weight(1f))

@@ -9,9 +9,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Museum
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Park
@@ -30,6 +32,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
@@ -39,13 +42,6 @@ import com.app.kenala.navigation.Screen
 import com.app.kenala.ui.theme.*
 import com.app.kenala.viewmodel.ProfileViewModel
 
-private data class InspirationCategory(val title: String, val imageUrl: String)
-private val inspirations = listOf(
-    InspirationCategory("Kuliner Tersembunyi", "https://images.pexels.com/photos/1267696/pexels-photo-1267696.jpeg"),
-    InspirationCategory("Seni & Budaya", "https://images.pexels.com/photos/269923/pexels-photo-269923.jpeg"),
-    InspirationCategory("Alam Kota", "https://images.pexels.com/photos/459225/pexels-photo-459225.jpeg"),
-    InspirationCategory("Belanja Unik", "https://images.pexels.com/photos/1106468/pexels-photo-1106468.jpeg")
-)
 
 @Composable
 fun HomeScreen(
@@ -62,7 +58,18 @@ fun HomeScreen(
     LaunchedEffect(Unit) {
         profileViewModel.refresh()
     }
-    // -------------------------------------------------------------------
+
+    val dailyTip = remember {
+        listOf(
+            "Selalu siapkan air minum sebelum memulai perjalanan.",
+            "Gunakan sepatu yang nyaman untuk eksplorasi jarak jauh.",
+            "Jangan lupa mengisi baterai HP hingga penuh!",
+            "Menyapa warga lokal bisa membuka petualangan baru.",
+            "Ambil foto, tapi jangan lupa nikmati momennya.",
+            "Cek ramalan cuaca sebelum berangkat mencari misi.",
+            "Petualangan terbaik seringkali terjadi tanpa rencana."
+        ).random()
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
@@ -85,9 +92,9 @@ fun HomeScreen(
             item { Spacer(modifier = Modifier.height(20.dp)) }
             item { StatsHighlightCard(stats = stats) }
             item { Spacer(modifier = Modifier.height(20.dp)) }
-            item { WeeklyChallengeCard() }
+            item { DailyTipsSection(tip = dailyTip) }
             item { Spacer(modifier = Modifier.height(20.dp)) }
-            item { AdventureInspirationSection() }
+
         }
     }
 }
@@ -362,154 +369,41 @@ private fun StatItem(
 }
 
 @Composable
-private fun WeeklyChallengeCard(profileViewModel: ProfileViewModel = viewModel()) {
-    val weeklyChallenge by profileViewModel.weeklyChallenge.collectAsState()
-
-    LaunchedEffect(Unit) {
-        // Fetch weekly challenge data
-        // profileViewModel.fetchWeeklyChallenge()
-    }
-
-    Column(modifier = Modifier.padding(horizontal = 25.dp)) {
+private fun DailyTipsSection(tip: String) {
+    Column(modifier = Modifier.padding(horizontal = 24.dp)) {
         Text(
-            text = "Tantangan Mingguan",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground,
+            text = "Tips Hari Ini",
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 18.sp,
+            color = Color.Black,
             modifier = Modifier.padding(bottom = 12.dp)
         )
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFE3F2FD)),
+            elevation = CardDefaults.cardElevation(0.dp)
         ) {
             Row(
-                modifier = Modifier.padding(20.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(MaterialTheme.shapes.medium)
-                        .background(AccentColor.copy(alpha = 0.1f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Star,
-                        contentDescription = "Tantangan",
-                        tint = AccentColor,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = weeklyChallenge?.title ?: "Jelajah Kuliner",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = weeklyChallenge?.description ?: "Selesaikan 2 misi kuliner minggu ini",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    val progress = if (weeklyChallenge != null) {
-                        (weeklyChallenge!!.current.toFloat() / weeklyChallenge!!.target)
-                    } else {
-                        0.5f
-                    }
-
-                    LinearProgressIndicator(
-                        progress = { progress },
-                        modifier = Modifier.fillMaxWidth(),
-                        color = AccentColor,
-                        trackColor = AccentColor.copy(alpha = 0.2f),
-                    )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = if (weeklyChallenge != null) {
-                            "${weeklyChallenge!!.current}/${weeklyChallenge!!.target} selesai"
-                        } else {
-                            "1/2 selesai"
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun AdventureInspirationSection() {
-    Column(modifier = Modifier.padding(top = 8.dp)) {
-        Text(
-            text = "Inspirasi Petualangan",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(start = 25.dp, bottom = 12.dp)
-        )
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 25.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            items(inspirations) { inspiration ->
-                InspirationCard(item = inspiration)
-            }
-        }
-    }
-}
-
-@Composable
-private fun InspirationCard(item: InspirationCategory) {
-    Card(
-        modifier = Modifier.width(180.dp),
-        shape = MaterialTheme.shapes.large,
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Box(
-            modifier = Modifier.height(240.dp),
-            contentAlignment = Alignment.BottomStart
-        ) {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(item.imageUrl)
-                    .crossfade(true)
-                    .build(),
-                contentDescription = item.title,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-            Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                Color.Black.copy(alpha = 0.7f)
-                            ),
-                            startY = 200f
-                        )
-                    )
-            )
-            Text(
-                text = item.title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                modifier = Modifier.padding(16.dp)
-            )
+                    .padding(16.dp)
+                    .fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Lightbulb,
+                    contentDescription = "Tip",
+                    tint = Color(0xFF1976D2),
+                    modifier = Modifier.size(32.dp)
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Text(
+                    text = tip,
+                    fontSize = 14.sp,
+                    color = Color(0xFF0D47A1),
+                    lineHeight = 20.sp
+                )
+            }
         }
     }
 }

@@ -27,7 +27,7 @@ fun MissionInfoDialog(
     distance: String?, // Nullable untuk state loading
     estimatedTime: Int?, // Nullable untuk state loading
     onDismissRequest: () -> Unit,
-    onDismissButton: () -> Unit,
+    onSearchAgain: () -> Unit, // Callback baru untuk "Cari Misi Lain"
     onAccept: () -> Unit
 ) {
     var visible by remember { mutableStateOf(false) }
@@ -51,7 +51,6 @@ fun MissionInfoDialog(
                 .fillMaxWidth(0.9f)
                 .scale(scale),
             shape = MaterialTheme.shapes.extraLarge,
-            // Menggunakan Deep Blue solid sesuai referensi gambar
             colors = CardDefaults.cardColors(containerColor = DeepBlue),
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
@@ -106,14 +105,14 @@ fun MissionInfoDialog(
                     InfoRow(
                         icon = Icons.Default.NearMe,
                         label = "Jarak",
-                        value = distance, // Pass nullable value
+                        value = distance,
                         isLoading = distance == null
                     )
                     Divider(color = Color.White.copy(alpha = 0.1f))
                     InfoRow(
                         icon = Icons.Default.AccessTime,
                         label = "Estimasi Waktu",
-                        value = estimatedTime?.let { "$it menit" }, // Format jika ada
+                        value = estimatedTime?.let { "$it menit" },
                         isLoading = estimatedTime == null
                     )
                 }
@@ -138,7 +137,7 @@ fun MissionInfoDialog(
                     }
 
                     OutlinedButton(
-                        onClick = onDismissButton,
+                        onClick = onSearchAgain, // Panggil callback navigasi
                         modifier = Modifier.fillMaxWidth().height(50.dp),
                         shape = MaterialTheme.shapes.large,
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
@@ -179,7 +178,6 @@ private fun InfoRow(
                 color = Color.White.copy(alpha = 0.7f)
             )
             if (isLoading) {
-                // Loading State (Shimmering Text / Progress)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(14.dp),

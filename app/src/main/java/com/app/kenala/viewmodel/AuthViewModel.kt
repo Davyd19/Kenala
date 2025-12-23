@@ -4,7 +4,6 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.kenala.api.RetrofitClient
-// IMPORT DTO YANG BARU
 import com.app.kenala.data.remote.dto.LoginRequest
 import com.app.kenala.data.remote.dto.RegisterRequest
 import com.app.kenala.data.remote.dto.ChangePasswordRequest
@@ -17,12 +16,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
-// ... (Sisa kode AuthViewModel sama persis seperti sebelumnya, yang penting import di atas sudah benar)
 sealed class AuthState {
     object Idle : AuthState()
     object Loading : AuthState()
     data class Success(val message: String) : AuthState()
     data class Error(val message: String) : AuthState()
+    // State khusus untuk menangani navigasi saat logout
+    object LoggedOut : AuthState()
 }
 
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
@@ -37,17 +37,30 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     private val _isLoggedIn = MutableStateFlow(false)
     val isLoggedIn: StateFlow<Boolean> = _isLoggedIn.asStateFlow()
 
+    // State untuk Splash Screen: Menandakan cek token selesai
+    private val _isAuthChecked = MutableStateFlow(false)
+    val isAuthChecked: StateFlow<Boolean> = _isAuthChecked.asStateFlow()
+
     init {
         checkLoginStatus()
     }
 
     private fun checkLoginStatus() {
         viewModelScope.launch {
+            // Mengambil token (pastikan fungsi ini ada di DataStoreManager dan bersifat suspend/flow)
             val token = dataStoreManager.getToken()
-            _isLoggedIn.value = !token.isNullOrEmpty()
+
             if (!token.isNullOrEmpty()) {
+                // Set token ke Retrofit agar request selanjutnya terotentikasi
                 RetrofitClient.setToken(token)
+                _isLoggedIn.value = true
+            } else {
+                _isLoggedIn.value = false
             }
+
+            // Tandai bahwa proses pengecekan awal sudah selesai
+            // Ini akan memicu navigasi dari Splash Screen ke Main atau Onboarding
+            _isAuthChecked.value = true
         }
     }
 
@@ -60,13 +73,19 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 )
                 if (response.isSuccessful && response.body() != null) {
                     val authResponse = response.body()!!
+
+                    // 1. Simpan Data Auth (Token & User Info Dasar) ke DataStore
                     dataStoreManager.saveAuthData(
                         token = authResponse.token,
                         userId = authResponse.user.id,
                         userName = authResponse.user.name,
                         userEmail = authResponse.user.email
                     )
+
+                    // 2. Set Token Global Retrofit
                     RetrofitClient.setToken(authResponse.token)
+
+                    // 3. Simpan Data User Lengkap ke Database Lokal (Room)
                     val userEntity = UserEntity(
                         id = authResponse.user.id,
                         name = authResponse.user.name,
@@ -81,8 +100,9 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                         total_active_days = authResponse.user.total_active_days
                     )
                     userDao.insertUser(userEntity)
-                    _authState.value = AuthState.Success("Login berhasil!")
+
                     _isLoggedIn.value = true
+                    _authState.value = AuthState.Success("Login berhasil!")
                 } else {
                     val errorMessage = when (response.code()) {
                         401 -> "Email atau password salah"
@@ -108,6 +128,8 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 )
                 if (response.isSuccessful && response.body() != null) {
                     val authResponse = response.body()!!
+
+                    // Auto-login setelah register sukses
                     dataStoreManager.saveAuthData(
                         token = authResponse.token,
                         userId = authResponse.user.id,
@@ -115,6 +137,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                         userEmail = authResponse.user.email
                     )
                     RetrofitClient.setToken(authResponse.token)
+
                     val userEntity = UserEntity(
                         id = authResponse.user.id,
                         name = authResponse.user.name,
@@ -129,8 +152,9 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                         total_active_days = authResponse.user.total_active_days
                     )
                     userDao.insertUser(userEntity)
-                    _authState.value = AuthState.Success("Registrasi berhasil!")
+
                     _isLoggedIn.value = true
+                    _authState.value = AuthState.Success("Registrasi berhasil!")
                 } else {
                     val errorMessage = when (response.code()) {
                         400 -> "Email sudah terdaftar"
@@ -148,11 +172,20 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     fun logout() {
         viewModelScope.launch {
+            // 1. Hapus data auth dari DataStore
             dataStoreManager.clearAuthData()
+
+            // 2. Reset token Retrofit
             RetrofitClient.setToken(null)
+
+            // 3. Hapus data user dari Database Lokal
             userDao.deleteUser()
+
+            // 4. Update state
             _isLoggedIn.value = false
-            _authState.value = AuthState.Idle
+
+            // 5. PENTING: Trigger state LoggedOut agar UI (AppNavGraph) melakukan navigasi ke Onboarding
+            _authState.value = AuthState.LoggedOut
         }
     }
 

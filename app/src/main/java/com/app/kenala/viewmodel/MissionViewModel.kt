@@ -1,6 +1,7 @@
 package com.app.kenala.viewmodel
 
 import android.app.Application
+import android.location.Location
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -42,6 +43,12 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
     private val _checkLocationResponse = MutableStateFlow<CheckLocationResponse?>(null)
     val checkLocationResponse: StateFlow<CheckLocationResponse?> = _checkLocationResponse.asStateFlow()
 
+    // --- FITUR BARU: Odometer (Jarak Tempuh Real) ---
+    // Disimpan di ViewModel agar tidak reset (berkurang jadi 0) saat rotasi layar
+    private val _distanceTraveled = MutableStateFlow(0.0)
+    val distanceTraveled: StateFlow<Double> = _distanceTraveled.asStateFlow()
+    private var lastOdometerLocation: Location? = null
+
     // Flow untuk event satu kali (notifikasi/toast)
     private val _missionEvent = MutableSharedFlow<MissionEvent>()
     val missionEvent: SharedFlow<MissionEvent> = _missionEvent.asSharedFlow()
@@ -60,7 +67,7 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
     private var isMissionFinished = false
 
     /**
-     * Mengambil daftar misi berdasarkan kategori, budget, dan jarak
+     * Mengambil daftar misi
      */
     fun fetchMissions(category: String? = null, budget: String? = null, distance: String? = null) {
         viewModelScope.launch {
@@ -103,7 +110,7 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
                         _selectedMission.value = missionList.random()
                         _missions.value = missionList
                     } else {
-                        _error.value = "Tidak ada misi yang ditemukan"
+                        _error.value = "Misi Tidak Ditemukan"
                     }
                 } else {
                     _error.value = "Gagal mengambil misi acak: ${response.message()}"
@@ -134,6 +141,23 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
             }
             _isLoading.value = false
         }
+    }
+
+    /**
+     * --- FITUR BARU: Update Odometer ---
+     * Dipanggil dari UI setiap kali ada lokasi baru.
+     * Hanya menambah jarak jika user benar-benar bergerak (GPS).
+     * TIDAK dipanggil saat Skip Clue.
+     */
+    fun updateOdometer(newLocation: Location) {
+        if (lastOdometerLocation != null) {
+            val distanceInc = lastOdometerLocation!!.distanceTo(newLocation)
+            // Filter noise GPS: hanya hitung jika bergerak lebih dari 2 meter
+            if (distanceInc > 2.0) {
+                _distanceTraveled.value += distanceInc
+            }
+        }
+        lastOdometerLocation = newLocation
     }
 
     /**
@@ -174,26 +198,22 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
                             "Selamat! Menyimpan hasil misi Anda..."
                         ))
 
-                        // Panggil API complete agar Statistik & Badge tercatat di Database
-                        val dist = locationResponse?.destination?.distance ?: 0.0
+                        // Panggil API complete dengan JARAK REAL dari Odometer
+                        val dist = _distanceTraveled.value
                         autoCompleteMissionOnArrival(missionId, dist)
                     }
 
                 }
             } catch (e: Exception) {
-                println("Koneksi terganggu: ${e.message}")
+                Log.e("MissionViewModel", "Koneksi terganggu: ${e.message}")
             }
         }
     }
 
-    /**
-     * Fungsi internal untuk sinkronisasi data ke server saat misi selesai
-     */
     private fun autoCompleteMissionOnArrival(missionId: String, distance: Double) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                // Pastikan parameter ini SAMA dengan yang didefinisikan di CompleteMissionRequest
                 val request = CompleteMissionRequest(
                     missionId = missionId,
                     realDistanceMeters = distance
@@ -201,18 +221,14 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
                 val response = apiService.completeMission(request)
 
                 if (response.isSuccessful) {
-                    // Berhasil catat, emit event sukses
                     _missionEvent.emit(MissionEvent.MissionCompletedSuccessfully)
                 } else {
-                    // Cek detail error dari server
                     val errorBody = response.errorBody()?.string() ?: ""
-
-                    // Jika backend menolak karena duplikasi, anggap sukses di UI agar user tidak bingung
                     if (errorBody.contains("already completed", ignoreCase = true)) {
                         _missionEvent.emit(MissionEvent.MissionCompletedSuccessfully)
                     } else {
                         _error.value = "Server gagal mencatat: ${response.message()}"
-                        isMissionFinished = false // Reset lock agar bisa coba lagi
+                        isMissionFinished = false
                     }
                 }
             } catch (e: Exception) {
@@ -223,9 +239,6 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    /**
-     * Melewati clue saat ini secara manual
-     */
     fun skipCurrentClue() {
         val missionId = _missionWithClues.value?.mission?.id
         val clueId = _checkLocationResponse.value?.currentClue?.id
@@ -246,7 +259,6 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
                     _checkLocationResponse.value = skipResponse
 
                     if (skipResponse?.destination?.isArrived == true) {
-                        // Jika skip clue terakhir membawa ke tujuan akhir
                         checkLocation(0.0, 0.0)
                     }
                 } else {
@@ -264,32 +276,28 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    /**
-     * Menghapus progress misi saat ini (Reset)
-     */
     fun resetMissionProgress(missionId: String, onComplete: () -> Unit) {
         viewModelScope.launch {
             _missionWithClues.value = null
             _checkLocationResponse.value = null
+            // Reset Odometer saat misi baru dimulai/direset
+            _distanceTraveled.value = 0.0
+            lastOdometerLocation = null
             isMissionFinished = false
             try {
                 val request = ResetProgressRequest(missionId = missionId)
                 apiService.resetMissionProgress(request)
             } catch (e: Exception) {
-                println("Gagal reset: ${e.message}")
+                Log.e("MissionViewModel", "Gagal reset: ${e.message}")
             }
             onComplete()
         }
     }
 
-    /**
-     * Fungsi manual untuk menyelesaikan misi (jika dibutuhkan tombol manual)
-     */
     fun completeMission(missionId: String, realDistanceMeters: Double = 0.0, onSuccess: () -> Unit) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                // PERBAIKAN: Gunakan parameter CamelCase
                 val request = CompleteMissionRequest(
                     missionId = missionId,
                     realDistanceMeters = realDistanceMeters
@@ -308,7 +316,6 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
     }
 
     // --- INTEGRASI REAL-TIME TRACKING (SOCKET.IO) ---
-    // Dipanggil dari GuidanceScreen saat masuk
     fun startRealtimeTracking(missionId: String, userId: String) {
         viewModelScope.launch {
             _isTracking.value = true
@@ -319,7 +326,6 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
                     put("userId", userId)
                 }
                 SocketManager.emit("join_mission", joinData)
-                Log.d("MissionViewModel", "Socket join_mission emitted for mission $missionId")
             } catch (e: Exception) {
                 Log.e("MissionViewModel", "Socket error: ${e.message}")
             }
@@ -335,8 +341,6 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
                     put("userId", userId)
                 }
                 SocketManager.emit("leave_mission", leaveData)
-                Log.d("MissionViewModel", "Socket leave_mission emitted")
-                // Opsional: SocketManager.disconnect() jika ingin memutus koneksi sepenuhnya
             } catch (e: Exception) {
                 Log.e("MissionViewModel", "Socket error: ${e.message}")
             }

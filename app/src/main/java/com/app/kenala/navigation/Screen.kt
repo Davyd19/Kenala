@@ -2,7 +2,7 @@ package com.app.kenala.navigation
 
 sealed class Screen(val route: String) {
 
-    // --- Alur Awal (Autentikasi) ---
+    object Splash : Screen("splash_screen")
     object Onboarding : Screen("onboarding_screen")
     object Login : Screen("login_screen")
     object Register : Screen("register_screen")

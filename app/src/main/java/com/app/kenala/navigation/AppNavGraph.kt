@@ -12,6 +12,7 @@ import com.app.kenala.screens.auth.OnboardingScreen
 import com.app.kenala.screens.auth.RegisterScreen
 import com.app.kenala.screens.journal.*
 import com.app.kenala.screens.main.MainScreen
+import com.app.kenala.screens.main.SplashScreen
 import com.app.kenala.screens.mission.*
 import com.app.kenala.screens.notifications.NotificationsCenterScreen
 import com.app.kenala.screens.profile.*
@@ -22,12 +23,12 @@ import com.app.kenala.viewmodel.AuthViewModel
 fun AppNavGraph(navController: NavHostController) {
     val authViewModel: AuthViewModel = viewModel()
     val authState by authViewModel.authState.collectAsState()
-    val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
 
     var loginError by remember { mutableStateOf<String?>(null) }
     var registerError by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
 
+    // Efek Samping untuk Navigasi berdasarkan AuthState
     LaunchedEffect(authState) {
         when (val state = authState) {
             is AuthState.Loading -> isLoading = true
@@ -35,6 +36,7 @@ fun AppNavGraph(navController: NavHostController) {
                 isLoading = false
                 loginError = null
                 registerError = null
+                // Login/Register Sukses -> Masuk ke Main
                 navController.navigate(Screen.Main.route) {
                     popUpTo(navController.graph.id) { inclusive = true }
                 }
@@ -49,16 +51,27 @@ fun AppNavGraph(navController: NavHostController) {
                 }
                 authViewModel.resetAuthState()
             }
+            // TAMBAHAN: Menangani Logout
+            is AuthState.LoggedOut -> {
+                isLoading = false
+                // Logout -> Kembali ke Onboarding dan hapus semua backstack
+                navController.navigate(Screen.Onboarding.route) {
+                    popUpTo(0) { inclusive = true } // Hapus semua history
+                }
+                authViewModel.resetAuthState()
+            }
             is AuthState.Idle -> isLoading = false
         }
     }
 
-    val startDestination = if (isLoggedIn) Screen.Main.route else Screen.Onboarding.route
-
     NavHost(
         navController = navController,
-        startDestination = startDestination
+        startDestination = Screen.Splash.route
     ) {
+        composable(Screen.Splash.route) {
+            SplashScreen(navController = navController, authViewModel = authViewModel)
+        }
+
         composable(Screen.Onboarding.route) {
             OnboardingScreen(onNavigateToLogin = { navController.navigate(Screen.Login.route) })
         }
@@ -115,6 +128,9 @@ fun AppNavGraph(navController: NavHostController) {
                     navController.navigate("${Screen.Guidance.route}/$missionId") {
                         popUpTo(Screen.Gacha.route) { inclusive = true }
                     }
+                },
+                onNavigateToPreferences = {
+                    navController.popBackStack()
                 }
             )
         }
@@ -135,16 +151,13 @@ fun AppNavGraph(navController: NavHostController) {
                             popUpTo(Screen.Main.route) { inclusive = true }
                         }
                     },
-                    // Kirim distance (Double) ke JournalEntry via route argument
                     onArrivedClick = { distance ->
-                        // Konversi Double ke Float untuk passing via NavArg (lebih aman)
                         navController.navigate("${Screen.JournalEntry.route}?distance=${distance.toFloat()}")
                     }
                 )
             }
         }
 
-        // Screen.JournalEntry sekarang menerima argument optional distance
         composable(
             route = "${Screen.JournalEntry.route}?distance={distance}",
             arguments = listOf(
@@ -154,7 +167,7 @@ fun AppNavGraph(navController: NavHostController) {
             val distance = backStackEntry.arguments?.getFloat("distance")?.toDouble() ?: 0.0
 
             JournalEntryScreen(
-                realDistance = distance, // Pass distance ke screen
+                realDistance = distance,
                 onBackClick = { navController.popBackStack() },
                 onSaveClick = {
                     navController.navigate(Screen.Main.route) {

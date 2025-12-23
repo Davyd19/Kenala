@@ -27,9 +27,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.app.kenala.api.RetrofitClient
 import com.app.kenala.ui.theme.AccentColor
 import com.app.kenala.ui.theme.DeepBlue
+import com.app.kenala.utils.UrlUtils
 import com.app.kenala.viewmodel.JournalViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -156,14 +156,8 @@ fun EditJournalScreen(
 
                 val displayImage: Any? = if (imageUri != null) {
                     imageUri
-                } else if (!journal!!.imageUrl.isNullOrEmpty()) {
-                    if (journal.imageUrl!!.startsWith("http")) {
-                        journal.imageUrl
-                    } else {
-                        "${RetrofitClient.IMAGE_BASE_URL}${journal.imageUrl}"
-                    }
                 } else {
-                    null
+                    UrlUtils.getFullImageUrl(journal?.imageUrl)
                 }
 
                 Card(
@@ -251,13 +245,15 @@ fun EditJournalScreen(
 
                 Button(
                     onClick = {
-                        viewModel.updateJournal(
-                            id = journal!!.id,
-                            title = title,
-                            story = story,
-                            imageUri = imageUri,
-                            existingImageUrl = journal.imageUrl
-                        )
+                        journal?.let { j ->
+                            viewModel.updateJournal(
+                                id = j.id,
+                                title = title,
+                                story = story,
+                                imageUri = imageUri,
+                                existingImageUrl = j.imageUrl
+                            )
+                        }
                     },
                     modifier = Modifier.fillMaxWidth().height(58.dp),
                     shape = MaterialTheme.shapes.extraLarge,

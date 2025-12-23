@@ -22,11 +22,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.app.kenala.api.RetrofitClient
 import com.app.kenala.data.local.entities.JournalEntity
 import com.app.kenala.ui.theme.AccentColor
-import com.app.kenala.ui.theme.LightTextColor
 import com.app.kenala.ui.theme.OceanBlue
+import com.app.kenala.utils.UrlUtils
 import com.app.kenala.viewmodel.JournalViewModel
 
 @Composable
@@ -159,16 +158,9 @@ private fun JournalCard(journal: JournalEntity, onClick: () -> Unit) {
                     .height(200.dp)
             ) {
                 if (!journal.imageUrl.isNullOrEmpty()) {
-                    val cleanUrl = journal.imageUrl.replace("\\", "/")
-                    val fullImageUrl = if (cleanUrl.startsWith("http")) {
-                        cleanUrl
-                    } else {
-                        "${RetrofitClient.IMAGE_BASE_URL}${cleanUrl}"
-                    }
-
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
-                            .data(fullImageUrl)
+                            .data(UrlUtils.getFullImageUrl(journal.imageUrl))
                             .crossfade(true)
                             .build(),
                         contentDescription = journal.title,

@@ -24,8 +24,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.app.kenala.api.RetrofitClient
 import com.app.kenala.ui.theme.*
+import com.app.kenala.utils.UrlUtils
 import com.app.kenala.viewmodel.JournalViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -93,16 +93,9 @@ fun JournalDetailScreen(
                         .height(380.dp)
                 ) {
                     if (!journal.imageUrl.isNullOrEmpty()) {
-                        val cleanUrl = journal.imageUrl.replace("\\", "/")
-                        val fullImageUrl = if (cleanUrl.startsWith("http")) {
-                            cleanUrl
-                        } else {
-                            "${RetrofitClient.IMAGE_BASE_URL}${cleanUrl}"
-                        }
-
                         AsyncImage(
                             model = ImageRequest.Builder(LocalContext.current)
-                                .data(fullImageUrl)
+                                .data(UrlUtils.getFullImageUrl(journal.imageUrl))
                                 .crossfade(true)
                                 .build(),
                             contentDescription = journal.title,
@@ -145,6 +138,7 @@ fun JournalDetailScreen(
                         }
                     }
 
+                    // Gradient Overlay agar teks judul di bawah terlihat jelas
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -162,6 +156,7 @@ fun JournalDetailScreen(
                     )
                 }
 
+                // Konten Kartu Judul dan Cerita
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()

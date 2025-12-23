@@ -35,7 +35,6 @@ fun LoginScreen(
     var emailError by remember { mutableStateOf<String?>(null) }
     var passwordError by remember { mutableStateOf<String?>(null) }
 
-    // Validation
     fun validateEmail(): Boolean {
         emailError = when {
             email.isBlank() -> "Email tidak boleh kosong"
@@ -101,7 +100,6 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Error Message
             if (errorMessage != null) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),

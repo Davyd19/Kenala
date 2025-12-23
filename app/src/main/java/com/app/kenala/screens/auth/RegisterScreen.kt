@@ -40,7 +40,6 @@ fun RegisterScreen(
     var passwordError by remember { mutableStateOf<String?>(null) }
     var confirmPasswordError by remember { mutableStateOf<String?>(null) }
 
-    // Validation functions
     fun validateName(): Boolean {
         nameError = when {
             name.isBlank() -> "Nama tidak boleh kosong"
@@ -127,7 +126,6 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Error Message
             if (errorMessage != null) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),

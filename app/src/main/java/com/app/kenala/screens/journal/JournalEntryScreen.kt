@@ -10,7 +10,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Place
@@ -45,21 +45,11 @@ fun JournalEntryScreen(
     var journalTitle by remember { mutableStateOf("") }
     var journalStory by remember { mutableStateOf("") }
     val isSaving by journalViewModel.isLoading.collectAsState()
+    val journalSaved by journalViewModel.journalSaved.collectAsState()
 
-    // State baru untuk tracking apakah misi SUDAH selesai di backend
-    // Ini penting agar jika user tekan "Selesai Tanpa Jurnal", kita tidak panggil completeMission lagi
     var isMissionCompletedOnServer by remember { mutableStateOf(false) }
-
-    val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        // Handle image selection
-    }
-
-    // Variable state untuk menyimpan Uri gambar
     var imageUri by remember { mutableStateOf<Uri?>(null) }
 
-    // Perbaikan launcher agar mengupdate state imageUri
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -74,7 +64,13 @@ fun JournalEntryScreen(
         }
     }
 
-    // Fungsi helper untuk menyelesaikan misi (jika belum)
+    LaunchedEffect(journalSaved) {
+        if (journalSaved) {
+            journalViewModel.resetJournalSaved()
+            onSaveClick()
+        }
+    }
+
     fun ensureMissionCompleted(onSuccess: () -> Unit) {
         if (isMissionCompletedOnServer) {
             onSuccess()
@@ -86,7 +82,7 @@ fun JournalEntryScreen(
                 isMissionCompletedOnServer = true
                 onSuccess()
             }
-        } ?: onSuccess() // Jika tidak ada misi (manual entry), langsung sukses
+        } ?: onSuccess()
     }
 
     fun handleSave() {
@@ -95,7 +91,6 @@ fun JournalEntryScreen(
         }
 
         ensureMissionCompleted {
-            // Setelah misi dipastikan selesai, buat jurnal
             journalViewModel.createJournal(
                 title = journalTitle,
                 story = journalStory,
@@ -104,14 +99,12 @@ fun JournalEntryScreen(
                 latitude = selectedMission?.latitude,
                 longitude = selectedMission?.longitude
             )
-            onSaveClick() // Kembali ke Home
         }
     }
 
-    // Fungsi baru: Selesai Tanpa Jurnal
     fun handleFinishWithoutJournal() {
         ensureMissionCompleted {
-            onSaveClick() // Kembali ke Home tanpa membuat jurnal
+            onSaveClick()
         }
     }
 
@@ -121,16 +114,14 @@ fun JournalEntryScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "Selesaikan Misi", // Judul diganti sedikit agar lebih umum
+                        "Selesaikan Misi",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold
                     )
                 },
-                // Tombol Back dihilangkan atau diarahkan ke Home untuk mencegah user 'membatalkan' penyelesaian secara tidak sengaja
-                // Di sini kita arahkan ke handleFinishWithoutJournal agar aman
                 navigationIcon = {
                     IconButton(onClick = { handleFinishWithoutJournal() }, enabled = !isSaving) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -146,7 +137,6 @@ fun JournalEntryScreen(
                 .padding(horizontal = 25.dp, vertical = 20.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Card Info Misi dengan desain lebih modern
             selectedMission?.let { mission ->
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -199,7 +189,7 @@ fun JournalEntryScreen(
 
                         if (realDistance > 0) {
                             Spacer(modifier = Modifier.height(16.dp))
-                            Divider(
+                            HorizontalDivider(
                                 color = AccentColor.copy(alpha = 0.2f),
                                 thickness = 1.dp
                             )
@@ -223,7 +213,6 @@ fun JournalEntryScreen(
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
-            // Section header yang lebih menarik
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -248,7 +237,6 @@ fun JournalEntryScreen(
                 )
             }
 
-            // Judul field dengan styling lebih baik
             OutlinedTextField(
                 value = journalTitle,
                 onValueChange = { journalTitle = it },
@@ -269,7 +257,6 @@ fun JournalEntryScreen(
             )
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Story field dengan styling lebih baik
             OutlinedTextField(
                 value = journalStory,
                 onValueChange = { journalStory = it },
@@ -290,7 +277,6 @@ fun JournalEntryScreen(
             )
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Photo button dengan styling lebih menarik
             OutlinedButton(
                 onClick = { launcher.launch("image/*") },
                 modifier = Modifier
@@ -298,7 +284,7 @@ fun JournalEntryScreen(
                     .height(56.dp),
                 enabled = !isSaving,
                 shape = MaterialTheme.shapes.large,
-                border = androidx.compose.foundation.BorderStroke(
+                border = BorderStroke(
                     1.5.dp,
                     if (imageUri == null) AccentColor.copy(alpha = 0.5f) else AccentColor
                 )
@@ -339,7 +325,6 @@ fun JournalEntryScreen(
 
             Spacer(modifier = Modifier.height(30.dp))
 
-            // TOMBOL 1: Simpan Jurnal & Selesai dengan styling lebih menarik
             Button(
                 onClick = { handleSave() },
                 modifier = Modifier
@@ -373,7 +358,6 @@ fun JournalEntryScreen(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // TOMBOL 2: Lewati Jurnal dengan styling lebih baik
             OutlinedButton(
                 onClick = { handleFinishWithoutJournal() },
                 modifier = Modifier
@@ -381,7 +365,7 @@ fun JournalEntryScreen(
                     .height(56.dp),
                 shape = MaterialTheme.shapes.extraLarge,
                 enabled = !isSaving,
-                border = androidx.compose.foundation.BorderStroke(
+                border = BorderStroke(
                     1.5.dp,
                     MaterialTheme.colorScheme.outline
                 )

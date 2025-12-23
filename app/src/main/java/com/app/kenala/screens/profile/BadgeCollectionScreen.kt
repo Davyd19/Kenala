@@ -94,7 +94,6 @@ fun BadgeCollectionScreen(
                         .fillMaxSize()
                         .padding(innerPadding)
                 ) {
-                    // Progress Section
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -284,7 +283,6 @@ private fun BadgeDetailDialogFromApi(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        // WARNA CARD: Putih (surface theme)
         containerColor = MaterialTheme.colorScheme.surface,
         icon = {
             Box(

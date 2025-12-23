@@ -189,7 +189,6 @@ private fun ProfileHeader(user: UserEntity?, stats: StatsDto?) {
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
-        // TAMBAHAN: Tampilkan Bio pengguna
         user?.bio?.let { bio ->
             if (bio.isNotBlank()) {
                 Spacer(modifier = Modifier.height(4.dp))

@@ -29,11 +29,8 @@ fun SplashScreen(
     val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
     val isAuthChecked by authViewModel.isAuthChecked.collectAsState()
 
-    // Logika Navigasi
     LaunchedEffect(isAuthChecked, isLoggedIn) {
         if (isAuthChecked) {
-            // Beri sedikit delay agar logo terlihat estetik (opsional, misal 500ms)
-            // Jika ingin instan, hapus baris delay ini
             delay(500)
 
             if (isLoggedIn) {
@@ -48,11 +45,10 @@ fun SplashScreen(
         }
     }
 
-    // UI Splash Screen
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background), // Atau warna primary
+            .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center
     ) {
         Image(

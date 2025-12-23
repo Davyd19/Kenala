@@ -2,10 +2,6 @@ package com.app.kenala.data.remote.dto
 
 import com.google.gson.annotations.SerializedName
 
-// File ini HANYA berisi Data (DTO) dan Response.
-// Semua Request (CheckLocationRequest, dll) sudah dipindah ke RequestDtos.kt
-
-// DTO Asli
 data class MissionDto(
     val id: String,
     val name: String,
@@ -17,13 +13,12 @@ data class MissionDto(
     val address: String?,
     val image_url: String?,
     val budget_category: String,
-    val estimated_distance: Double?, // Ubah ke Double agar konsisten
+    val estimated_distance: Double?,
     val difficulty_level: String,
     val points: Int,
     val is_active: Boolean
 )
 
-// --- DTO BARU UNTUK TRACKING MISI ---
 
 data class MissionClueDto(
     val id: String,
@@ -45,14 +40,12 @@ data class MissionProgressDto(
     @SerializedName("is_mission_completed") val isMissionCompleted: Boolean
 )
 
-// DTO untuk Response GET /api/tracking/mission/:id
 data class MissionWithCluesResponse(
     val mission: MissionDto,
     val clues: List<MissionClueDto>,
     val progress: MissionProgressDto
 )
 
-// DTO untuk Response POST /api/tracking/check-location
 data class CheckLocationResponse(
     val status: String, // "tracking", "clue_reached", "all_clues_completed"
     @SerializedName("clue_reached") val clueReached: Boolean,

@@ -1,7 +1,7 @@
 package com.app.kenala.data.repository
 
 import com.app.kenala.api.ApiService
-import com.app.kenala.data.remote.dto.UpdateProfileRequest // IMPORT DTO
+import com.app.kenala.data.remote.dto.UpdateProfileRequest
 import com.app.kenala.data.local.dao.UserDao
 import com.app.kenala.data.local.entities.UserEntity
 import com.app.kenala.data.remote.dto.StatsDto

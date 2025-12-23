@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PhotoCamera
@@ -24,8 +24,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.app.kenala.api.RetrofitClient
 import com.app.kenala.ui.theme.*
-import com.app.kenala.viewmodel.JournalViewModel // Pastikan path sesuai dengan lokasi ViewModel kamu
+import com.app.kenala.viewmodel.JournalViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,7 +54,7 @@ fun JournalDetailScreen(
                         modifier = Modifier.padding(start = 8.dp)
                     ) {
                         Icon(
-                            Icons.Default.ArrowBack,
+                            Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Kembali"
                         )
                     }
@@ -86,16 +87,22 @@ fun JournalDetailScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             if (journal != null) {
-                // Hero Image Section dengan parallax effect
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(380.dp)
                 ) {
-                    if (journal.imageUrl != null) {
+                    if (!journal.imageUrl.isNullOrEmpty()) {
+                        val cleanUrl = journal.imageUrl.replace("\\", "/")
+                        val fullImageUrl = if (cleanUrl.startsWith("http")) {
+                            cleanUrl
+                        } else {
+                            "${RetrofitClient.IMAGE_BASE_URL}${cleanUrl}"
+                        }
+
                         AsyncImage(
                             model = ImageRequest.Builder(LocalContext.current)
-                                .data(journal.imageUrl)
+                                .data(fullImageUrl)
                                 .crossfade(true)
                                 .build(),
                             contentDescription = journal.title,
@@ -103,7 +110,6 @@ fun JournalDetailScreen(
                             modifier = Modifier.fillMaxSize()
                         )
                     } else {
-                        // Fallback gradient yang lebih menarik
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -139,7 +145,6 @@ fun JournalDetailScreen(
                         }
                     }
 
-                    // Enhanced gradient overlay untuk transisi yang lebih smooth
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -157,13 +162,11 @@ fun JournalDetailScreen(
                     )
                 }
 
-                // Content Section dengan offset yang lebih halus
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .offset(y = (-40).dp)
                 ) {
-                    // Title Card dengan desain lebih modern
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -177,7 +180,6 @@ fun JournalDetailScreen(
                         Column(
                             modifier = Modifier.padding(28.dp)
                         ) {
-                            // Date Badge di atas
                             Surface(
                                 color = AccentColor.copy(alpha = 0.15f),
                                 shape = MaterialTheme.shapes.medium,
@@ -208,7 +210,6 @@ fun JournalDetailScreen(
 
                             Spacer(modifier = Modifier.height(16.dp))
 
-                            // Title dengan line height yang lebih baik
                             Text(
                                 text = journal.title,
                                 style = MaterialTheme.typography.headlineMedium,
@@ -221,7 +222,6 @@ fun JournalDetailScreen(
 
                     Spacer(modifier = Modifier.height(28.dp))
 
-                    // Story Content dengan desain lebih menarik
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -235,7 +235,6 @@ fun JournalDetailScreen(
                         Column(
                             modifier = Modifier.padding(28.dp)
                         ) {
-                            // Section Header yang lebih menarik
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -260,7 +259,6 @@ fun JournalDetailScreen(
 
                             Spacer(modifier = Modifier.height(20.dp))
 
-                            // Story text dengan typography yang lebih baik
                             Text(
                                 text = journal.story,
                                 style = MaterialTheme.typography.bodyLarge,
@@ -273,7 +271,6 @@ fun JournalDetailScreen(
                     Spacer(modifier = Modifier.height(40.dp))
                 }
             } else {
-                // Journal not found
                 Box(
                     modifier = Modifier
                         .fillMaxSize()

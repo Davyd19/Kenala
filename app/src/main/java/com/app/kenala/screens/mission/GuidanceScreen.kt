@@ -53,12 +53,10 @@ fun GuidanceScreen(
     val isLoading by missionViewModel.isLoading.collectAsState()
     val error by missionViewModel.error.collectAsState()
 
-    // State UI
     val hasArrivedAtDestination = locationResponse?.destination?.isArrived == true
     val currentClue = locationResponse?.currentClue
     val destination = locationResponse?.destination
 
-    // Logic Checks
     val isHeadingToDestination = currentClue == null && destination != null
     val totalClues = locationResponse?.progress?.total ?: 0
     val currentClueOrder = currentClue?.order ?: 0
@@ -78,7 +76,6 @@ fun GuidanceScreen(
         )
     }
 
-    // --- LOGIKA REAL-TIME (SOCKET & BACKGROUND SERVICE) ---
     LaunchedEffect(missionId) {
         if (missionId.isNotEmpty()) {
             missionViewModel.resetMissionProgress(missionId) {
@@ -109,7 +106,6 @@ fun GuidanceScreen(
         }
     }
 
-    // Logika Tracking Lokal untuk UI
     LaunchedEffect(locationManager, missionWithClues, hasArrivedAtDestination) {
         if (missionWithClues == null || hasArrivedAtDestination) return@LaunchedEffect
 
@@ -124,7 +120,6 @@ fun GuidanceScreen(
         }
     }
 
-    // Handler Event Misi (Notifikasi & Auto Navigasi)
     LaunchedEffect(Unit) {
         missionViewModel.missionEvent.collectLatest { event ->
             when (event) {
@@ -132,8 +127,6 @@ fun GuidanceScreen(
                     notificationHelper.showArrivalNotification(event.title)
                 }
                 is MissionEvent.MissionCompletedSuccessfully -> {
-                    // Hapus Toast "Data tersimpan"
-                    // Beri jeda 2 detik agar user melihat animasi sukses, lalu pindah otomatis
                     delay(2000)
                     onArrivedClick(distanceTraveled)
                 }
@@ -144,7 +137,6 @@ fun GuidanceScreen(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            // Sembunyikan TopBar jika sudah sampai agar tampilan sukses lebih bersih
             if (!hasArrivedAtDestination) {
                 TopAppBar(
                     title = {
@@ -181,13 +173,11 @@ fun GuidanceScreen(
 
         Box(modifier = Modifier.fillMaxSize()) {
             if (hasArrivedAtDestination) {
-                // TAMPILAN SUKSES KHUSUS (Lebih Bagus)
                 ArrivalSuccessView(
                     modifier = Modifier.padding(innerPadding),
                     missionName = missionWithClues?.mission?.name ?: "Misi"
                 )
             } else {
-                // TAMPILAN GUIDANCE NORMAL
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -209,7 +199,7 @@ fun GuidanceScreen(
                         )
                         Spacer(modifier = Modifier.height(30.dp))
 
-                        LocationIcon() // Animasi Pulse
+                        LocationIcon()
 
                         Spacer(modifier = Modifier.height(30.dp))
 
@@ -256,8 +246,6 @@ fun GuidanceScreen(
                             Text(text = error!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                         }
                     }
-
-                    // Action Buttons (Normal)
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -334,13 +322,11 @@ fun GuidanceScreen(
     }
 }
 
-// --- KOMPONEN UI BARU: ArrivalSuccessView ---
 @Composable
 fun ArrivalSuccessView(
     modifier: Modifier = Modifier,
     missionName: String
 ) {
-    // Animasi Scale untuk Checkmark
     val scale = remember { Animatable(0f) }
     LaunchedEffect(Unit) {
         scale.animateTo(1f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy))
@@ -353,11 +339,9 @@ fun ArrivalSuccessView(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Lingkaran Hijau Besar Berdenyut
         Box(
             contentAlignment = Alignment.Center
         ) {
-            // Efek Glow/Ring belakang
             Box(
                 modifier = Modifier
                     .size(180.dp)
@@ -370,7 +354,6 @@ fun ArrivalSuccessView(
                     .scale(scale.value)
                     .background(ForestGreen.copy(alpha = 0.2f), CircleShape)
             )
-            // Icon Utama
             Icon(
                 imageVector = Icons.Default.CheckCircle,
                 contentDescription = "Success",
@@ -411,7 +394,6 @@ fun ArrivalSuccessView(
 
         Spacer(modifier = Modifier.height(48.dp))
 
-        // Indikator Loading Pengalihan
         CircularProgressIndicator(
             modifier = Modifier.size(32.dp),
             color = ForestGreen,
@@ -428,7 +410,6 @@ fun ArrivalSuccessView(
     }
 }
 
-// ... Animation Components Lama (LocationIcon, DistanceCard) ...
 
 @Composable
 fun LocationIcon() {

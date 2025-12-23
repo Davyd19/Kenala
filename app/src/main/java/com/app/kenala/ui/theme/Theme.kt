@@ -11,7 +11,6 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-// 1. Light Mode (Tetap Sama/Original)
 private val LightColorScheme = lightColorScheme(
     primary = PrimaryColor,
     onPrimary = WhiteColor,
@@ -32,34 +31,24 @@ private val LightColorScheme = lightColorScheme(
     onError = WhiteColor
 )
 
-// 2. Dark Mode (Disempurnakan: Night Adventure Theme) 🌙
 private val DarkColorScheme = darkColorScheme(
-    // Primary: Gunakan Kuning agar ikon/tombol aktif 'menyala' di kegelapan
     primary = DarkAccent,
-    onPrimary = DeepBlue, // Teks di atas tombol kuning tetap biru tua agar terbaca
-
-    // Container: Area berwarna (seperti tombol non-aktif/chip) pakai biru tua
+    onPrimary = DeepBlue,
     primaryContainer = DeepBlue,
     onPrimaryContainer = DarkAccent,
-
-    // Secondary: Biru muda bercahaya (Cyan/Sky)
     secondary = DarkSecondary,
     onSecondary = DarkBackground,
-
-    // Tertiary: Variasi lain
     tertiary = PrimaryYellow,
+    background = DarkBackground,
+    onBackground = DarkTextPrimary,
 
-    // Background & Surface
-    background = DarkBackground,    // Biru Malam Sangat Gelap
-    onBackground = DarkTextPrimary, // Teks Putih Tulang
+    surface = DarkSurface,
+    onSurface = DarkTextPrimary,
 
-    surface = DarkSurface,          // Kartu (Navy Gelap)
-    onSurface = DarkTextPrimary,    // Teks di atas Kartu
+    surfaceVariant = DarkSurfaceVariant,
+    onSurfaceVariant = DarkTextSecondary,
 
-    surfaceVariant = DarkSurfaceVariant, // Kartu sekunder
-    onSurfaceVariant = DarkTextSecondary, // Teks sekunder (Abu kebiruan)
-
-    outline = DarkSurfaceVariant.copy(alpha = 0.8f), // Garis pembatas halus
+    outline = DarkSurfaceVariant.copy(alpha = 0.8f),
     error = DarkError,
     onError = DarkBackground
 )
@@ -75,12 +64,10 @@ fun KenalaTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            // Status bar mengikuti warna background agar terlihat seamless (edge-to-edge)
             window.statusBarColor = colorScheme.background.toArgb()
             window.navigationBarColor = colorScheme.surface.toArgb()
 
             WindowCompat.getInsetsController(window, view).apply {
-                // Saat Dark Mode, ikon status bar harus terang (isLight = false)
                 isAppearanceLightStatusBars = !darkTheme
                 isAppearanceLightNavigationBars = !darkTheme
             }

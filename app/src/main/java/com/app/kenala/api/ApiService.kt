@@ -7,7 +7,6 @@ import retrofit2.http.*
 
 interface ApiService {
 
-    // --- AUTH ---
     @POST("auth/register")
     suspend fun register(@Body request: RegisterRequest): Response<AuthResponse>
 
@@ -17,7 +16,6 @@ interface ApiService {
     @POST("auth/change-password")
     suspend fun changePassword(@Body request: ChangePasswordRequest): Response<GeneralResponse>
 
-    // --- JOURNALS ---
     @GET("journals")
     suspend fun getJournals(): Response<List<JournalDto>>
 
@@ -36,7 +34,6 @@ interface ApiService {
     @DELETE("journals/{id}")
     suspend fun deleteJournal(@Path("id") id: String): Response<Unit>
 
-    // --- MISSIONS ---
     @GET("missions")
     suspend fun getMissions(
         @Query("category") category: String? = null,
@@ -50,7 +47,6 @@ interface ApiService {
     @POST("missions/complete")
     suspend fun completeMission(@Body request: CompleteMissionRequest): Response<Unit>
 
-    // --- PROFILE ---
     @GET("profile")
     suspend fun getProfile(): Response<UserDto>
 
@@ -69,7 +65,6 @@ interface ApiService {
     @GET("profile/weekly-challenge")
     suspend fun getWeeklyChallenge(): Response<WeeklyChallengeDto>
 
-    // --- TRACKING ---
     @GET("tracking/mission/{missionId}")
     suspend fun getMissionWithClues(
         @Path("missionId") missionId: String
@@ -90,12 +85,11 @@ interface ApiService {
         @Body request: ResetProgressRequest
     ): Response<Unit>
 
-    // --- UPLOAD & SUGGESTIONS ---
     @Multipart
     @POST("upload")
     suspend fun uploadImage(
         @Part image: MultipartBody.Part
-    ): Response<UploadResponse>
+    ): Response<Map<String, String>>
 
     @GET("suggestions")
     suspend fun getSuggestions(): Response<List<SuggestionDto>>
@@ -116,7 +110,6 @@ interface ApiService {
     suspend fun deleteSuggestion(@Path("id") id: String): Response<Unit>
 }
 
-// Data class Response tetap di sini (atau dipindah ke DTO juga boleh, tapi biar ringkas di sini saja yang kecil)
 data class AuthResponse(
     val token: String,
     val user: UserDto

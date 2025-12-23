@@ -2,7 +2,6 @@ package com.app.kenala.data.remote.dto
 
 import com.google.gson.annotations.SerializedName
 
-// Data yang diterima dari server
 data class SuggestionDto(
     val id: String,
     @SerializedName("user_id") val userId: String,
@@ -10,8 +9,6 @@ data class SuggestionDto(
     val address: String?,
     val category: String,
     val description: String,
-    val status: String, // "pending", "approved", "rejected"
+    val status: String,
     @SerializedName("created_at") val createdAt: String
 )
-
-// CreateSuggestionRequest dan UpdateSuggestionRequest sudah dipindah ke RequestDtos.kt

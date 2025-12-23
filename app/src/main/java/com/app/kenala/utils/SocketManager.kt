@@ -9,8 +9,6 @@ import java.net.URISyntaxException
 object SocketManager {
     private var socket: Socket? = null
 
-    // Ganti URL ini dengan IP Address komputer Anda jika menggunakan Emulator (biasanya 10.0.2.2)
-    // atau IP Address LAN jika menggunakan Device Fisik (misal 192.168.1.X:3000)
     private const val SOCKET_URL = "http://10.0.2.2:3000"
 
     fun connect() {
@@ -40,7 +38,6 @@ object SocketManager {
         }
     }
 
-    // Fungsi ini yang sebelumnya hilang dan menyebabkan error
     fun emit(event: String, data: Any) {
         if (socket == null) {
             connect()
@@ -51,7 +48,6 @@ object SocketManager {
             Log.d("SocketManager", "Emitted event: $event with data: $data")
         } else {
             Log.w("SocketManager", "Socket not connected. Failed to emit: $event")
-            // Coba reconnect
             socket?.connect()
         }
     }

@@ -40,7 +40,6 @@ fun AdventureSuggestionScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
 
-    // PERBAIKAN KRITIS: Deklarasi state yang diperlukan untuk 'when (screenMode)'
     var screenMode by remember { mutableStateOf(ScreenMode.LIST) }
     var selectedSuggestion by remember { mutableStateOf<SuggestionDto?>(null) }
 
@@ -98,7 +97,6 @@ fun AdventureSuggestionScreen(
                     }
                 )
             } ?: run {
-                // Fail-safe jika state null
                 screenMode = ScreenMode.LIST
             }
             ScreenMode.EDIT -> selectedSuggestion?.let { suggestion ->
@@ -120,7 +118,6 @@ fun AdventureSuggestionScreen(
                     }
                 )
             } ?: run {
-                // Fail-safe jika state null
                 screenMode = ScreenMode.LIST
             }
         }
@@ -284,7 +281,6 @@ private fun SuggestionCard(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    // Tampilkan alamat di card jika ada
                     if (!suggestion.address.isNullOrBlank()) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -425,7 +421,6 @@ private fun AddSuggestionScreen(
                     }
                 }
 
-                // Item Baru: Input Alamat
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
@@ -546,7 +541,6 @@ private fun AddSuggestionScreen(
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(
-                        // Pass address ke fungsi onSave
                         onClick = { onSave(locationName, address, selectedCategory, description) },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -637,7 +631,6 @@ private fun SuggestionDetailScreen(
                         fontWeight = FontWeight.Bold
                     )
 
-                    // Tampilkan Alamat di Detail
                     if (!suggestion.address.isNullOrBlank()) {
                         Row(
                             verticalAlignment = Alignment.Top,
@@ -796,7 +789,6 @@ private fun EditSuggestionScreen(
 
     val categories = listOf("Kuliner", "Rekreasi", "Seni & Budaya", "Sejarah", "Belanja", "Alam")
 
-    // LOGIKA PERUBAHAN: Cek apakah ada perubahan
     val isChanged = remember(locationName, address, selectedCategory, description) {
         val originalAddress = suggestion.address.orEmpty().trim()
         val currentAddress = address.trim()
@@ -807,7 +799,6 @@ private fun EditSuggestionScreen(
                 description != suggestion.description
     }
 
-    // Logika canSave: Harus valid (tidak kosong), tidak sedang loading, DAN ADA perubahan
     val canSave = locationName.isNotBlank() && description.isNotBlank() && !isLoading && isChanged
 
     Scaffold(
@@ -854,7 +845,6 @@ private fun EditSuggestionScreen(
                     }
                 }
 
-                // Item Baru: Input Alamat untuk Edit
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(

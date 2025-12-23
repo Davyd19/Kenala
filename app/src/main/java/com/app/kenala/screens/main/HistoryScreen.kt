@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.app.kenala.api.RetrofitClient
 import com.app.kenala.data.local.entities.JournalEntity
 import com.app.kenala.ui.theme.AccentColor
 import com.app.kenala.ui.theme.LightTextColor
@@ -37,7 +38,6 @@ fun HistoryScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
 
-    // Trigger initial sync
     LaunchedEffect(Unit) {
         viewModel.syncJournals()
     }
@@ -153,16 +153,22 @@ private fun JournalCard(journal: JournalEntity, onClick: () -> Unit) {
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
         Column {
-            // Hero Image dengan gradient overlay
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp)
             ) {
-                if (journal.imageUrl != null) {
+                if (!journal.imageUrl.isNullOrEmpty()) {
+                    val cleanUrl = journal.imageUrl.replace("\\", "/")
+                    val fullImageUrl = if (cleanUrl.startsWith("http")) {
+                        cleanUrl
+                    } else {
+                        "${RetrofitClient.IMAGE_BASE_URL}${cleanUrl}"
+                    }
+
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
-                            .data(journal.imageUrl)
+                            .data(fullImageUrl)
                             .crossfade(true)
                             .build(),
                         contentDescription = journal.title,
@@ -170,7 +176,6 @@ private fun JournalCard(journal: JournalEntity, onClick: () -> Unit) {
                         modifier = Modifier.fillMaxSize()
                     )
                 } else {
-                    // Fallback gradient untuk jurnal tanpa gambar
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -184,8 +189,6 @@ private fun JournalCard(journal: JournalEntity, onClick: () -> Unit) {
                             )
                     )
                 }
-                
-                // Gradient overlay untuk readability
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -202,7 +205,6 @@ private fun JournalCard(journal: JournalEntity, onClick: () -> Unit) {
             }
 
             Column(modifier = Modifier.padding(20.dp)) {
-                // Date badge
                 Surface(
                     color = AccentColor.copy(alpha = 0.12f),
                     shape = MaterialTheme.shapes.small,
@@ -216,10 +218,9 @@ private fun JournalCard(journal: JournalEntity, onClick: () -> Unit) {
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                     )
                 }
-                
+
                 Spacer(modifier = Modifier.height(12.dp))
-                
-                // Title
+
                 Text(
                     text = journal.title,
                     style = MaterialTheme.typography.titleLarge,
@@ -228,10 +229,9 @@ private fun JournalCard(journal: JournalEntity, onClick: () -> Unit) {
                     overflow = TextOverflow.Ellipsis,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                
+
                 Spacer(modifier = Modifier.height(8.dp))
-                
-                // Story preview
+
                 Text(
                     text = journal.story,
                     style = MaterialTheme.typography.bodyMedium,
@@ -240,10 +240,9 @@ private fun JournalCard(journal: JournalEntity, onClick: () -> Unit) {
                     overflow = TextOverflow.Ellipsis,
                     lineHeight = MaterialTheme.typography.bodyMedium.lineHeight.times(1.4f)
                 )
-                
+
                 Spacer(modifier = Modifier.height(8.dp))
-                
-                // Read more indicator
+
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -255,7 +254,7 @@ private fun JournalCard(journal: JournalEntity, onClick: () -> Unit) {
                         fontWeight = FontWeight.Medium
                     )
                     Icon(
-                        imageVector = Icons.Default.ArrowForward,
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                         contentDescription = null,
                         tint = AccentColor,
                         modifier = Modifier.size(14.dp)

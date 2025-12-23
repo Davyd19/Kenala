@@ -1,5 +1,7 @@
 package com.app.kenala.data.remote.dto
 
+import com.google.gson.annotations.SerializedName
+
 data class JournalDto(
     val id: String,
     val user_id: String,

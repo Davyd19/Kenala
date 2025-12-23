@@ -34,7 +34,6 @@ import com.app.kenala.viewmodel.ProfileViewModel
 @Composable
 fun MainScreen(navController: NavHostController, ) {
     val mainNavController = rememberNavController()
-    // Inisialisasi ProfileViewModel di sini agar bisa di-pass ke HomeScreen & ProfileScreen
     val profileViewModel: ProfileViewModel = viewModel()
 
     Scaffold(
@@ -45,7 +44,7 @@ fun MainScreen(navController: NavHostController, ) {
         MainNavGraph(
             mainNavController = mainNavController,
             appNavController = navController,
-            profileViewModel = profileViewModel, // Pass ViewModel
+            profileViewModel = profileViewModel,
             modifier = Modifier.padding(innerPadding)
         )
     }
@@ -157,7 +156,7 @@ private fun RowScope.BottomNavItem(
 private fun MainNavGraph(
     mainNavController: NavHostController,
     appNavController: NavHostController,
-    profileViewModel: ProfileViewModel, // Terima ViewModel
+    profileViewModel: ProfileViewModel,
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -168,7 +167,7 @@ private fun MainNavGraph(
         composable(Screen.Home.route) {
             HomeScreen(
                 navController = appNavController,
-                profileViewModel = profileViewModel, // Pass ViewModel ke HomeScreen
+                profileViewModel = profileViewModel,
                 onNavigateToNotifications = {
                     appNavController.navigate(Screen.Notifications.route)
                 }
@@ -183,7 +182,7 @@ private fun MainNavGraph(
         }
         composable(Screen.Profile.route) {
             ProfileScreen(
-                profileViewModel = profileViewModel, // Pass ViewModel ke ProfileScreen
+                profileViewModel = profileViewModel,
                 onNavigateToEditProfile = {
                     appNavController.navigate(Screen.EditProfile.route)
                 },

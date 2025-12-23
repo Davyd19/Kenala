@@ -17,7 +17,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
-// Event khusus untuk notifikasi dan navigasi setelah misi selesai
 sealed class MissionEvent {
     data class ShowNotification(val title: String, val message: String) : MissionEvent()
     object MissionCompletedSuccessfully : MissionEvent()
@@ -27,29 +26,22 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
 
     private val apiService = RetrofitClient.apiService
 
-    // State untuk daftar misi
     private val _missions = MutableStateFlow<List<MissionDto>>(emptyList())
     val missions: StateFlow<List<MissionDto>> = _missions.asStateFlow()
 
-    // State untuk misi yang sedang dipilih
     private val _selectedMission = MutableStateFlow<MissionDto?>(null)
     val selectedMission: StateFlow<MissionDto?> = _selectedMission.asStateFlow()
 
-    // State untuk detail misi dan clue-clue nya
     private val _missionWithClues = MutableStateFlow<MissionWithCluesResponse?>(null)
     val missionWithClues: StateFlow<MissionWithCluesResponse?> = _missionWithClues.asStateFlow()
 
-    // State untuk hasil tracking lokasi terbaru
     private val _checkLocationResponse = MutableStateFlow<CheckLocationResponse?>(null)
     val checkLocationResponse: StateFlow<CheckLocationResponse?> = _checkLocationResponse.asStateFlow()
 
-    // --- FITUR BARU: Odometer (Jarak Tempuh Real) ---
-    // Disimpan di ViewModel agar tidak reset (berkurang jadi 0) saat rotasi layar
     private val _distanceTraveled = MutableStateFlow(0.0)
     val distanceTraveled: StateFlow<Double> = _distanceTraveled.asStateFlow()
     private var lastOdometerLocation: Location? = null
 
-    // Flow untuk event satu kali (notifikasi/toast)
     private val _missionEvent = MutableSharedFlow<MissionEvent>()
     val missionEvent: SharedFlow<MissionEvent> = _missionEvent.asSharedFlow()
 
@@ -59,16 +51,12 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
-    // State tracking
     private val _isTracking = MutableStateFlow(false)
     val isTracking: StateFlow<Boolean> = _isTracking.asStateFlow()
 
-    // Guard agar API complete tidak terpanggil berkali-kali dalam satu sesi
     private var isMissionFinished = false
 
-    /**
-     * Mengambil daftar misi
-     */
+
     fun fetchMissions(category: String? = null, budget: String? = null, distance: String? = null) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -91,9 +79,7 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    /**
-     * Mengambil misi secara acak (Gacha)
-     */
+
     fun getRandomMission(category: String? = null, budget: String? = null, distance: String? = null) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -122,9 +108,7 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    /**
-     * Mengambil detail misi beserta list clues
-     */
+
     fun fetchMissionWithClues(missionId: String) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -143,12 +127,7 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    /**
-     * --- FITUR BARU: Update Odometer ---
-     * Dipanggil dari UI setiap kali ada lokasi baru.
-     * Hanya menambah jarak jika user benar-benar bergerak (GPS).
-     * TIDAK dipanggil saat Skip Clue.
-     */
+
     fun updateOdometer(newLocation: Location) {
         if (lastOdometerLocation != null) {
             val distanceInc = lastOdometerLocation!!.distanceTo(newLocation)
@@ -160,9 +139,7 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
         lastOdometerLocation = newLocation
     }
 
-    /**
-     * Logika Cek Lokasi: Dipanggil otomatis oleh GPS
-     */
+
     fun checkLocation(latitude: Double, longitude: Double) {
         if (isMissionFinished) return
 

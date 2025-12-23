@@ -79,7 +79,6 @@ class SuggestionViewModel(application: Application) : AndroidViewModel(applicati
             _error.value = null
             repository.updateSuggestion(id, locationName, address, category, description)
                 .onSuccess { updatedSuggestion ->
-                    // Ganti item lama di list dengan item baru
                     _suggestions.value = _suggestions.value.map {
                         if (it.id == updatedSuggestion.id) updatedSuggestion else it
                     }

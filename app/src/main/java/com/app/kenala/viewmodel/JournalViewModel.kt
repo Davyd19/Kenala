@@ -2,16 +2,17 @@ package com.app.kenala.viewmodel
 
 import android.app.Application
 import android.net.Uri
+import android.util.Log
+import android.webkit.MimeTypeMap
 import android.provider.OpenableColumns
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.kenala.api.RetrofitClient
-import com.app.kenala.data.remote.dto.CreateJournalRequest // IMPORT DTO
-import com.app.kenala.data.remote.dto.UpdateJournalRequest // IMPORT DTO
 import com.app.kenala.data.local.AppDatabase
 import com.app.kenala.data.local.entities.JournalEntity
 import com.app.kenala.data.repository.JournalRepository
 import com.app.kenala.utils.DataStoreManager
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -20,19 +21,19 @@ import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
 import java.io.FileOutputStream
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class JournalViewModel(application: Application) : AndroidViewModel(application) {
-    // ... (Isi class tetap sama, hanya import di atas yang berubah)
-    // Saya tulis ulang bagian atas class untuk konteks
 
     private val database = AppDatabase.getDatabase(application)
     private val apiService = RetrofitClient.apiService
     private val dataStoreManager = DataStoreManager(application)
+
     private val repository = JournalRepository(
         apiService,
-        database.journalDao()
+        database.journalDao(),
+        application.applicationContext
     )
 
-    // Get current user ID
     private val currentUserId: Flow<String?> = dataStoreManager.userId
 
     val journals: StateFlow<List<JournalEntity>> = currentUserId
@@ -55,23 +56,26 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    private val _journalSaved = MutableStateFlow(false)
+    val journalSaved: StateFlow<Boolean> = _journalSaved.asStateFlow()
+
     init {
         syncJournals()
     }
 
+    fun resetJournalSaved() {
+        _journalSaved.value = false
+    }
+
     fun syncJournals() {
         viewModelScope.launch {
-            _isLoading.value = true
             val userId = currentUserId.first()
             if (userId != null) {
                 repository.syncJournals(userId)
                     .onFailure {
-                        _error.value = it.message
+                        Log.e("JournalViewModel", "Sync failed: ${it.message}")
                     }
-            } else {
-                _error.value = "User tidak terautentikasi"
             }
-            _isLoading.value = false
         }
     }
 
@@ -86,6 +90,7 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
+            _journalSaved.value = false
 
             try {
                 val userId = currentUserId.first()
@@ -95,27 +100,30 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
                     return@launch
                 }
 
-                val imageUrl = if (imageUri != null) {
+                var finalImageUrl: String? = null
+
+                if (imageUri != null) {
                     val uploadResult = uploadImage(imageUri)
                     if (uploadResult.isSuccess) {
-                        uploadResult.getOrNull()
+                        finalImageUrl = uploadResult.getOrNull()
                     } else {
                         _error.value = "Gagal upload gambar: ${uploadResult.exceptionOrNull()?.message}"
                         _isLoading.value = false
                         return@launch
                     }
-                } else {
-                    null
                 }
 
-                repository.createJournal(userId, title, story, imageUrl, locationName, latitude, longitude)
+                repository.createJournal(userId, title, story, finalImageUrl, locationName, latitude, longitude)
+                    .onSuccess {
+                        _journalSaved.value = true
+                        syncJournals()
+                    }
                     .onFailure {
                         _error.value = it.message
                     }
-                _isLoading.value = false
-
             } catch (e: Exception) {
                 _error.value = "Terjadi kesalahan: ${e.message}"
+            } finally {
                 _isLoading.value = false
             }
         }
@@ -131,9 +139,10 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
+            _journalSaved.value = false
 
             try {
-                val imageUrl = if (imageUri != null) {
+                val finalImageUrl = if (imageUri != null) {
                     val uploadResult = uploadImage(imageUri)
                     if (uploadResult.isSuccess) {
                         uploadResult.getOrNull()
@@ -146,14 +155,17 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
                     existingImageUrl
                 }
 
-                repository.updateJournal(id, title, story, imageUrl)
+                repository.updateJournal(id, title, story, finalImageUrl)
+                    .onSuccess {
+                        _journalSaved.value = true
+                        syncJournals()
+                    }
                     .onFailure {
                         _error.value = it.message
                     }
-                _isLoading.value = false
-
             } catch (e: Exception) {
                 _error.value = "Terjadi kesalahan: ${e.message}"
+            } finally {
                 _isLoading.value = false
             }
         }
@@ -164,39 +176,49 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
             val context = getApplication<Application>().applicationContext
             val contentResolver = context.contentResolver
 
-            var fileName: String? = null
-            contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                    if (nameIndex != -1) {
-                        fileName = cursor.getString(nameIndex)
-                    }
-                }
-            }
-            fileName = fileName ?: "image_${System.currentTimeMillis()}"
+            val mimeType = contentResolver.getType(uri) ?: "image/jpeg"
+            val extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType) ?: "jpg"
 
+            val fileName = "upload_${System.currentTimeMillis()}.$extension"
+
+            val file = File(context.cacheDir, fileName)
             val inputStream = contentResolver.openInputStream(uri)
-            val file = File(context.cacheDir, fileName!!)
             val outputStream = FileOutputStream(file)
             inputStream?.copyTo(outputStream)
             inputStream?.close()
             outputStream.close()
 
-            val requestFile = file.asRequestBody(
-                contentResolver.getType(uri)?.toMediaTypeOrNull()
-            )
+            val requestFile = file.asRequestBody(mimeType.toMediaTypeOrNull())
 
+            // 3. Upload dengan key "image"
             val body = MultipartBody.Part.createFormData("image", file.name, requestFile)
             val response = apiService.uploadImage(body)
-
             file.delete()
 
             if (response.isSuccessful) {
-                Result.success(response.body()?.imageUrl)
+                val responseBody = response.body()
+
+                var url = responseBody?.get("url")
+                    ?: responseBody?.get("imageUrl")
+                    ?: responseBody?.get("path")
+                    ?: responseBody?.get("file")
+                    ?: responseBody?.get("data")
+
+                if (!url.isNullOrEmpty()) {
+                    url = url.replace("\\", "/")
+
+                    Log.d("JournalViewModel", "Gambar berhasil diupload, URL bersih: $url")
+                    Result.success(url)
+                } else {
+                    Result.failure(Exception("Server sukses, tapi URL gambar kosong."))
+                }
             } else {
-                Result.failure(Exception("Upload gagal: ${response.message()}"))
+                val errorMsg = "Upload gagal: ${response.code()} ${response.message()}"
+                Log.e("JournalViewModel", errorMsg)
+                Result.failure(Exception(errorMsg))
             }
         } catch (e: Exception) {
+            Log.e("JournalViewModel", "Error upload", e)
             Result.failure(e)
         }
     }

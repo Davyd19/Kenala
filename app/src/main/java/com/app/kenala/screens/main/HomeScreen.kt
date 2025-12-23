@@ -49,12 +49,9 @@ fun HomeScreen(
     profileViewModel: ProfileViewModel = viewModel(),
     onNavigateToNotifications: () -> Unit
 ) {
-    // Ambil data dari ViewModel
     val user by profileViewModel.user.collectAsState()
     val stats by profileViewModel.stats.collectAsState()
 
-    // --- FIX PENTING: Auto-refresh data setiap kali HomeScreen tampil ---
-    // Ini menjamin data statistik (Misi Selesai, Jarak) diperbarui setelah user kembali dari JournalEntryScreen
     LaunchedEffect(Unit) {
         profileViewModel.refresh()
     }
@@ -276,7 +273,6 @@ private fun StatsHighlightCard(stats: StatsDto?) {
             )
         }
 
-        // Tambahkan category breakdown jika ada
         if (stats?.category_breakdown?.isNotEmpty() == true) {
             Spacer(modifier = Modifier.height(16.dp))
             Text(

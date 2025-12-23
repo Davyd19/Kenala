@@ -36,10 +36,8 @@ fun SettingsScreen(
     authViewModel: AuthViewModel = viewModel(),
     settingsViewModel: SettingsViewModel = viewModel()
 ) {
-    // 1. State dari SettingsViewModel (DataStore)
     val darkModeEnabled by settingsViewModel.darkModeEnabled.collectAsState()
 
-    // 2. State Lokal untuk Dialog
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showPasswordDialog by remember { mutableStateOf(false) }
 

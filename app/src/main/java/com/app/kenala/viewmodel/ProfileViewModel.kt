@@ -66,11 +66,10 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     fun refresh() {
         viewModelScope.launch {
             _isRefreshing.value = true
-            // Panggil API secara paralel
             val jobs = listOf(
-                launch { syncUserProfile() }, // Update data user (XP, Level, dll)
-                launch { fetchStats() },      // Update statistik (Total Misi, Jarak)
-                launch { fetchStreak() }      // Update streak
+                launch { syncUserProfile() },
+                launch { fetchStats() },
+                launch { fetchStreak() }
             )
             jobs.joinAll()
             _isRefreshing.value = false
@@ -100,7 +99,6 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // ... (Fungsi updateProfile, uploadImage, clearError tetap sama) ...
     fun updateProfile(
         name: String,
         phone: String?,
@@ -178,7 +176,8 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
             file.delete()
 
             if (response.isSuccessful) {
-                Result.success(response.body()?.imageUrl)
+                val url = response.body()?.get("url") ?: response.body()?.get("imageUrl")
+                Result.success(url)
             } else {
                 Result.failure(Exception("Upload gagal: ${response.message()}"))
             }

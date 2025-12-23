@@ -8,8 +8,9 @@ import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
 
-    private const val BASE_URL = "http://10.0.2.2:5000/api/" // Untuk emulator
-    // Untuk device fisik gunakan IP laptop: "http://192.168.x.x:5000/api/"
+    const val BASE_URL = "http://10.0.2.2:5000/api/"
+
+    val IMAGE_BASE_URL = BASE_URL.replace("api/", "")
 
     private var token: String? = null
 

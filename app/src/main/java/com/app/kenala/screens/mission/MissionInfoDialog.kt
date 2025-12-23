@@ -24,10 +24,10 @@ import com.app.kenala.ui.theme.*
 @Composable
 fun MissionInfoDialog(
     missionName: String,
-    distance: String?, // Nullable untuk state loading
-    estimatedTime: Int?, // Nullable untuk state loading
+    distance: String?,
+    estimatedTime: Int?,
     onDismissRequest: () -> Unit,
-    onSearchAgain: () -> Unit, // Callback baru untuk "Cari Misi Lain"
+    onSearchAgain: () -> Unit,
     onAccept: () -> Unit
 ) {
     var visible by remember { mutableStateOf(false) }
@@ -61,7 +61,6 @@ fun MissionInfoDialog(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                // Icon Header
                 Box(
                     modifier = Modifier
                         .size(80.dp)
@@ -75,8 +74,6 @@ fun MissionInfoDialog(
                         tint = AccentColor
                     )
                 }
-
-                // Title Section
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text = "Misi Baru Ditemukan!",
@@ -93,8 +90,6 @@ fun MissionInfoDialog(
                         textAlign = TextAlign.Center
                     )
                 }
-
-                // Info Rows (Jarak & Waktu)
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -116,8 +111,6 @@ fun MissionInfoDialog(
                         isLoading = estimatedTime == null
                     )
                 }
-
-                // Buttons
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -137,7 +130,7 @@ fun MissionInfoDialog(
                     }
 
                     OutlinedButton(
-                        onClick = onSearchAgain, // Panggil callback navigasi
+                        onClick = onSearchAgain,
                         modifier = Modifier.fillMaxWidth().height(50.dp),
                         shape = MaterialTheme.shapes.large,
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),

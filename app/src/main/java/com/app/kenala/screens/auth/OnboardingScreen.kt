@@ -39,10 +39,8 @@ fun OnboardingScreen(
                 .padding(innerPadding)
                 .padding(top = 80.dp, bottom = 40.dp, start = 32.dp, end = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            // Arrangement ini akan mendorong konten pertama ke atas dan konten terakhir ke bawah
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Konten utama (logo dan teks)
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -67,7 +65,6 @@ fun OnboardingScreen(
                 )
             }
 
-            // Tombol akan secara otomatis didorong ke bawah
             Button(
                 onClick = onNavigateToLogin,
                 modifier = Modifier

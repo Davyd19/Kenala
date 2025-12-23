@@ -2,12 +2,6 @@ package com.app.kenala.data.remote.dto
 
 import com.google.gson.annotations.SerializedName
 
-/**
- * File ini berisi semua data class untuk Request Body ke API
- * agar tidak terjadi duplikasi atau mismatch package.
- */
-
-// --- Auth Requests ---
 data class RegisterRequest(
     val name: String,
     val email: String,
@@ -31,7 +25,6 @@ data class UpdateProfileRequest(
     val profile_image_url: String?
 )
 
-// --- Mission Requests ---
 data class CheckLocationRequest(
     @SerializedName("mission_id") val missionId: String,
     val latitude: Double,
@@ -52,7 +45,6 @@ data class CompleteMissionRequest(
     @SerializedName("real_distance_meters") val realDistanceMeters: Double? = 0.0
 )
 
-// --- Journal Requests ---
 data class CreateJournalRequest(
     val title: String,
     val story: String,
@@ -66,7 +58,6 @@ data class UpdateJournalRequest(
     val imageUrl: String?
 )
 
-// --- Suggestion Requests ---
 data class CreateSuggestionRequest(
     @SerializedName("location_name") val locationName: String,
     val address: String?,

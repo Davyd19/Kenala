@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
-// Extension untuk membuat DataStore instance
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "kenala_preferences")
 
 class DataStoreManager(private val context: Context) {
@@ -24,17 +23,14 @@ class DataStoreManager(private val context: Context) {
         private val DARK_MODE_KEY = booleanPreferencesKey("dark_mode_enabled")
     }
 
-    // Flow untuk membaca token
     val authToken: Flow<String?> = context.dataStore.data.map { preferences ->
         preferences[TOKEN_KEY]
     }
 
-    // Flow untuk membaca user ID
     val userId: Flow<String?> = context.dataStore.data.map { preferences ->
         preferences[USER_ID_KEY]
     }
 
-    // Simpan data login
     suspend fun saveAuthData(token: String, userId: String, userName: String, userEmail: String) {
         context.dataStore.edit { preferences ->
             preferences[TOKEN_KEY] = token
@@ -44,27 +40,24 @@ class DataStoreManager(private val context: Context) {
         }
     }
 
-    // Hapus semua data (logout)
     suspend fun clearAuthData() {
         context.dataStore.edit { preferences ->
             preferences.clear()
         }
     }
 
-    // Cek apakah user sudah login
     suspend fun isLoggedIn(): Boolean {
         val preferences = context.dataStore.data.first()
         return preferences[TOKEN_KEY] != null
     }
 
-    // Get token
     suspend fun getToken(): String? {
         val preferences = context.dataStore.data.first()
         return preferences[TOKEN_KEY]
     }
 
     val darkModeEnabled: Flow<Boolean> = context.dataStore.data.map {
-        it[DARK_MODE_KEY] ?: false // Default: Mati (Light Mode)
+        it[DARK_MODE_KEY] ?: false
     }
 
     suspend fun setDarkModeEnabled(enabled: Boolean) {

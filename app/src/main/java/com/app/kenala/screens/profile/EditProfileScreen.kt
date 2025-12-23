@@ -40,7 +40,6 @@ fun EditProfileScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
 
-    // State untuk form input
     var name by remember(user) { mutableStateOf(user?.name ?: "") }
     var email by remember(user) { mutableStateOf(user?.email ?: "") }
     var phone by remember(user) { mutableStateOf(user?.phone ?: "") }
@@ -97,7 +96,6 @@ fun EditProfileScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // Scrollable Content
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -107,7 +105,6 @@ fun EditProfileScreen(
             ) {
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Profile Photo Section
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -177,7 +174,6 @@ fun EditProfileScreen(
                     }
                 }
 
-                // Form Fields
                 ProfileTextField(
                     value = name,
                     onValueChange = {

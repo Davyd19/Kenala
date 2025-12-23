@@ -21,7 +21,6 @@ sealed class AuthState {
     object Loading : AuthState()
     data class Success(val message: String) : AuthState()
     data class Error(val message: String) : AuthState()
-    // State khusus untuk menangani navigasi saat logout
     object LoggedOut : AuthState()
 }
 
@@ -37,7 +36,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     private val _isLoggedIn = MutableStateFlow(false)
     val isLoggedIn: StateFlow<Boolean> = _isLoggedIn.asStateFlow()
 
-    // State untuk Splash Screen: Menandakan cek token selesai
     private val _isAuthChecked = MutableStateFlow(false)
     val isAuthChecked: StateFlow<Boolean> = _isAuthChecked.asStateFlow()
 
@@ -47,19 +45,15 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun checkLoginStatus() {
         viewModelScope.launch {
-            // Mengambil token (pastikan fungsi ini ada di DataStoreManager dan bersifat suspend/flow)
             val token = dataStoreManager.getToken()
 
             if (!token.isNullOrEmpty()) {
-                // Set token ke Retrofit agar request selanjutnya terotentikasi
                 RetrofitClient.setToken(token)
                 _isLoggedIn.value = true
             } else {
                 _isLoggedIn.value = false
             }
 
-            // Tandai bahwa proses pengecekan awal sudah selesai
-            // Ini akan memicu navigasi dari Splash Screen ke Main atau Onboarding
             _isAuthChecked.value = true
         }
     }
@@ -74,7 +68,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 if (response.isSuccessful && response.body() != null) {
                     val authResponse = response.body()!!
 
-                    // 1. Simpan Data Auth (Token & User Info Dasar) ke DataStore
                     dataStoreManager.saveAuthData(
                         token = authResponse.token,
                         userId = authResponse.user.id,
@@ -82,10 +75,8 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                         userEmail = authResponse.user.email
                     )
 
-                    // 2. Set Token Global Retrofit
                     RetrofitClient.setToken(authResponse.token)
 
-                    // 3. Simpan Data User Lengkap ke Database Lokal (Room)
                     val userEntity = UserEntity(
                         id = authResponse.user.id,
                         name = authResponse.user.name,

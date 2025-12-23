@@ -117,11 +117,9 @@ fun GachaScreen(
         }
     }
 
-    // Handle Error State (Not Found)
     LaunchedEffect(error) {
         if (error != null) {
             if (error!!.contains("Tidak ada misi", ignoreCase = true) || error!!.contains("Misi Tidak Ditemukan", ignoreCase = true)) {
-                // Delay sedikit agar animasi searching sempat terlihat/selesai cycle-nya jika terlalu cepat
                 if (isAnimatingSearch) {
                     delay(500)
                 }
@@ -166,16 +164,13 @@ fun GachaScreen(
             AmbientParticles()
             EnhancedFloatingParticles(isActive = gachaState == GachaState.Searching)
 
-            // Gunakan AnimatedContent untuk transisi halus antar UI
             AnimatedContent(
                 targetState = gachaState == GachaState.NotFound,
                 transitionSpec = {
                     if (targetState) {
-                        // Masuk ke NotFound: Fade In + Scale In dengan Spring (Bouncy)
                         (fadeIn(animationSpec = tween(600, easing = FastOutSlowInEasing)) +
                                 scaleIn(
                                     initialScale = 0.8f,
-                                    // PERBAIKAN DI SINI: Gunakan spring() bukan tween() untuk dampingRatio
                                     animationSpec = spring(
                                         dampingRatio = Spring.DampingRatioMediumBouncy,
                                         stiffness = Spring.StiffnessLow
@@ -184,7 +179,6 @@ fun GachaScreen(
                             fadeOut(animationSpec = tween(300))
                         )
                     } else {
-                        // Keluar dari NotFound (Reset): Fade In biasa
                         fadeIn(animationSpec = tween(500)).togetherWith(
                             fadeOut(animationSpec = tween(300))
                         )
@@ -193,7 +187,6 @@ fun GachaScreen(
                 label = "NotFoundTransition"
             ) { isNotFound ->
                 if (isNotFound) {
-                    // --- HANDLING UI NOT FOUND ---
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -201,7 +194,6 @@ fun GachaScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        // Animasi Icon
                         val transition = rememberInfiniteTransition(label = "pulse")
                         val scale by transition.animateFloat(
                             initialValue = 1f, targetValue = 1.1f,
@@ -265,7 +257,6 @@ fun GachaScreen(
                         }
                     }
                 } else {
-                    // --- UI GACHA NORMAL ---
                     Column(
                         modifier = Modifier.fillMaxSize(),
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -376,7 +367,6 @@ fun GachaScreen(
                 )
             }
 
-            // Tampilkan error snackbar jika bukan "Not Found" error
             error?.let {
                 if (gachaState != GachaState.NotFound) {
                     Snackbar(
@@ -390,7 +380,6 @@ fun GachaScreen(
     }
 }
 
-// ... (Components) ...
 @Composable
 private fun AnimatedText(text: String, style: androidx.compose.ui.text.TextStyle, color: Color) {
     var visible by remember { mutableStateOf(false) }

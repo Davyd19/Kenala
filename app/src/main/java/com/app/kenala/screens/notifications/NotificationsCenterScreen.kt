@@ -44,9 +44,7 @@ fun NotificationsCenterScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
                     }
                 },
-                // --- TAMBAHAN: TOMBOL CLEAR ALL DI KANAN ATAS ---
                 actions = {
-                    // Tombol hanya muncul jika notifikasi TIDAK kosong
                     if (notifications.isNotEmpty()) {
                         IconButton(onClick = { viewModel.clearAllNotifications() }) {
                             Icon(

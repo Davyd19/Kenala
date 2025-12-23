@@ -51,9 +51,9 @@ class LocationManager(private val context: Context) {
 
         val locationRequest = LocationRequest.Builder(
             Priority.PRIORITY_HIGH_ACCURACY,
-            5000L // Update every 5 seconds
+            5000L
         ).apply {
-            setMinUpdateIntervalMillis(2000L) // Fastest update every 2 seconds
+            setMinUpdateIntervalMillis(2000L)
             setWaitForAccurateLocation(false)
         }.build()
 
@@ -87,7 +87,7 @@ class LocationManager(private val context: Context) {
             lat2: Double,
             lon2: Double
         ): Double {
-            val earthRadius = 6371000.0 // meters
+            val earthRadius = 6371000.0
             val dLat = Math.toRadians(lat2 - lat1)
             val dLon = Math.toRadians(lon2 - lon1)
             val a = sin(dLat / 2) * sin(dLat / 2) +
@@ -105,9 +105,8 @@ class LocationManager(private val context: Context) {
         }
 
         fun estimateTime(distanceMeters: Double, speedKmh: Double = 5.0): Int {
-            // Default walking speed 5 km/h
             val hours = (distanceMeters / 1000) / speedKmh
-            return (hours * 60).toInt() // Convert to minutes
+            return (hours * 60).toInt()
         }
     }
 }

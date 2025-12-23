@@ -31,7 +31,6 @@ class TrackingService : Service() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private lateinit var locationManager: LocationManager
 
-    // Data misi saat ini
     private var currentMissionId: Int = -1
     private var currentUserId: String = ""
 
@@ -42,7 +41,6 @@ class TrackingService : Service() {
     override fun onCreate() {
         super.onCreate()
         locationManager = LocationManager(applicationContext)
-        // Pastikan Socket connect saat service dibuat
         SocketManager.connect()
     }
 
@@ -80,7 +78,7 @@ class TrackingService : Service() {
         val notification: Notification = NotificationCompat.Builder(this, channelId)
             .setContentTitle("Kenala Mission Active")
             .setContentText("Melacak perjalanan misi Anda...")
-            .setSmallIcon(android.R.drawable.ic_menu_mylocation) // Ganti dengan icon app Anda
+            .setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .setOngoing(true)
             .build()
 
@@ -88,11 +86,10 @@ class TrackingService : Service() {
     }
 
     private fun startLocationUpdates() {
-        // Menggunakan FusedLocationProviderClient langsung untuk kontrol granular di Service
         val fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
-        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000) // Update tiap 5 detik
-            .setMinUpdateDistanceMeters(10f) // Atau jika bergerak 10 meter
+        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000)
+            .setMinUpdateDistanceMeters(10f)
             .build()
 
         val locationCallback = object : LocationCallback() {
@@ -122,8 +119,8 @@ class TrackingService : Service() {
                 put("latitude", location.latitude)
                 put("longitude", location.longitude)
                 put("timestamp", System.currentTimeMillis())
-                put("speed", location.speed) // Opsional: Kecepatan
-                put("heading", location.bearing) // Opsional: Arah
+                put("speed", location.speed)
+                put("heading", location.bearing)
             }
 
             // Emit ke Socket.IO

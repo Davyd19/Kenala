@@ -190,7 +190,6 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
 
             val requestFile = file.asRequestBody(mimeType.toMediaTypeOrNull())
 
-            // 3. Upload dengan key "image"
             val body = MultipartBody.Part.createFormData("image", file.name, requestFile)
             val response = apiService.uploadImage(body)
             file.delete()

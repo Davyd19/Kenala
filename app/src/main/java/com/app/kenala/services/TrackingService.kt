@@ -123,8 +123,6 @@ class TrackingService : Service() {
                 put("heading", location.bearing)
             }
 
-            // Emit ke Socket.IO
-            // Pastikan event name 'update_location' sesuai dengan backend Anda
             SocketManager.emit("update_location", data)
         }
     }

@@ -45,7 +45,6 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    // Fungsi helper: Buka URL
     fun openUrl(url: String) {
         try {
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
@@ -55,7 +54,6 @@ fun SettingsScreen(
         }
     }
 
-    // Fungsi helper: Ambil versi aplikasi
     fun getAppVersion(context: Context): String {
         return try {
             val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
@@ -89,7 +87,6 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // Area Konten yang Bisa Discroll
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -97,7 +94,6 @@ fun SettingsScreen(
                     .padding(horizontal = 25.dp, vertical = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // --- SEKSI 1: PREFERENSI (Hanya Mode Gelap) ---
                 SettingsSection(title = "Preferensi") {
                     SettingsSwitchItem(
                         title = "Mode Gelap",
@@ -108,7 +104,6 @@ fun SettingsScreen(
                     )
                 }
 
-                // --- SEKSI 2: AKUN (Hanya Ganti Password) ---
                 SettingsSection(title = "Akun") {
                     SettingsActionItem(
                         title = "Ganti Password",
@@ -116,16 +111,10 @@ fun SettingsScreen(
                         icon = Icons.Default.Lock,
                         onClick = { showPasswordDialog = true }
                     )
-
-                    // Opsi 'Bahasa' telah dihapus
                 }
-
-                // --- SEKSI 3: TENTANG (Dihapus) ---
-                // Seluruh bagian "Tentang" telah dihapus
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // --- TOMBOL KELUAR ---
                 Button(
                     onClick = { showLogoutDialog = true },
                     modifier = Modifier
@@ -151,15 +140,11 @@ fun SettingsScreen(
                     )
                 }
 
-                // Spacer tambahan agar tidak mepet bawah saat discroll
                 Spacer(modifier = Modifier.height(24.dp))
             }
         }
     }
 
-    // --- DIALOGS ---
-
-    // 1. Dialog Ganti Password
     if (showPasswordDialog) {
         ChangePasswordDialog(
             onDismiss = { showPasswordDialog = false },
@@ -181,7 +166,6 @@ fun SettingsScreen(
         )
     }
 
-    // 2. Dialog Konfirmasi Logout
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
@@ -211,8 +195,6 @@ fun SettingsScreen(
     }
 }
 
-// --- HELPER COMPONENTS ---
-
 @Composable
 fun ChangePasswordDialog(
     onDismiss: () -> Unit,
@@ -223,7 +205,6 @@ fun ChangePasswordDialog(
     var passwordVisible by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
 
-    // State Error
     var oldPassError by remember { mutableStateOf<String?>(null) }
     var newPassError by remember { mutableStateOf<String?>(null) }
     var generalError by remember { mutableStateOf<String?>(null) }
@@ -253,7 +234,6 @@ fun ChangePasswordDialog(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                // INPUT PASSWORD LAMA
                 OutlinedTextField(
                     value = oldPass,
                     onValueChange = {
@@ -274,7 +254,6 @@ fun ChangePasswordDialog(
                         }
                     }
                 )
-                // Error Password Lama (di bawah box)
                 if (oldPassError != null) {
                     Text(
                         text = oldPassError!!,
@@ -286,7 +265,6 @@ fun ChangePasswordDialog(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // INPUT PASSWORD BARU
                 OutlinedTextField(
                     value = newPass,
                     onValueChange = {
@@ -301,7 +279,6 @@ fun ChangePasswordDialog(
                     shape = MaterialTheme.shapes.medium
                 )
 
-                // ATURAN PASSWORD & ERROR
                 Column(modifier = Modifier.padding(start = 8.dp, top = 4.dp)) {
                     if (newPassError != null) {
                         Text(
@@ -311,7 +288,6 @@ fun ChangePasswordDialog(
                             fontWeight = FontWeight.Bold
                         )
                     } else {
-                        // Tampilkan aturan jika tidak ada error
                         Text(
                             text = "• Minimal 6 karakter",
                             style = MaterialTheme.typography.labelSmall,
@@ -325,7 +301,6 @@ fun ChangePasswordDialog(
                     }
                 }
 
-                // Error Umum (Koneksi, Server)
                 if (generalError != null) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Card(
@@ -346,7 +321,6 @@ fun ChangePasswordDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    // VALIDASI LOKAL YANG KETAT
                     val hasLetter = newPass.any { it.isLetter() }
                     val hasDigit = newPass.any { it.isDigit() }
 
@@ -363,7 +337,6 @@ fun ChangePasswordDialog(
                     isLoading = true
                     onSubmit(oldPass, newPass) { errorMsgFromApi ->
                         isLoading = false
-                        // Deteksi jenis error dari API
                         if (errorMsgFromApi.contains("salah", ignoreCase = true) ||
                             errorMsgFromApi.contains("invalid", ignoreCase = true) ||
                             errorMsgFromApi.contains("incorrect", ignoreCase = true)) {

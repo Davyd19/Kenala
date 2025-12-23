@@ -131,7 +131,6 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
     fun updateOdometer(newLocation: Location) {
         if (lastOdometerLocation != null) {
             val distanceInc = lastOdometerLocation!!.distanceTo(newLocation)
-            // Filter noise GPS: hanya hitung jika bergerak lebih dari 2 meter
             if (distanceInc > 2.0) {
                 _distanceTraveled.value += distanceInc
             }
@@ -158,7 +157,6 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
 
                     _checkLocationResponse.value = locationResponse
 
-                    // 1. Notifikasi jika sampai di clue
                     if (clueReached && previousStatus != "clue_reached") {
                         _missionEvent.emit(MissionEvent.ShowNotification(
                             "Petunjuk Ditemukan!",
@@ -166,7 +164,6 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
                         ))
                     }
 
-                    // 2. TRIGGER OTOMATIS: Jika sampai di tujuan akhir misi
                     else if (isArrived && !isMissionFinished) {
                         isMissionFinished = true
 
@@ -175,7 +172,6 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
                             "Selamat! Menyimpan hasil misi Anda..."
                         ))
 
-                        // Panggil API complete dengan JARAK REAL dari Odometer
                         val dist = _distanceTraveled.value
                         autoCompleteMissionOnArrival(missionId, dist)
                     }
@@ -257,7 +253,6 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             _missionWithClues.value = null
             _checkLocationResponse.value = null
-            // Reset Odometer saat misi baru dimulai/direset
             _distanceTraveled.value = 0.0
             lastOdometerLocation = null
             isMissionFinished = false
@@ -292,7 +287,6 @@ class MissionViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // --- INTEGRASI REAL-TIME TRACKING (SOCKET.IO) ---
     fun startRealtimeTracking(missionId: String, userId: String) {
         viewModelScope.launch {
             _isTracking.value = true

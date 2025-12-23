@@ -120,7 +120,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 if (response.isSuccessful && response.body() != null) {
                     val authResponse = response.body()!!
 
-                    // Auto-login setelah register sukses
                     dataStoreManager.saveAuthData(
                         token = authResponse.token,
                         userId = authResponse.user.id,
@@ -163,19 +162,14 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     fun logout() {
         viewModelScope.launch {
-            // 1. Hapus data auth dari DataStore
             dataStoreManager.clearAuthData()
 
-            // 2. Reset token Retrofit
             RetrofitClient.setToken(null)
 
-            // 3. Hapus data user dari Database Lokal
             userDao.deleteUser()
 
-            // 4. Update state
             _isLoggedIn.value = false
 
-            // 5. PENTING: Trigger state LoggedOut agar UI (AppNavGraph) melakukan navigasi ke Onboarding
             _authState.value = AuthState.LoggedOut
         }
     }

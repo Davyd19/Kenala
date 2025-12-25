@@ -7,6 +7,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.BrokenImage
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,7 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import com.app.kenala.data.local.entities.JournalEntity
 import com.app.kenala.ui.theme.AccentColor
@@ -157,15 +159,46 @@ private fun JournalCard(journal: JournalEntity, onClick: () -> Unit) {
                     .fillMaxWidth()
                     .height(200.dp)
             ) {
-                if (!journal.imageUrl.isNullOrEmpty()) {
-                    AsyncImage(
+                val fullImageUrl = UrlUtils.getFullImageUrl(journal.imageUrl)
+
+                if (!fullImageUrl.isNullOrEmpty()) {
+                    SubcomposeAsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
-                            .data(UrlUtils.getFullImageUrl(journal.imageUrl))
+                            .data(fullImageUrl)
                             .crossfade(true)
                             .build(),
                         contentDescription = journal.title,
                         contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier.fillMaxSize(),
+                        loading = {
+                            Box(
+                                modifier = Modifier.fillMaxSize().background(Color.Gray.copy(alpha = 0.2f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                            }
+                        },
+                        error = {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(
+                                        imageVector = Icons.Default.BrokenImage,
+                                        contentDescription = "Error memuat gambar",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        "Gagal memuat",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
                     )
                 } else {
                     Box(
@@ -178,9 +211,18 @@ private fun JournalCard(journal: JournalEntity, onClick: () -> Unit) {
                                         AccentColor.copy(alpha = 0.4f)
                                     )
                                 )
-                            )
-                    )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Image,
+                            contentDescription = null,
+                            tint = Color.White.copy(alpha = 0.5f),
+                            modifier = Modifier.size(48.dp)
+                        )
+                    }
                 }
+
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -188,7 +230,7 @@ private fun JournalCard(journal: JournalEntity, onClick: () -> Unit) {
                             Brush.verticalGradient(
                                 colors = listOf(
                                     Color.Transparent,
-                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.3f),
+                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.1f),
                                     MaterialTheme.colorScheme.surface
                                 )
                             )

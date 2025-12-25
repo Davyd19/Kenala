@@ -47,7 +47,7 @@ data class MissionWithCluesResponse(
 )
 
 data class CheckLocationResponse(
-    val status: String, // "tracking", "clue_reached", "all_clues_completed"
+    val status: String,
     @SerializedName("clue_reached") val clueReached: Boolean,
     @SerializedName("current_clue") val currentClue: CurrentClueDto?,
     val distance: DistanceDto,

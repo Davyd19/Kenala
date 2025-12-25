@@ -1,6 +1,7 @@
 package com.app.kenala.screens.mission
 
 import android.Manifest
+import android.location.Location
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
@@ -41,6 +42,7 @@ import com.app.kenala.ui.theme.*
 import com.app.kenala.utils.LocationManager
 import com.app.kenala.viewmodel.MissionViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlin.random.Random
 
@@ -64,10 +66,13 @@ fun GachaScreen(
     missionViewModel: MissionViewModel = viewModel()
 ) {
     var gachaState by remember { mutableStateOf(GachaState.Idle) }
-    var missionDistance by remember { mutableStateOf<String?>(null) }
-    var estimatedTime by remember { mutableStateOf<Int?>(null) }
+    var calculatedDistance by remember { mutableStateOf<String?>(null) }
+    var calculatedTime by remember { mutableStateOf<Int?>(null) }
+
     var dragOffset by remember { mutableFloatStateOf(0f) }
     var isAnimatingSearch by remember { mutableStateOf(false) }
+
+    var currentUserLocation by remember { mutableStateOf<Location?>(null) }
 
     val context = LocalContext.current
     val locationManager = remember { LocationManager(context) }
@@ -79,7 +84,11 @@ fun GachaScreen(
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) { }
+    ) { permissions ->
+        if (permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+            permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true) {
+        }
+    }
 
     LaunchedEffect(Unit) {
         permissionLauncher.launch(
@@ -88,31 +97,48 @@ fun GachaScreen(
                 Manifest.permission.ACCESS_COARSE_LOCATION
             )
         )
+
+        if (locationManager.hasLocationPermission()) {
+            locationManager.getLocationUpdates().collectLatest { location ->
+                currentUserLocation = location
+            }
+        } else {
+            locationManager.getCurrentLocation { loc ->
+                if (loc != null) currentUserLocation = loc
+            }
+        }
     }
 
-    LaunchedEffect(selectedMission, gachaState) {
-        if (selectedMission != null && gachaState == GachaState.Revealing) {
-            missionDistance = null
-            estimatedTime = null
-            if (locationManager.hasLocationPermission()) {
-                locationManager.getCurrentLocation { location ->
-                    if (location != null) {
-                        val distanceMeters = LocationManager.calculateDistance(
-                            location.latitude,
-                            location.longitude,
-                            selectedMission!!.latitude,
-                            selectedMission!!.longitude
-                        )
-                        missionDistance = LocationManager.formatDistance(distanceMeters)
-                        estimatedTime = LocationManager.estimateTime(distanceMeters)
-                    } else {
-                        missionDistance = "Tidak diketahui"
-                        estimatedTime = 0
+    LaunchedEffect(selectedMission, gachaState, currentUserLocation) {
+        if (selectedMission != null && (gachaState == GachaState.Revealing || gachaState == GachaState.ShowingInfo)) {
+            if (calculatedDistance == null || calculatedDistance == "Menghitung...") {
+                if (currentUserLocation != null) {
+                    val distMeters = LocationManager.calculateDistance(
+                        currentUserLocation!!.latitude,
+                        currentUserLocation!!.longitude,
+                        selectedMission!!.latitude,
+                        selectedMission!!.longitude
+                    )
+                    calculatedDistance = LocationManager.formatDistance(distMeters)
+                    calculatedTime = LocationManager.estimateTime(distMeters)
+                } else {
+                    locationManager.getCurrentLocation { loc ->
+                        if (loc != null) {
+                            currentUserLocation = loc
+                            val distMeters = LocationManager.calculateDistance(
+                                loc.latitude,
+                                loc.longitude,
+                                selectedMission!!.latitude,
+                                selectedMission!!.longitude
+                            )
+                            calculatedDistance = LocationManager.formatDistance(distMeters)
+                            calculatedTime = LocationManager.estimateTime(distMeters)
+                        } else {
+                            calculatedDistance = "Menghitung..."
+                            calculatedTime = null
+                        }
                     }
                 }
-            } else {
-                missionDistance = "Izin Ditolak"
-                estimatedTime = 0
             }
         }
     }
@@ -134,6 +160,8 @@ fun GachaScreen(
     LaunchedEffect(isAnimatingSearch, isLoading, selectedMission) {
         if (gachaState == GachaState.Searching && !isAnimatingSearch && !isLoading) {
             if (selectedMission != null) {
+                calculatedDistance = "Menghitung..."
+                calculatedTime = null
                 gachaState = GachaState.Revealing
             }
         }
@@ -350,8 +378,8 @@ fun GachaScreen(
             if (gachaState == GachaState.ShowingInfo && selectedMission != null) {
                 MissionInfoDialog(
                     missionName = selectedMission!!.name,
-                    distance = missionDistance,
-                    estimatedTime = estimatedTime,
+                    distance = calculatedDistance,
+                    estimatedTime = calculatedTime,
                     onDismissRequest = {
                         gachaState = GachaState.Idle
                         missionViewModel.clearSelectedMission()

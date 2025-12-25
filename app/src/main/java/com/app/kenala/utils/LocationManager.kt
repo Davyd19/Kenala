@@ -34,7 +34,26 @@ class LocationManager(private val context: Context) {
 
         try {
             fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-                callback(location)
+                if (location != null) {
+                    callback(location)
+                } else {
+                    val locationRequest = LocationRequest.Builder(
+                        Priority.PRIORITY_HIGH_ACCURACY,
+                        1000
+                    ).setMaxUpdates(1).build()
+
+                    val locationCallback = object : LocationCallback() {
+                        override fun onLocationResult(result: LocationResult) {
+                            val freshLocation = result.lastLocation
+                            callback(freshLocation)
+                        }
+                    }
+                    fusedLocationClient.requestLocationUpdates(
+                        locationRequest,
+                        locationCallback,
+                        Looper.getMainLooper()
+                    )
+                }
             }.addOnFailureListener {
                 callback(null)
             }
@@ -104,9 +123,18 @@ class LocationManager(private val context: Context) {
             }
         }
 
-        fun estimateTime(distanceMeters: Double, speedKmh: Double = 5.0): Int {
-            val hours = (distanceMeters / 1000) / speedKmh
-            return (hours * 60).toInt()
+        fun estimateTime(distanceMeters: Double): Int {
+            val speedKmh = if (distanceMeters < 1500) {
+                4.0
+            } else {
+                25.0
+            }
+
+            val speedMetersPerMinute = (speedKmh * 1000) / 60
+
+            val minutes = distanceMeters / speedMetersPerMinute
+
+            return Math.ceil(minutes).toInt().coerceAtLeast(1)
         }
     }
 }

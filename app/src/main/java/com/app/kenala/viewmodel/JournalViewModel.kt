@@ -2,9 +2,7 @@ package com.app.kenala.viewmodel
 
 import android.app.Application
 import android.net.Uri
-import android.util.Log
 import android.webkit.MimeTypeMap
-import android.provider.OpenableColumns
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.kenala.api.RetrofitClient
@@ -15,9 +13,6 @@ import com.app.kenala.utils.DataStoreManager
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.MultipartBody
-import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
 import java.io.FileOutputStream
 
@@ -72,9 +67,6 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
             val userId = currentUserId.first()
             if (userId != null) {
                 repository.syncJournals(userId)
-                    .onFailure {
-                        Log.e("JournalViewModel", "Sync failed: ${it.message}")
-                    }
             }
         }
     }
@@ -100,20 +92,9 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
                     return@launch
                 }
 
-                var finalImageUrl: String? = null
+                val imageFile = imageUri?.let { uriToFile(it) }
 
-                if (imageUri != null) {
-                    val uploadResult = uploadImage(imageUri)
-                    if (uploadResult.isSuccess) {
-                        finalImageUrl = uploadResult.getOrNull()
-                    } else {
-                        _error.value = "Gagal upload gambar: ${uploadResult.exceptionOrNull()?.message}"
-                        _isLoading.value = false
-                        return@launch
-                    }
-                }
-
-                repository.createJournal(userId, title, story, finalImageUrl, locationName, latitude, longitude)
+                repository.createJournal(userId, title, story, imageFile, locationName, latitude, longitude)
                     .onSuccess {
                         _journalSaved.value = true
                         syncJournals()
@@ -121,6 +102,9 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
                     .onFailure {
                         _error.value = it.message
                     }
+
+                imageFile?.delete()
+
             } catch (e: Exception) {
                 _error.value = "Terjadi kesalahan: ${e.message}"
             } finally {
@@ -142,20 +126,9 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
             _journalSaved.value = false
 
             try {
-                val finalImageUrl = if (imageUri != null) {
-                    val uploadResult = uploadImage(imageUri)
-                    if (uploadResult.isSuccess) {
-                        uploadResult.getOrNull()
-                    } else {
-                        _error.value = "Gagal upload gambar: ${uploadResult.exceptionOrNull()?.message}"
-                        _isLoading.value = false
-                        return@launch
-                    }
-                } else {
-                    existingImageUrl
-                }
+                val imageFile = imageUri?.let { uriToFile(it) }
 
-                repository.updateJournal(id, title, story, finalImageUrl)
+                repository.updateJournal(id, title, story, imageFile)
                     .onSuccess {
                         _journalSaved.value = true
                         syncJournals()
@@ -163,62 +136,14 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
                     .onFailure {
                         _error.value = it.message
                     }
+
+                imageFile?.delete()
+
             } catch (e: Exception) {
                 _error.value = "Terjadi kesalahan: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
-        }
-    }
-
-    private suspend fun uploadImage(uri: Uri): Result<String?> {
-        return try {
-            val context = getApplication<Application>().applicationContext
-            val contentResolver = context.contentResolver
-
-            val mimeType = contentResolver.getType(uri) ?: "image/jpeg"
-            val extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType) ?: "jpg"
-
-            val fileName = "upload_${System.currentTimeMillis()}.$extension"
-
-            val file = File(context.cacheDir, fileName)
-            val inputStream = contentResolver.openInputStream(uri)
-            val outputStream = FileOutputStream(file)
-            inputStream?.copyTo(outputStream)
-            inputStream?.close()
-            outputStream.close()
-
-            val requestFile = file.asRequestBody(mimeType.toMediaTypeOrNull())
-
-            val body = MultipartBody.Part.createFormData("image", file.name, requestFile)
-            val response = apiService.uploadImage(body)
-            file.delete()
-
-            if (response.isSuccessful) {
-                val responseBody = response.body()
-
-                var url = responseBody?.get("url")
-                    ?: responseBody?.get("imageUrl")
-                    ?: responseBody?.get("path")
-                    ?: responseBody?.get("file")
-                    ?: responseBody?.get("data")
-
-                if (!url.isNullOrEmpty()) {
-                    url = url.replace("\\", "/")
-
-                    Log.d("JournalViewModel", "Gambar berhasil diupload, URL bersih: $url")
-                    Result.success(url)
-                } else {
-                    Result.failure(Exception("Server sukses, tapi URL gambar kosong."))
-                }
-            } else {
-                val errorMsg = "Upload gagal: ${response.code()} ${response.message()}"
-                Log.e("JournalViewModel", errorMsg)
-                Result.failure(Exception(errorMsg))
-            }
-        } catch (e: Exception) {
-            Log.e("JournalViewModel", "Error upload", e)
-            Result.failure(e)
         }
     }
 
@@ -235,5 +160,26 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
 
     fun clearError() {
         _error.value = null
+    }
+
+    private fun uriToFile(uri: Uri): File? {
+        val context = getApplication<Application>().applicationContext
+        return try {
+            val contentResolver = context.contentResolver
+            val mimeType = contentResolver.getType(uri) ?: "image/jpeg"
+            val extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType) ?: "jpg"
+
+            val tempFile = File.createTempFile("journal_${System.currentTimeMillis()}", ".$extension", context.cacheDir)
+
+            contentResolver.openInputStream(uri)?.use { inputStream ->
+                FileOutputStream(tempFile).use { outputStream ->
+                    inputStream.copyTo(outputStream)
+                }
+            }
+            tempFile
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
     }
 }

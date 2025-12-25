@@ -11,6 +11,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.BrokenImage
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.*
@@ -25,7 +26,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import com.app.kenala.ui.theme.AccentColor
 import com.app.kenala.ui.theme.DeepBlue
@@ -154,7 +155,7 @@ fun EditJournalScreen(
                     )
                 }
 
-                val displayImage: Any? = if (imageUri != null) {
+                val modelData = if (imageUri != null) {
                     imageUri
                 } else {
                     UrlUtils.getFullImageUrl(journal?.imageUrl)
@@ -165,9 +166,9 @@ fun EditJournalScreen(
                     shape = MaterialTheme.shapes.extraLarge,
                     elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                 ) {
-                    AsyncImage(
+                    SubcomposeAsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
-                            .data(displayImage)
+                            .data(modelData)
                             .crossfade(true)
                             .build(),
                         contentDescription = "Preview Gambar Jurnal",
@@ -175,7 +176,29 @@ fun EditJournalScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(220.dp)
-                            .clip(MaterialTheme.shapes.extraLarge)
+                            .clip(MaterialTheme.shapes.extraLarge),
+                        loading = {
+                            Box(contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = AccentColor)
+                            }
+                        },
+                        error = {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(
+                                        Icons.Default.BrokenImage,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text("Gagal memuat / Tidak ada foto", style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                        }
                     )
                 }
 

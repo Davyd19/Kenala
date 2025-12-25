@@ -254,7 +254,7 @@ fun GuidanceScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Button(
-                            onClick = { /* Menunggu sampai */ },
+                            onClick = { },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(56.dp),

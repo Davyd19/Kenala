@@ -6,6 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.BrokenImage
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PhotoCamera
@@ -22,7 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import com.app.kenala.ui.theme.*
 import com.app.kenala.utils.UrlUtils
@@ -92,15 +93,41 @@ fun JournalDetailScreen(
                         .fillMaxWidth()
                         .height(380.dp)
                 ) {
-                    if (!journal.imageUrl.isNullOrEmpty()) {
-                        AsyncImage(
+                    val fullImageUrl = UrlUtils.getFullImageUrl(journal.imageUrl)
+
+                    if (!fullImageUrl.isNullOrEmpty()) {
+                        SubcomposeAsyncImage(
                             model = ImageRequest.Builder(LocalContext.current)
-                                .data(UrlUtils.getFullImageUrl(journal.imageUrl))
+                                .data(fullImageUrl)
                                 .crossfade(true)
                                 .build(),
                             contentDescription = journal.title,
                             contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
+                            modifier = Modifier.fillMaxSize(),
+                            loading = {
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator(color = AccentColor)
+                                }
+                            },
+                            error = {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Icon(
+                                            imageVector = Icons.Default.BrokenImage,
+                                            contentDescription = "Gagal memuat",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(48.dp)
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text("Gagal memuat gambar", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            }
                         )
                     } else {
                         Box(

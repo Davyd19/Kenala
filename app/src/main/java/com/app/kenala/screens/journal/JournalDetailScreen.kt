@@ -138,7 +138,6 @@ fun JournalDetailScreen(
                         }
                     }
 
-                    // Gradient Overlay agar teks judul di bawah terlihat jelas
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -156,7 +155,6 @@ fun JournalDetailScreen(
                     )
                 }
 
-                // Konten Kartu Judul dan Cerita
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
